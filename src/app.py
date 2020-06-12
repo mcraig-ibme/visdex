@@ -10,7 +10,7 @@ import pandas as pd
 import glob
 import json
 
-graph_dimensions = ["x", "y", "color", "facet_col", "facet_row"]
+graph_dimensions = {"x": "x", "y": "y", "color": "color (will drop NAs)", "facet_col": "split horizontally", "facet_row": "split vertically"}
 global_width = '100%'
 default_marker_color = "crimson"
 file_extensions=['*.txt','*.xlsx']
@@ -32,11 +32,9 @@ test_df = pd.read_excel('../data/ABCD_PSB01.xlsx', delim_whitespace=True).head(n
 app.layout = html.Div(children=[
     html.H1(children='ABCD data exploration dashboard'),
 
-    html.Div(children='''
-        Select 1+ files, and then plot scatter plots!
-    '''),
+    html.H2(children="File selection"),
 
-    html.Label('Files Multi-Select'),
+    html.Label(children='Files Multi-Select'),
     dcc.Dropdown(
         id='file-dropdown',
         options=[{'label': filename,
@@ -44,7 +42,7 @@ app.layout = html.Div(children=[
         value=[],
         multi=True
     ),
-
+    html.H2(children="Table Preview"),
     html.Div(id='table_preview',
                  style={'width': global_width}),
     # dcc.Dropdown(
@@ -54,47 +52,57 @@ app.layout = html.Div(children=[
     #     value=[]
     # ),
     # Hidden div for holding the jsonised combined DF in use
-    html.Div(id='my-div', style={'display': 'none'}, children=[]),
+    html.Div(id='json-df-div', style={'display': 'none'}, children=[]),
 
-    # dcc.Graph(
-    #     id='example-graph',
-    #     figure = go.Figure(data=go.Scatter(x=test_df['PROSOCIAL_Q1_Y'],
-    #                         y=test_df['PROSOCIAL_Q2_Y'],
-    #                         mode='markers',
-    #                         marker=dict(color=test_df['PROSOCIAL_Q3_Y'],
-    #                                     coloraxis="coloraxis",
-    #                                     showscale=True
-    #                                     )
-    #                         )),
-        # fig.update_layout(coloraxis=dict(colorscale='Bluered_r'))
-        # fig.update_xaxes(matches='x')
-        # figure={
-        #     'data': [
-        #         {'x': test_df['PROSOCIAL_Q1_Y'], 'y': [4, 1, 2], 'type': 'bar', 'name': 'SF'},
-        #         # {'x': [1, 2, 3], 'y': [2, 4, 5], 'type': 'bar', 'name': u'Montréal'},
-        #     ],
-        #     'layout': {
-        #         'title': 'Dash Data Visualization'
-        #     }
-        # }
-    # ),
+
     # Div holds the graph selection elements
     html.Div(id='graph1-selection',
-             children=[html.Div([d + ":", dcc.Dropdown(id=d, options=[])], style=style_dict) for d in graph_dimensions]),
+             children=[html.Div([value + ":", dcc.Dropdown(id=key, options=[])], style=style_dict) for key, value in graph_dimensions.items()]),
 
     dcc.Graph(id="graph1", style={"width": global_width}),
 
+    html.H2(children="Count per category"),
+    html.Div(id='bar-div',
+             children=[html.Div(["Select variable to group by:", dcc.Dropdown(id='bar-dropdown', options=([]))])]),
+    dcc.Graph(
+        id='bar-chart',
+        figure=go.Figure(data=go.Bar()),
+    ),
 ])
+
+
+@app.callback(
+    Output('bar-div', 'children'),
+    [Input('json-df-div', 'children')])
+# Standard dropdown to select column of interest
+def update_bar_columns(input_json_df):
+    print('update_bar_columns')
+    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    options = [{'label': col,
+                'value': col} for col in dff.columns]
+    return html.Div(["Select variable:", dcc.Dropdown(id='bar-dropdown', options=options)])
+
+
+@app.callback(
+    Output("bar-chart", "figure"),
+    [Input('json-df-div', 'children'),
+     Input('bar-dropdown', 'value')])
+def make_barchart(input_json_df, x):
+    print('make_barchart', x)
+    dff = pd.read_json(json.loads(input_json_df), orient='split')
+
+    # Manually group by the column selected - TODO is there an easier way to do this?
+    if x is not None:
+        grouped_df = dff[x].to_frame(0).groupby(0)
+
+        return go.Figure(data=go.Bar(x=[key for key, _ in grouped_df],
+                                     y=[item.size for key, item in grouped_df]))
+    else:
+        return go.Figure(data=go.Bar())
 
 
 def filter_facet(dff, facet, facet_cats, i):
     if facet is not None:
-        # if not isinstance(color, str):
-        #     print('dff', dff)
-        #     print('color', color)
-        #     print('facet', facet)
-        #     return dff[dff[facet] == facet_cats[i]], color[dff[facet] == facet_cats[i]]
-        # else:
         return dff[dff[facet] == facet_cats[i]]
     else:
         return dff
@@ -103,8 +111,6 @@ def filter_facet(dff, facet, facet_cats, i):
 def map_color(dff):
     values = sorted(dff.unique())
     all_values = pd.Series(list(map(lambda x: values.index(x), dff)), index=dff.index)
-    print(dff)
-    print(all_values)
     if all([value == 0 for value in all_values]):
         all_values = pd.Series([1 for _ in all_values])
     return all_values
@@ -112,17 +118,11 @@ def map_color(dff):
 
 @app.callback(
     Output("graph1", "figure"),
-    [Input('my-div', 'children'),
+    [Input('json-df-div', 'children'),
      *(Input(d, "value") for d in graph_dimensions)])
 def make_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None):
     dff = pd.read_json(json.loads(input_json_df), orient='split')
     print('make_figure', x, y, color, facet_col, facet_row)
-    # return go.Figure(data=go.Scatter(x=dff[x], y=dff[y], color=color, facet_row=facet_row, facet_col=facet_col, mode='markers'))
-    # print('dffx', dff[x])
-    # print('dffy', dff[y])
-    print(x)
-    print(y)
-    print(dff.dropna())
     if facet_row is not None:
         facet_row_cats = dff[facet_row].unique()
     else:
@@ -138,7 +138,7 @@ def make_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None)
             color_to_use = default_marker_color
         # Otherwise, if the dtype is categorical, then we need to map - otherwise, leave as it is
         else:
-            # dff.dropna(inplace=True, subset=[color])
+            dff.dropna(inplace=True, subset=[color])
             print('color_to_use', color)
             color_to_use = pd.DataFrame(dff[color])
             print('color_to_use2', color)
@@ -174,15 +174,6 @@ def make_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None)
         fig.update_layout(coloraxis=dict(colorscale='Bluered_r'), showlegend=False, )
         fig.update_xaxes(matches='x')
         fig.update_yaxes(matches='y')
-        # fig.show()
-        # return px.scatter(
-        #     x=dff.dropna()[x],
-        #     y=dff.dropna()[y],
-        #     color=dff.dropna()[color] if color is not None else None,
-        #     # facet_col=facet_col,
-        #     # facet_row=facet_row,
-        #     height=700
-        # )
         return fig
     else:
         return px.scatter()
@@ -190,13 +181,10 @@ def make_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None)
 
 @app.callback(
     Output('table_preview', 'children'),
-    [Input('my-div', 'children')])
+    [Input('json-df-div', 'children')])
 def update_preview_table(input_json_df):
     print('update_preview_table')
     dff = pd.read_json(json.loads(input_json_df), orient='split')
-    # subset_df = dff[row_value[0]:row_value[1]]
-    # if set(col_value).intersection(set(dff.columns)):
-    #     subset_df = subset_df[col_value]
     # Add the index back in as a column so we can see it in the table preview
     if dff.size > 0:
         dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
@@ -207,9 +195,10 @@ def update_preview_table(input_json_df):
     ),
     )
 
+
 @app.callback(
     dash.dependencies.Output('graph1-selection', 'children'),
-    [dash.dependencies.Input('my-div', 'children')])
+    [dash.dependencies.Input('json-df-div', 'children')])
 def update_select_columns(input_json_df):
     print('update_select_columns')
     dff = pd.read_json(json.loads(input_json_df), orient='split')
@@ -222,8 +211,9 @@ def update_select_columns(input_json_df):
         'margin-right':'2em',
     }
     return html.Div([
-        html.Div([d + ":", dcc.Dropdown(id=d, options=options)], style=style_dict) for d in graph_dimensions],
+        html.Div([value + ":", dcc.Dropdown(id=key, options=options)], style=style_dict) for key, value in graph_dimensions.items()],
         )
+
 
 def standardise_subjectkey(subjectkey):
     if subjectkey[4] == "_":
@@ -232,7 +222,7 @@ def standardise_subjectkey(subjectkey):
         return subjectkey[0:4]+"_"+subjectkey[4:]
 
 @app.callback(
-    Output(component_id='my-div', component_property='children'),
+    Output(component_id='json-df-div', component_property='children'),
     [Input(component_id='file-dropdown', component_property='value')]
 )
 def update_output_div(input_value):
