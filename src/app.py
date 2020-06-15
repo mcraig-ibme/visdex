@@ -68,7 +68,40 @@ app.layout = html.Div(children=[
         id='bar-chart',
         figure=go.Figure(data=go.Bar()),
     ),
+    html.H2(children="Boxplot per category"),
+    html.Div(id='box-div',
+             children=[html.Div(["Select variables to view:", dcc.Dropdown(id='box-dropdown', options=([]))])]),
+    dcc.Graph(
+        id='box-plot',
+        figure=go.Figure(data=go.Bar()),
+    ),
 ])
+
+
+@app.callback(
+    Output('box-div', 'children'),
+    [Input('json-df-div', 'children')])
+# Standard dropdown to select column of interest
+def update_box_columns(input_json_df):
+    print('update_box_columns')
+    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    options = [{'label': col,
+                'value': col} for col in dff.columns]
+    return html.Div(["Select variable:", dcc.Dropdown(id='box-dropdown', options=options)])
+
+
+@app.callback(
+    Output("box-plot", "figure"),
+    [Input('json-df-div', 'children'),
+     Input('box-dropdown', 'value')])
+def make_boxplot(input_json_df, x):
+    print('make_boxplot', x)
+    dff = pd.read_json(json.loads(input_json_df), orient='split')
+
+    if x is not None:
+        return go.Figure(go.Box(x=dff[x].dropna(), boxpoints="all"))
+    else:
+        return go.Figure()
 
 
 @app.callback(
