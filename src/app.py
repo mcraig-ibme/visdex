@@ -2,7 +2,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State, MATCH, ALL
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -13,7 +13,7 @@ import json
 graph_dimensions = {"x": "x", "y": "y", "color": "color (will drop NAs)", "facet_col": "split horizontally", "facet_row": "split vertically"}
 global_width = '100%'
 default_marker_color = "crimson"
-file_extensions=['*.txt','*.xlsx']
+file_extensions = ['*.txt','*.xlsx']
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -28,6 +28,11 @@ style_dict = {
     }
 
 test_df = pd.read_excel('../data/ABCD_PSB01.xlsx', delim_whitespace=True).head(n=10)
+
+
+def generate_graph_button(graph_no):
+    return html.Button('Show Graph '+str(graph_no), id='add-graph-button'+str(graph_no))
+
 
 app.layout = html.Div(children=[
     html.H1(children='ABCD data exploration dashboard'),
@@ -75,7 +80,44 @@ app.layout = html.Div(children=[
         id='box-plot',
         figure=go.Figure(data=go.Bar()),
     ),
+    html.Div(id='graph-group-container', children=[]),
+    generate_graph_button(1),
+    # generate_graph_group('graph-group-1', go.Figure(data=go.Bar()), graph_no=1, style={'display': 'none'}),
 ])
+
+
+
+@app.callback(
+    Output('graph-group-container', 'children'),
+    [Input('add-graph-button1', 'n_clicks')],
+    [State('graph-group-container', 'children')])
+def display_graph_groups(n_clicks, children):
+    # Add a new graph group each time the button is clicked. The if None guard stops there being an initial graph.
+    if n_clicks is not None:
+        new_graph_group = html.Div(id={
+                'type': 'filter-graph-group',
+                'index': n_clicks
+            },
+            children=[html.Div([value + ":", dcc.Dropdown(id=key+str(n_clicks), options=[])],
+                               style=style_dict
+                               )
+                      for key, value in graph_dimensions.items()]
+            + [dcc.Graph(id='gen_graph'+str(n_clicks), figure=go.Figure(data=go.Bar()))]
+        )
+        children.append(new_graph_group)
+    return children
+
+
+# @app.callback(
+#     Output('graph-group-1', 'style'),
+#     [Input('add-graph-button1', 'n_clicks')]
+# )
+# def show_graph_group1(n_clicks):
+#     print('show_graph_group1')
+#     if n_clicks is not None:
+#         if n_clicks % 2:
+#             return {'display': 'block'}
+#     return {'display': 'none'}
 
 
 @app.callback(
