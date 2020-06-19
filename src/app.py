@@ -93,20 +93,55 @@ app.layout = html.Div(children=[
     [State('graph-group-container', 'children')])
 def display_graph_groups(n_clicks, children):
     # Add a new graph group each time the button is clicked. The if None guard stops there being an initial graph.
+    print('children0', children)
     if n_clicks is not None:
         new_graph_group = html.Div(id={
                 'type': 'filter-graph-group',
                 'index': n_clicks
             },
-            children=[html.Div([value + ":", dcc.Dropdown(id=key+str(n_clicks), options=[])],
+            children=[html.Div([value + ":", dcc.Dropdown(id={'type': key, 'index': n_clicks}, options=[])],
+                               id={'type': 'div'+str(key), 'index': n_clicks},
                                style=style_dict
-                               )
-                      for key, value in graph_dimensions.items()]
-            + [dcc.Graph(id='gen_graph'+str(n_clicks), figure=go.Figure(data=go.Bar()))]
+                              )
+                      for key, value in graph_dimensions.items()
+                      ]
+                      + [dcc.Graph(id={'type': 'gen_graph', 'index': n_clicks},
+                         figure=go.Figure(data=go.Bar()))]
         )
         children.append(new_graph_group)
+        print('children', children)
     return children
 
+
+@app.callback(
+    Output({'type': 'divx', 'index': MATCH}, 'children'),
+    [Input('json-df-div', 'children')],
+    [State({'type': 'x', 'index': MATCH}, 'id')],
+)
+def update_any_select_columns(input_json_df, x):
+    print('update_any_select_columns')
+    print(x)
+    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    options = [{'label': col,
+                'value': col} for col in dff.columns]
+    print(options)
+    style_dict = {
+        'width':'15%',
+        'display':'inline-block',
+        'verticalAlign':"middle",
+        'margin-right':'2em',
+    }
+    key='x'
+    value='x'
+    return [value + ":", dcc.Dropdown(id={'type': 'x', 'index': x['index']}, options=options)]
+
+                     # style=style_dict
+                    # )
+                    # for key, value in [x, y, color, facet_col, facet_row].items()]
+            # + [dcc.Graph(id={'type': 'gen_graph', 'index': n_clicks},
+            #              figure=go.Figure(data=go.Bar()))]
+    #options#html.Div([
+        #value + ":", dcc.Dropdown(id=key, options=options)], style=style_dict)
 
 # @app.callback(
 #     Output('graph-group-1', 'style'),
@@ -300,9 +335,9 @@ def standardise_subjectkey(subjectkey):
     Output(component_id='json-df-div', component_property='children'),
     [Input(component_id='file-dropdown', component_property='value')]
 )
-def update_output_div(input_value):
+def update_json_div(input_value):
 
-    print('update_output_div', input_value)
+    print('update_json_div', input_value)
     dfs = []
     # Read in files based upon their extension - assume .txt is a whitespace-delimited csv.
     for filename in input_value:
