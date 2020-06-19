@@ -93,7 +93,8 @@ app.layout = html.Div(children=[
     [State('graph-group-container', 'children')])
 def display_graph_groups(n_clicks, children):
     # Add a new graph group each time the button is clicked. The if None guard stops there being an initial graph.
-    print('children0', children)
+    print('display_graph_groups')
+    # print('children0', children)
     if n_clicks is not None:
         new_graph_group = html.Div(id={
                 'type': 'filter-graph-group',
@@ -109,50 +110,123 @@ def display_graph_groups(n_clicks, children):
                          figure=go.Figure(data=go.Bar()))]
         )
         children.append(new_graph_group)
-        print('children', children)
+        # print('children', children)
     return children
 
 
 @app.callback(
-    Output({'type': 'divx', 'index': MATCH}, 'children'),
+    [Output({'type': 'divx', 'index': MATCH}, 'children'),
+     Output({'type': 'divy', 'index': MATCH}, 'children'),
+     Output({'type': 'divcolor', 'index': MATCH}, 'children'),
+     Output({'type': 'divfacet_col', 'index': MATCH}, 'children'),
+     Output({'type': 'divfacet_row', 'index': MATCH}, 'children')],
     [Input('json-df-div', 'children')],
-    [State({'type': 'x', 'index': MATCH}, 'id')],
+    [State({'type': 'x', 'index': MATCH}, 'id'),
+     State({'type': 'x', 'index': MATCH}, 'value'),
+     State({'type': 'y', 'index': MATCH}, 'id'),
+     State({'type': 'y', 'index': MATCH}, 'value'),
+     State({'type': 'color', 'index': MATCH}, 'id'),
+     State({'type': 'color', 'index': MATCH}, 'value'),
+     State({'type': 'facet_col', 'index': MATCH}, 'id'),
+     State({'type': 'facet_col', 'index': MATCH}, 'value'),
+     State({'type': 'facet_row', 'index': MATCH}, 'id'),
+     State({'type': 'facet_row', 'index': MATCH}, 'value')],
 )
-def update_any_select_columns(input_json_df, x):
+def update_any_select_columns(input_json_df, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv):
     print('update_any_select_columns')
-    print(x)
+    print(x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv)
+    ctx = dash.callback_context
+    ctx_msg = json.dumps({
+        'states': ctx.states,
+        'triggered': ctx.triggered
+    }, indent=2)
+    print(ctx_msg)
     dff = pd.read_json(json.loads(input_json_df), orient='split')
     options = [{'label': col,
                 'value': col} for col in dff.columns]
-    print(options)
+    # print(options)
     style_dict = {
         'width':'15%',
         'display':'inline-block',
         'verticalAlign':"middle",
         'margin-right':'2em',
     }
-    key='x'
-    value='x'
-    return [value + ":", dcc.Dropdown(id={'type': 'x', 'index': x['index']}, options=options)]
+    return ["x:", dcc.Dropdown(id={'type': 'x', 'index': x['index']}, options=options, value=xv)], \
+           ["y:", dcc.Dropdown(id={'type': 'y', 'index': y['index']}, options=options, value=yv)], \
+           ["color:", dcc.Dropdown(id={'type': 'color', 'index': color['index']}, options=options, value=colorv)], \
+           ["split_horizontally:", dcc.Dropdown(id={'type': 'facet_col', 'index': facet_col['index']}, options=options, value=fcv)], \
+           ["split_vertically:", dcc.Dropdown(id={'type': 'facet_row', 'index': facet_row['index']}, options=options, value=frv)]
 
-                     # style=style_dict
-                    # )
-                    # for key, value in [x, y, color, facet_col, facet_row].items()]
-            # + [dcc.Graph(id={'type': 'gen_graph', 'index': n_clicks},
-            #              figure=go.Figure(data=go.Bar()))]
-    #options#html.Div([
-        #value + ":", dcc.Dropdown(id=key, options=options)], style=style_dict)
 
-# @app.callback(
-#     Output('graph-group-1', 'style'),
-#     [Input('add-graph-button1', 'n_clicks')]
-# )
-# def show_graph_group1(n_clicks):
-#     print('show_graph_group1')
-#     if n_clicks is not None:
-#         if n_clicks % 2:
-#             return {'display': 'block'}
-#     return {'display': 'none'}
+@app.callback(
+    Output({'type': 'gen_graph', 'index': MATCH}, "figure"),
+    [Input('json-df-div', 'children'),
+     *(Input({'type': d, 'index': MATCH}, "value") for d in graph_dimensions)])
+def make_any_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None):
+    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    print('make_any_figure', x, y, color, facet_col, facet_row)
+    ctx = dash.callback_context
+    ctx_msg = json.dumps({
+        'states': ctx.states,
+        'triggered': ctx.triggered
+    }, indent=2)
+    print(ctx_msg)
+    if facet_row is not None:
+        facet_row_cats = dff[facet_row].unique()
+    else:
+        facet_row_cats = [None]
+    if facet_col is not None:
+        facet_col_cats = dff[facet_col].unique()
+    else:
+        facet_col_cats = [None]
+    if dff.columns.size > 0 and x is not None and y is not None:
+        fig = make_subplots(len(facet_row_cats), len(facet_col_cats))
+        # If color is not provided, then use default
+        if color is None:
+            color_to_use = default_marker_color
+        # Otherwise, if the dtype is categorical, then we need to map - otherwise, leave as it is
+        else:
+            dff.dropna(inplace=True, subset=[color])
+            # print('color_to_use', color)
+            color_to_use = pd.DataFrame(dff[color])
+            # print('color_to_use2', color)
+
+            if dff[color].dtype == pd.CategoricalDtype:
+                # print("category detected")
+                dff['color_to_use'] = map_color(dff[color])
+                # print('color_to_use3', color_to_use)
+                # print(dff, dff['color_to_use'])
+            else:
+                color_to_use.set_index(dff.index, inplace=True)
+                dff['color_to_use'] = color_to_use
+        for i in range(len(facet_row_cats)):
+            for j in range(len(facet_col_cats)):
+                working_dff = dff
+                working_dff = filter_facet(working_dff, facet_row, facet_row_cats, i)
+                working_dff = filter_facet(working_dff, facet_col, facet_col_cats, j)
+                # print(working_dff.columns)
+                # print('color_to_use4',
+                #       working_dff['color_to_use'] if 'color_to_use' in working_dff.columns else color_to_use)
+                # print()
+                # print(working_dff['color_to_use'])
+                # print(color_to_use)
+                # print('dffx', working_dff[x])
+                # print('dffy', working_dff[y])
+                fig.add_trace(go.Scatter(x=working_dff[x],
+                                         y=working_dff[y],
+                                         mode='markers',
+                                         marker=dict(color=working_dff[
+                                             'color_to_use'] if 'color_to_use' in working_dff.columns else color_to_use,
+                                                     coloraxis="coloraxis",
+                                                     showscale=True)),
+                              i + 1,
+                              j + 1)
+        fig.update_layout(coloraxis=dict(colorscale='Bluered_r'), showlegend=False, )
+        fig.update_xaxes(matches='x')
+        fig.update_yaxes(matches='y')
+        return fig
+    else:
+        return px.scatter()
 
 
 @app.callback(
@@ -249,15 +323,15 @@ def make_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None)
         # Otherwise, if the dtype is categorical, then we need to map - otherwise, leave as it is
         else:
             dff.dropna(inplace=True, subset=[color])
-            print('color_to_use', color)
+            # print('color_to_use', color)
             color_to_use = pd.DataFrame(dff[color])
-            print('color_to_use2', color)
+            # print('color_to_use2', color)
 
             if dff[color].dtype == pd.CategoricalDtype:
-                print("category detected")
+                # print("category detected")
                 dff['color_to_use'] = map_color(dff[color])
-                print('color_to_use3', color_to_use)
-                print(dff, dff['color_to_use'])
+                # print('color_to_use3', color_to_use)
+                # print(dff, dff['color_to_use'])
             else:
                 color_to_use.set_index(dff.index, inplace=True)
                 dff['color_to_use'] = color_to_use
@@ -266,13 +340,13 @@ def make_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None)
                 working_dff = dff
                 working_dff = filter_facet(working_dff, facet_row, facet_row_cats, i)
                 working_dff = filter_facet(working_dff, facet_col, facet_col_cats, j)
-                print(working_dff.columns)
-                print('color_to_use4', working_dff['color_to_use'] if 'color_to_use' in working_dff.columns else color_to_use)
-                print()
+                # print(working_dff.columns)
+                # print('color_to_use4', working_dff['color_to_use'] if 'color_to_use' in working_dff.columns else color_to_use)
+                # print()
                 # print(working_dff['color_to_use'])
                 # print(color_to_use)
-                print('dffx', working_dff[x])
-                print('dffy', working_dff[y])
+                # print('dffx', working_dff[x])
+                # print('dffy', working_dff[y])
                 fig.add_trace(go.Scatter(x=working_dff[x],
                                          y=working_dff[y],
                                          mode='markers',
@@ -377,7 +451,7 @@ def update_json_div(input_value):
 
         for (df, df_name) in zip(dfs[1:], input_value[1:]):
             total_df = total_df.join(df.add_suffix('_'+df_name), how='outer')
-        print(total_df.dtypes)
+        # print(total_df.dtypes)
         return json.dumps(total_df.to_json(orient='split', date_format='iso'))
 
     else:
