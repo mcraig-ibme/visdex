@@ -7,6 +7,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
+import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline
 import glob
 import json
 
@@ -21,7 +25,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.config['suppress_callback_exceptions'] = True
 
 style_dict = {
-        'width': '15%',
+        'width': '13%',
         'display': 'inline-block',
         'verticalAlign': "middle",
         'margin-right': '2em',
@@ -62,7 +66,16 @@ app.layout = html.Div(children=[
 
     # Div holds the graph selection elements
     html.Div(id='graph1-selection',
-             children=[html.Div([value + ":", dcc.Dropdown(id=key, options=[])], style=style_dict) for key, value in graph_dimensions.items()]),
+             children=[html.Div([value + ":", dcc.Dropdown(id=key, options=[])], style=style_dict) for key, value in graph_dimensions.items()]
+             + [html.Div(["regression:", dcc.Input(id="regression",
+                                                   type='number',
+                                                   min=0,
+                                                   step=1
+                                                   )
+                          ],
+                         style=style_dict)
+                ]
+             ),
 
     dcc.Graph(id="graph1", style={"width": global_width}),
 
@@ -106,6 +119,13 @@ def display_graph_groups(n_clicks, children):
                               )
                       for key, value in graph_dimensions.items()
                       ]
+                      + [html.Div(["regression:", dcc.Input(id={'type': 'regression', 'index': n_clicks},
+                                                            type='number',
+                                                            min=0,
+                                                            step=1,
+                                                            )],
+                                  id={'type': 'divregression', 'index': n_clicks},
+                                  style=style_dict)]
                       + [dcc.Graph(id={'type': 'gen_graph', 'index': n_clicks},
                          figure=go.Figure(data=go.Bar()))]
         )
@@ -119,7 +139,8 @@ def display_graph_groups(n_clicks, children):
      Output({'type': 'divy', 'index': MATCH}, 'children'),
      Output({'type': 'divcolor', 'index': MATCH}, 'children'),
      Output({'type': 'divfacet_col', 'index': MATCH}, 'children'),
-     Output({'type': 'divfacet_row', 'index': MATCH}, 'children')],
+     Output({'type': 'divfacet_row', 'index': MATCH}, 'children'),
+     Output({'type': 'divregression', 'index': MATCH}, 'children')],
     [Input('json-df-div', 'children')],
     [State({'type': 'x', 'index': MATCH}, 'id'),
      State({'type': 'x', 'index': MATCH}, 'value'),
@@ -130,11 +151,14 @@ def display_graph_groups(n_clicks, children):
      State({'type': 'facet_col', 'index': MATCH}, 'id'),
      State({'type': 'facet_col', 'index': MATCH}, 'value'),
      State({'type': 'facet_row', 'index': MATCH}, 'id'),
-     State({'type': 'facet_row', 'index': MATCH}, 'value')],
+     State({'type': 'facet_row', 'index': MATCH}, 'value'),
+     State({'type': 'regression', 'index': MATCH}, 'id'),
+     State({'type': 'regression', 'index': MATCH}, 'value')
+     ],
 )
-def update_any_select_columns(input_json_df, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv):
+def update_any_select_columns(input_json_df, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv):
     print('update_any_select_columns')
-    print(x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv)
+    print(x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv)
     ctx = dash.callback_context
     ctx_msg = json.dumps({
         'states': ctx.states,
@@ -155,16 +179,22 @@ def update_any_select_columns(input_json_df, x, xv, y, yv, color, colorv, facet_
            ["y:", dcc.Dropdown(id={'type': 'y', 'index': y['index']}, options=options, value=yv)], \
            ["color:", dcc.Dropdown(id={'type': 'color', 'index': color['index']}, options=options, value=colorv)], \
            ["split_horizontally:", dcc.Dropdown(id={'type': 'facet_col', 'index': facet_col['index']}, options=options, value=fcv)], \
-           ["split_vertically:", dcc.Dropdown(id={'type': 'facet_row', 'index': facet_row['index']}, options=options, value=frv)]
+           ["split_vertically:", dcc.Dropdown(id={'type': 'facet_row', 'index': facet_row['index']}, options=options, value=frv)], \
+           ["regression degree:", dcc.Input(id={'type': 'regression', 'index': regression['index']},
+                                            type='number',
+                                            min=0,
+                                            step=1,
+                                            value=regv)]
 
 
 @app.callback(
     Output({'type': 'gen_graph', 'index': MATCH}, "figure"),
     [Input('json-df-div', 'children'),
-     *(Input({'type': d, 'index': MATCH}, "value") for d in graph_dimensions)])
-def make_any_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None):
+     *(Input({'type': d, 'index': MATCH}, "value") for d in graph_dimensions),
+     Input({'type': 'regression', 'index': MATCH}, "value")])
+def make_any_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
     dff = pd.read_json(json.loads(input_json_df), orient='split')
-    print('make_any_figure', x, y, color, facet_col, facet_row)
+    print('make_any_figure', x, y, color, facet_col, facet_row, regression_degree)
     ctx = dash.callback_context
     ctx_msg = json.dumps({
         'states': ctx.states,
@@ -221,6 +251,22 @@ def make_any_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=N
                                                      showscale=True)),
                               i + 1,
                               j + 1)
+
+                # Add regression lines
+                print('regression_degree', regression_degree)
+                if regression_degree is not None:
+                    working_dff.dropna(inplace=True)
+                    # Guard against fitting an empty graph
+                    if len(working_dff) > 0:
+                        working_dff.sort_values(by=x, inplace=True)
+                        Y = working_dff[y]
+                        X = working_dff[x]
+                        model = Pipeline([('poly', PolynomialFeatures(degree=regression_degree)),
+                                          ('linear', LinearRegression(fit_intercept=False))])
+                        reg = model.fit(np.vstack(X), Y)
+                        Y_pred = reg.predict(np.vstack(X))
+                        fig.add_trace(go.Scatter(name='line of best fit', x=X, y=Y_pred, mode='lines'))
+
         fig.update_layout(coloraxis=dict(colorscale='Bluered_r'), showlegend=False, )
         fig.update_xaxes(matches='x')
         fig.update_yaxes(matches='y')
@@ -303,10 +349,11 @@ def map_color(dff):
 @app.callback(
     Output("graph1", "figure"),
     [Input('json-df-div', 'children'),
-     *(Input(d, "value") for d in graph_dimensions)])
-def make_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None):
+     *(Input(d, "value") for d in graph_dimensions),
+     Input('regression', "value")])
+def make_scatter(input_json_df, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
     dff = pd.read_json(json.loads(input_json_df), orient='split')
-    print('make_figure', x, y, color, facet_col, facet_row)
+    print('make_scatter', x, y, color, facet_col, facet_row)
     if facet_row is not None:
         facet_row_cats = dff[facet_row].unique()
     else:
@@ -323,15 +370,11 @@ def make_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None)
         # Otherwise, if the dtype is categorical, then we need to map - otherwise, leave as it is
         else:
             dff.dropna(inplace=True, subset=[color])
-            # print('color_to_use', color)
+
             color_to_use = pd.DataFrame(dff[color])
-            # print('color_to_use2', color)
 
             if dff[color].dtype == pd.CategoricalDtype:
-                # print("category detected")
                 dff['color_to_use'] = map_color(dff[color])
-                # print('color_to_use3', color_to_use)
-                # print(dff, dff['color_to_use'])
             else:
                 color_to_use.set_index(dff.index, inplace=True)
                 dff['color_to_use'] = color_to_use
@@ -340,13 +383,7 @@ def make_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None)
                 working_dff = dff
                 working_dff = filter_facet(working_dff, facet_row, facet_row_cats, i)
                 working_dff = filter_facet(working_dff, facet_col, facet_col_cats, j)
-                # print(working_dff.columns)
-                # print('color_to_use4', working_dff['color_to_use'] if 'color_to_use' in working_dff.columns else color_to_use)
-                # print()
-                # print(working_dff['color_to_use'])
-                # print(color_to_use)
-                # print('dffx', working_dff[x])
-                # print('dffy', working_dff[y])
+
                 fig.add_trace(go.Scatter(x=working_dff[x],
                                          y=working_dff[y],
                                          mode='markers',
@@ -355,6 +392,21 @@ def make_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None)
                                                      showscale=True)),
                               i + 1,
                               j + 1)
+
+                # Add regression lines
+                if regression_degree is not None:
+                    working_dff.dropna(inplace=True)
+                    # Guard against fitting an empty graph
+                    if len(working_dff) > 0:
+                        working_dff.sort_values(by=x, inplace=True)
+                        Y = working_dff[y]
+                        X = working_dff[x]
+                        model = Pipeline([('poly', PolynomialFeatures(degree=regression_degree)),
+                                          ('linear', LinearRegression(fit_intercept=False))])
+                        reg = model.fit(np.vstack(X), Y)
+                        Y_pred = reg.predict(np.vstack(X))
+                        fig.add_trace(go.Scatter(name='line of best fit', x=X, y=Y_pred, mode='lines'))
+
         fig.update_layout(coloraxis=dict(colorscale='Bluered_r'), showlegend=False, )
         fig.update_xaxes(matches='x')
         fig.update_yaxes(matches='y')
@@ -389,13 +441,22 @@ def update_select_columns(input_json_df):
     options = [{'label': col,
                 'value': col} for col in dff.columns]
     style_dict = {
-        'width':'15%',
+        'width':'13%',
         'display':'inline-block',
         'verticalAlign':"middle",
         'margin-right':'2em',
     }
     return html.Div([
-        html.Div([value + ":", dcc.Dropdown(id=key, options=options)], style=style_dict) for key, value in graph_dimensions.items()],
+        html.Div([value + ":", dcc.Dropdown(id=key, options=options)],
+                 style=style_dict
+                 )
+        for key, value in graph_dimensions.items()]
+        + [html.Div(["regression:", dcc.Input(id="regression",
+                                                            type='number',
+                                                            min=0,
+                                                            step=1
+                                                           )
+                     ], style=style_dict)]
         )
 
 
