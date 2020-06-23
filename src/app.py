@@ -63,7 +63,7 @@ app.layout = html.Div(children=[
     # Hidden div for holding the jsonised combined DF in use
     html.Div(id='json-df-div', style={'display': 'none'}, children=[]),
 
-
+    html.H2(children="Scatter"),
     # Div holds the graph selection elements
     html.Div(id='graph1-selection',
              children=[html.Div([value + ":", dcc.Dropdown(id=key, options=[])], style=style_dict) for key, value in graph_dimensions.items()]
