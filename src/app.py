@@ -53,7 +53,10 @@ app.layout = html.Div(children=[
     ),
     html.H2(children="Table Preview"),
     html.Div(id='table_preview',
-                 style={'width': global_width}),
+             style={'width': global_width}),
+    html.H2(children="Table Summary"),
+    html.Div(id='table_summary',
+             style={'width': global_width}),
     # dcc.Dropdown(
     #     id='column-dropdown',
     #     options=[{'label': 'hello',
@@ -413,6 +416,26 @@ def make_scatter(input_json_df, x, y, color=None, facet_col=None, facet_row=None
         return fig
     else:
         return px.scatter()
+
+
+@app.callback(
+    Output('table_summary', 'children'),
+    [Input('json-df-div', 'children')])
+def update_summary_table(input_json_df):
+    print('update_summary_table')
+    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    # Add the index back in as a column so we can see it in the table preview
+    if dff.size > 0:
+        dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
+        description_df = dff.describe()
+        description_df.insert(loc=0, column='', value=description_df.index)
+        return html.Div(dash_table.DataTable(
+          id='table',
+          columns=[{"name": i, "id": i, 'type': 'numeric', 'format': {'specifier': '.2f'}} for i in description_df.columns],
+          data=description_df.to_dict('record'),
+    ),
+    )
+    return html.Div()
 
 
 @app.callback(
