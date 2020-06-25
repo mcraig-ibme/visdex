@@ -427,12 +427,23 @@ def update_summary_table(input_json_df):
     # Add the index back in as a column so we can see it in the table preview
     if dff.size > 0:
         dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
-        description_df = dff.describe()
+        description_df = dff.describe().transpose()
         description_df.insert(loc=0, column='', value=description_df.index)
         return html.Div(dash_table.DataTable(
-          id='table',
-          columns=[{"name": i, "id": i, 'type': 'numeric', 'format': {'specifier': '.2f'}} for i in description_df.columns],
-          data=description_df.to_dict('record'),
+            id='table',
+            columns=[{"name": i.upper(), "id": i, 'type': 'numeric', 'format': {'specifier': '.2f'}} for i in description_df.columns],
+            data=description_df.to_dict('record'),
+            # Highlight any columns that do not have a complete set of records,
+            # by comparing count against the length of the DF.
+            style_data_conditional=[{
+                'if': {
+                    'filter_query': '{{count}} < {}'.format(dff.shape[0]),
+                    'column_id': 'count'
+                },
+                'backgroundColor': 'FireBrick',
+                'color': 'white'
+                  }
+            ]
     ),
     )
     return html.Div()
