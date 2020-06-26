@@ -473,7 +473,7 @@ def update_heatmap_dropdown(input_json_df):
                 'value': col} for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
     return [html.Div(["Select variables to display:", dcc.Dropdown(id='heatmap-dropdown',
                                                                    options=options,
-                                                                   value=list(dff.columns),
+                                                                   value=[col for col in dff.columns if dff[col].dtype in [np.int64, np.float64]],
                                                                    multi=True)])]
 
 
