@@ -13,6 +13,8 @@ import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
+from psych_dashboard import preview_table
+from psych_dashboard.app import app
 
 
 graph_dimensions = {"x": "x",
@@ -26,8 +28,6 @@ file_extensions = ['*.txt', '*.xlsx']
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-app.config['suppress_callback_exceptions'] = True
 
 style_dict = {
         'width': '13%',
@@ -496,23 +496,6 @@ def update_summary_heatmap(input_json_df, dropdown_values):
                          )
 
     return go.Figure(go.Heatmap())
-
-
-@app.callback(
-    Output('table_preview', 'children'),
-    [Input('json-df-div', 'children')])
-def update_preview_table(input_json_df):
-    print('update_preview_table')
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
-    # Add the index back in as a column so we can see it in the table preview
-    if dff.size > 0:
-        dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
-    return html.Div(dash_table.DataTable(
-        id='table',
-        columns=[{"name": i, "id": i} for i in dff.columns],
-        data=dff.head().to_dict('record'),
-    ),
-                    )
 
 
 @app.callback(
