@@ -13,6 +13,7 @@ import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
+from scipy.cluster.vq import kmeans,vq,whiten
 from psych_dashboard import preview_table
 from psych_dashboard.app import app
 
@@ -488,10 +489,29 @@ def update_summary_heatmap(input_json_df, dropdown_values):
     if dff.size > 0 and dropdown_values != []:
         dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
         selected_columns = list(dropdown_values)
+        print('selected_columns', selected_columns)
         cov = dff[selected_columns].cov()
-        return go.Figure(go.Heatmap(z=cov,
-                                    x=cov.columns,
-                                    y=cov.columns
+        print('cov', cov)
+        # K-means clustering of covariance values.
+        w_cov = whiten(cov)
+        print(w_cov)
+        centroids, _ = kmeans(w_cov, min(4,w_cov.shape[0]))
+        print(centroids)
+        # Generate the indices for each column, which cluster they belong to.
+        clx, _ = vq(w_cov, centroids)
+        print(clx)
+        print([x for _,x in sorted(zip(clx,selected_columns))])
+        # TODO: what would be good here would be to rename the clusters based on the average variance (diags) within
+        # TODO: each cluster - that would reduce the undesirable behaviour whereby currently the clusters can jump about
+        # TODO: when re-calculating the clustering.
+        # Sort cov columns
+        half_sorted_cov = cov[[x for _,x in sorted(zip(clx,selected_columns))]]
+        print(half_sorted_cov)
+        # Sort cov rows
+        sorted_cov = half_sorted_cov.reindex([x for _, x in sorted(zip(clx, selected_columns))])
+        return go.Figure(go.Heatmap(z=sorted_cov,
+                                    x=sorted_cov.columns,
+                                    y=sorted_cov.columns
                                     )
                          )
 
