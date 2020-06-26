@@ -485,7 +485,7 @@ def update_summary_heatmap(input_json_df, dropdown_values):
     print('update_summary_heatmap')
     dff = pd.read_json(json.loads(input_json_df), orient='split')
     # Add the index back in as a column so we can see it in the table preview
-    if dff.size > 0:
+    if dff.size > 0 and dropdown_values != []:
         dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
         selected_columns = list(dropdown_values)
         cov = dff[selected_columns].cov()
