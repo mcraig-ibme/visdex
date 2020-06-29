@@ -9,6 +9,7 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 from psych_dashboard.app import app
 from scipy.cluster.vq import kmeans, vq, whiten
+from sklearn.cluster import AgglomerativeClustering
 
 
 @app.callback(
@@ -76,7 +77,7 @@ def update_heatmap_dropdown(input_json_df):
     [State('json-df-div', 'children')])
 def update_summary_heatmap(dropdown_values, input_json_df):
     print('update_summary_heatmap')
-    print('i', input_json_df)
+
     # Guard against the second argument being an empty list, as happens at first invocation
     if not input_json_df == []:
         dff = pd.read_json(json.loads(input_json_df), orient='split')
@@ -87,16 +88,26 @@ def update_summary_heatmap(dropdown_values, input_json_df):
             print('selected_columns', selected_columns)
             corr = dff[selected_columns].corr(min_periods=1)
             print('corr', corr)
-            # K-means clustering of correlation values.
             corr.fillna(0, inplace=True)
-            w_corr = whiten(corr)
-            print(w_corr)
-            centroids, _ = kmeans(w_corr, min(7, int(math.sqrt(w_corr.shape[0]))))
-            print(centroids)
-            # Generate the indices for each column, which cluster they belong to.
-            clx, _ = vq(w_corr, centroids)
+            cluster_method = 'hierarchical'
+            if cluster_method == 'Kmeans':
+                # K-means clustering of correlation values.
+                w_corr = whiten(corr)
+                centroids, _ = kmeans(w_corr, min(7, int(math.sqrt(w_corr.shape[0]))))
+                # Generate the indices for each column, which cluster they belong to.
+                clx, _ = vq(w_corr, centroids)
+
+            elif cluster_method == 'hierarchical':
+                cluster = AgglomerativeClustering(n_clusters=20, affinity='euclidean', linkage='ward')
+                cluster.fit_predict(corr)
+                clx = cluster.labels_
+
+            else:
+                raise ValueError
+
             print(clx)
             print([x for _,x in sorted(zip(clx, selected_columns))])
+
             # TODO: what would be good here would be to rename the clusters based on the average variance (diags) within
             # TODO: each cluster - that would reduce the undesirable behaviour whereby currently the clusters can jump about
             # TODO: when re-calculating the clustering.
