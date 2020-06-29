@@ -3,3 +3,5 @@ xlrd
 plotly
 dash
 sklearn
+numpy
+scipy
