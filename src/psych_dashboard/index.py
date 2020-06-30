@@ -28,15 +28,12 @@ file_extensions = ['*.txt', '*.xlsx']
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-
 style_dict = {
         'width': '13%',
         'display': 'inline-block',
         'verticalAlign': "middle",
         'margin-right': '2em',
     }
-
-test_df = pd.read_excel('../data/ABCD_PSB01.xlsx', delim_whitespace=True).head(n=10)
 
 
 def generate_graph_button(graph_no):
@@ -133,7 +130,6 @@ app.layout = html.Div(children=[
     html.Div(id='graph-group-container', children=[]),
     generate_graph_button(1),
 ])
-
 
 
 @app.callback(
@@ -294,7 +290,6 @@ def make_any_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=N
     fig.update_xaxes(matches='x')
     fig.update_yaxes(matches='y')
     return fig
-
 
 
 @app.callback(
