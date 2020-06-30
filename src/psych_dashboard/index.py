@@ -1,5 +1,6 @@
 import glob
 import json
+import itertools
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -169,26 +170,13 @@ def display_graph_groups(n_clicks, children):
 
 
 @app.callback(
-    [Output({'type': 'divx', 'index': MATCH}, 'children'),
-     Output({'type': 'divy', 'index': MATCH}, 'children'),
-     Output({'type': 'divcolor', 'index': MATCH}, 'children'),
-     Output({'type': 'divfacet_col', 'index': MATCH}, 'children'),
-     Output({'type': 'divfacet_row', 'index': MATCH}, 'children'),
-     Output({'type': 'divregression', 'index': MATCH}, 'children')],
+    [Output({'type': 'div'+str(t), 'index': MATCH}, 'children')
+     for t in (list(graph_dimensions) + ['regression'])],
     [Input('json-df-div', 'children')],
-    [State({'type': 'x', 'index': MATCH}, 'id'),
-     State({'type': 'x', 'index': MATCH}, 'value'),
-     State({'type': 'y', 'index': MATCH}, 'id'),
-     State({'type': 'y', 'index': MATCH}, 'value'),
-     State({'type': 'color', 'index': MATCH}, 'id'),
-     State({'type': 'color', 'index': MATCH}, 'value'),
-     State({'type': 'facet_col', 'index': MATCH}, 'id'),
-     State({'type': 'facet_col', 'index': MATCH}, 'value'),
-     State({'type': 'facet_row', 'index': MATCH}, 'id'),
-     State({'type': 'facet_row', 'index': MATCH}, 'value'),
-     State({'type': 'regression', 'index': MATCH}, 'id'),
-     State({'type': 'regression', 'index': MATCH}, 'value')
-     ],
+    list(itertools.chain.from_iterable([State({'type': t, 'index': MATCH}, 'id'),
+                                        State({'type': t, 'index': MATCH}, 'value')
+                                        ] for t in (list(graph_dimensions) + ['regression'])))
+    ,
 )
 def update_any_select_columns(input_json_df, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv):
     print('update_any_select_columns')
@@ -222,8 +210,8 @@ def update_any_select_columns(input_json_df, x, xv, y, yv, color, colorv, facet_
 @app.callback(
     Output({'type': 'gen_graph', 'index': MATCH}, "figure"),
     [Input('json-df-div', 'children'),
-     *(Input({'type': d, 'index': MATCH}, "value") for d in graph_dimensions),
-     Input({'type': 'regression', 'index': MATCH}, "value")])
+     *(Input({'type': d, 'index': MATCH}, "value") for d in (list(graph_dimensions) + ['regression']))]
+)
 def make_any_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
     dff = pd.read_json(json.loads(input_json_df), orient='split')
     print('make_any_figure', x, y, color, facet_col, facet_row, regression_degree)
@@ -366,8 +354,8 @@ def map_color(dff):
 @app.callback(
     Output("graph1", "figure"),
     [Input('json-df-div', 'children'),
-     *(Input(d, "value") for d in graph_dimensions),
-     Input('regression', "value")])
+     *(Input(d, "value") for d in (list(graph_dimensions) + ['regression']))]
+)
 def make_scatter(input_json_df, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
     dff = pd.read_json(json.loads(input_json_df), orient='split')
     print('make_scatter', x, y, color, facet_col, facet_row)

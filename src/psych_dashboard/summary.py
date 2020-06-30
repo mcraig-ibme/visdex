@@ -171,7 +171,7 @@ def update_summary_kde(dropdown_values, input_json_df):
                         fig.add_trace(go.Histogram(x=this_col, name=col_name, histnorm='probability density'),
                                       i+1,
                                       j+1)
-            fig.update_layout(height=100*n_rows)
+            fig.update_layout(height=200*n_rows)
             return fig
 
     return go.Figure(go.Scatter())
