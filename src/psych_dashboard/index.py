@@ -79,6 +79,10 @@ app.layout = html.Div(children=[
         id='heatmap',
         figure=go.Figure(data=go.Heatmap())
     ),
+    dcc.Graph(
+        id='kde-figure',
+        figure=go.Figure(data=go.Heatmap())
+    ),
 
     # Hidden div for holding the jsonised combined DF in use
     html.Div(id='json-df-div', style={'display': 'none'}, children=[]),

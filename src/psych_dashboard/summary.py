@@ -5,8 +5,10 @@ import numpy as np
 import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
+import scipy.stats as stats
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from psych_dashboard.app import app
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
@@ -98,10 +100,9 @@ def update_summary_heatmap(dropdown_values, input_json_df):
                 clx, _ = vq(w_corr, centroids)
 
             elif cluster_method == 'hierarchical':
-                cluster = AgglomerativeClustering(n_clusters=20, affinity='euclidean', linkage='ward')
+                cluster = AgglomerativeClustering(n_clusters=3, affinity='euclidean', linkage='ward')
                 cluster.fit_predict(corr)
                 clx = cluster.labels_
-
             else:
                 raise ValueError
 
@@ -126,3 +127,51 @@ def update_summary_heatmap(dropdown_values, input_json_df):
                              )
 
     return go.Figure(go.Heatmap())
+
+
+@app.callback(
+    Output('kde-figure', 'figure'),
+    [Input('heatmap-dropdown', 'value')],
+    [State('json-df-div', 'children')])
+def update_summary_kde(dropdown_values, input_json_df):
+    print('update_summary_kde')
+
+    # Guard against the second argument being an empty list, as happens at first invocation
+    if not input_json_df == []:
+        dff = pd.read_json(json.loads(input_json_df), orient='split')
+
+        n_columns = len(dropdown_values)
+        if n_columns > 0:
+            # Use a maximum of 5 columns
+            n_cols = min(5, math.ceil(math.sqrt(n_columns)))
+            n_rows = math.ceil(n_columns / n_cols)
+            fig = make_subplots(n_rows, n_cols)
+
+            # For each column, calculate its KDE and then plot that over the histogram.
+            for j in range(n_cols):
+                for i in range(n_rows):
+                    if i*n_cols+j < n_columns:
+                        col_name = dropdown_values[i*n_cols+j]
+                        this_col = dff[col_name]
+                        col_min = this_col.min()
+                        col_max = this_col.max()
+                        data_range = col_max - col_min
+                        # Generate KDE kernel
+                        kernel = stats.gaussian_kde(this_col.dropna())
+                        pad = 0.1
+                        # Generate linspace
+                        x = np.linspace(col_min - pad*data_range, col_max + pad*data_range, num=101)
+                        # Sample kernel
+                        y = kernel(x)
+                        # Plot KDE line graph using sampled data
+                        fig.add_trace(go.Scatter(x=x, y=y, name=col_name),
+                                      i+1,
+                                      j+1)
+                        # Plot normalised histogram of data
+                        fig.add_trace(go.Histogram(x=this_col, name=col_name, histnorm='probability density'),
+                                      i+1,
+                                      j+1)
+            fig.update_layout(height=100*n_rows)
+            return fig
+
+    return go.Figure(go.Scatter())
