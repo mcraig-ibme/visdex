@@ -116,8 +116,9 @@ def update_summary_heatmap(dropdown_values, input_json_df):
             print(half_sorted_corr)
             # Sort corr rows
             sorted_corr = half_sorted_corr.reindex([x for _, x in sorted(zip(clx, selected_columns))])
-            return go.Figure(go.Heatmap(z=sorted_corr,
-                                        x=sorted_corr.columns,
+
+            return go.Figure(go.Heatmap(z=np.fliplr(np.triu(sorted_corr)),
+                                        x=sorted_corr.columns[::-1],
                                         y=sorted_corr.columns,
                                         zmin=-1,
                                         zmax=1,
