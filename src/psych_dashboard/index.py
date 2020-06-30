@@ -59,29 +59,40 @@ app.layout = html.Div(children=[
         multi=True
     ),
     html.H2(children="Table Preview"),
-    html.Div(id='table_preview',
-             style={'width': global_width}),
+    dcc.Loading(
+        id='loading-table-preview',
+        children=[
+            html.Div(id='table_preview',
+                     style={'width': global_width})
+        ]
+    ),
     html.H2(children="Table Summary"),
-    html.Div(id='table_summary',
-             style={'width': global_width}),
-    # html.Div(id='table_heatmap',
-    #          style={'width': global_width},
-    #          children=[dcc.Dropdown(id='table_heatmap_dropdown', style={'display': 'none'}),
-    #                    dcc.Graph(id='table_heatmap_fig',
-    #                              figure=go.Figure(go.Heatmap()),
-    #                              style={'display': 'none'}
-    #                              )
-    #                    ]
-    #          ),
+    dcc.Loading(
+        id='loading-table-summary',
+        children=[
+            html.Div(id='table_summary',
+                     style={'width': global_width})
+            ]
+    ),
+    html.H2(children='Correlation Heatmap'),
     html.Div(id='heatmap-div',
              children=[html.Div(["Select variables to display:", dcc.Dropdown(id='heatmap-dropdown', options=([]))])]),
-    dcc.Graph(
-        id='heatmap',
-        figure=go.Figure(data=go.Heatmap())
+    dcc.Loading(
+        id='loading-heatmap',
+        children=[
+            dcc.Graph(id='heatmap',
+                      figure=go.Figure()
+                      )
+            ]
     ),
-    dcc.Graph(
-        id='kde-figure',
-        figure=go.Figure(data=go.Heatmap())
+    html.H2(children='Per-variable Histograms and KDEs'),
+    dcc.Loading(
+        id='loading-kde-figure',
+        children=[
+            dcc.Graph(id='kde-figure',
+                      figure=go.Figure()
+                      )
+            ]
     ),
 
     # Hidden div for holding the jsonised combined DF in use
