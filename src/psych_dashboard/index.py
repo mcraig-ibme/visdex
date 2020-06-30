@@ -254,8 +254,11 @@ def make_any_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=N
                                      marker=dict(color=working_dff[
                                          'color_to_use'] if 'color_to_use' in working_dff.columns else color_to_use,
                                                  coloraxis="coloraxis",
-                                                 showscale=True)
-                                     ),
+                                                 showscale=True),
+                                     hovertemplate=['SUBJECT_ID: ' + str(i) + ', DATASET_ID: ' + str(j) +
+                                                    '<extra></extra>'
+                                                    for i, j in zip(working_dff.index, working_dff.DATASET_ID)],
+            ),
                           i + 1,
                           j + 1)
 
