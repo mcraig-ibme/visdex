@@ -5,6 +5,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
+import dash_table
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -55,6 +56,10 @@ app.layout = html.Div(children=[
                  ],
         value=[],
         multi=True
+    ),
+    dcc.Loading(
+        id='loading-filenames-div',
+        children=[html.Div(id='filenames-div')],
     ),
     html.H2(children="Table Preview"),
     dcc.Loading(
@@ -456,8 +461,17 @@ def standardise_subjectkey(subjectkey):
     return subjectkey[0:4]+"_"+subjectkey[4:]
 
 
+def filename_and_number_to_abbr(filename, number):
+    """
+    Converts a given filename and filenumber (its position in the list of filenames) into a unique abbreviation for
+    use in column names etc.
+    """
+    return 'F' + str(number)
+
+
 @app.callback(
-    Output(component_id='json-df-div', component_property='children'),
+    [Output(component_id='json-df-div', component_property='children'),
+     Output(component_id='filenames-div', component_property='children')],
     [Input(component_id='file-dropdown', component_property='value')]
 )
 def update_json_div(input_value):
@@ -469,11 +483,11 @@ def update_json_div(input_value):
 
         if filename.endswith('.xlsx'):
 
-            dfs.append(pd.read_excel('../data/'+filename))
+            dfs.append(pd.read_excel(filename))
 
         elif filename.endswith('.txt'):
 
-            dfs.append(pd.read_csv('../data/' + filename, delim_whitespace=True))
+            dfs.append(pd.read_csv(filename, delim_whitespace=True))
 
     for df in dfs:
 
@@ -498,14 +512,24 @@ def update_json_div(input_value):
         total_df = dfs[0]
 
         if len(dfs) > 1:
-            total_df = total_df.add_suffix('_'+input_value[0])
+            total_df = total_df.add_suffix('@'+filename_and_number_to_abbr(input_value[0], 0))
 
-        for (df, df_name) in zip(dfs[1:], input_value[1:]):
-            total_df = total_df.join(df.add_suffix('_'+df_name), how='outer')
-        # print(total_df.dtypes)
-        return json.dumps(total_df.to_json(orient='split', date_format='iso'))
+            for (df_number, (df, df_name)) in enumerate(zip(dfs[1:], input_value[1:]), start=1):
+                total_df = total_df.join(df.add_suffix('@'+filename_and_number_to_abbr(df_name, df_number)),
+                                         how='outer')
 
-    return json.dumps(pd.DataFrame().to_json(orient='split', date_format='iso'))
+        return json.dumps(total_df.to_json(orient='split', date_format='iso')), \
+            [html.H3('File abbreviations:')] + \
+            [dash_table.DataTable(id='abbreviations-table',
+                                  columns=[{"name": i, "id": i} for i in ['Filename', 'Abbreviation']],
+                                  data=[{'Filename': filename,
+                                         'Abbreviation': filename_and_number_to_abbr(filename, i)
+                                         }
+                                        for i, filename in enumerate(input_value)]
+                                  )
+             ]
+
+    return json.dumps(pd.DataFrame().to_json(orient='split', date_format='iso')), html.Div()
 
 
 if __name__ == '__main__':
