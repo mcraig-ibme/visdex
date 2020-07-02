@@ -16,7 +16,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from psych_dashboard import preview_table
 from psych_dashboard import summary
-from psych_dashboard.app import app
+from psych_dashboard.app import app, indices
+from psych_dashboard.load_feather import load_feather
 
 
 graph_dimensions = {"x": "x",
@@ -98,8 +99,8 @@ app.layout = html.Div(children=[
             ]
     ),
 
-    # Hidden div for holding the jsonised combined DF in use
-    html.Div(id='json-df-div', style={'display': 'none'}, children=[]),
+    # Hidden div for holding the boolean identifying whether a DF is loaded
+    html.Div(id='df-loaded-div', style={'display': 'none'}, children=[]),
 
     html.H2(children="Scatter"),
     # Div holds the graph selection elements
@@ -177,13 +178,13 @@ def display_graph_groups(n_clicks, children):
 @app.callback(
     [Output({'type': 'div'+str(t), 'index': MATCH}, 'children')
      for t in (list(graph_dimensions) + ['regression'])],
-    [Input('json-df-div', 'children')],
+    [Input('df-loaded-div', 'children')],
     list(itertools.chain.from_iterable([State({'type': t, 'index': MATCH}, 'id'),
                                         State({'type': t, 'index': MATCH}, 'value')
                                         ] for t in (list(graph_dimensions) + ['regression'])))
     ,
 )
-def update_any_select_columns(input_json_df, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv):
+def update_any_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv):
     print('update_any_select_columns')
     print(x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv)
     ctx = dash.callback_context
@@ -194,7 +195,7 @@ def update_any_select_columns(input_json_df, x, xv, y, yv, color, colorv, facet_
         },
         indent=2)
     print(ctx_msg)
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    dff = load_feather(df_loaded)
     options = [{'label': col,
                 'value': col} for col in dff.columns]
 
@@ -214,11 +215,11 @@ def update_any_select_columns(input_json_df, x, xv, y, yv, color, colorv, facet_
 
 @app.callback(
     Output({'type': 'gen_graph', 'index': MATCH}, "figure"),
-    [Input('json-df-div', 'children'),
+    [Input('df-loaded-div', 'children'),
      *(Input({'type': d, 'index': MATCH}, "value") for d in (list(graph_dimensions) + ['regression']))]
 )
-def make_any_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
+def make_any_figure(df_loaded, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
+    dff = load_feather(df_loaded)
     print('make_any_figure', x, y, color, facet_col, facet_row, regression_degree)
     ctx = dash.callback_context
     ctx_msg = json.dumps({
@@ -260,9 +261,9 @@ def make_any_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=N
                                          'color_to_use'] if 'color_to_use' in working_dff.columns else color_to_use,
                                                  coloraxis="coloraxis",
                                                  showscale=True),
-                                     hovertemplate=['SUBJECT_ID: ' + str(i) + ', DATASET_ID: ' + str(j) +
-                                                    '<extra></extra>'
-                                                    for i, j in zip(working_dff.index, working_dff.DATASET_ID)],
+                                     # hovertemplate=['SUBJECT_ID: ' + str(i) + ', DATASET_ID: ' + str(j) +
+                                     #                '<extra></extra>'
+                                     #                for i, j in zip(working_dff.index, working_dff.DATASET_ID)],
             ),
                           i + 1,
                           j + 1)
@@ -290,11 +291,11 @@ def make_any_figure(input_json_df, x, y, color=None, facet_col=None, facet_row=N
 
 @app.callback(
     Output('box-div', 'children'),
-    [Input('json-df-div', 'children')])
+    [Input('df-loaded-div', 'children')])
 # Standard dropdown to select column of interest
-def update_box_columns(input_json_df):
+def update_box_columns(df_loaded):
     print('update_box_columns')
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    dff = load_feather(df_loaded)
     options = [{'label': col,
                 'value': col} for col in dff.columns]
     return html.Div(["Select variable:", dcc.Dropdown(id='box-dropdown', options=options)])
@@ -302,11 +303,11 @@ def update_box_columns(input_json_df):
 
 @app.callback(
     Output("box-plot", "figure"),
-    [Input('json-df-div', 'children'),
+    [Input('df-loaded-div', 'children'),
      Input('box-dropdown', 'value')])
-def make_boxplot(input_json_df, x):
+def make_boxplot(df_loaded, x):
     print('make_boxplot', x)
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    dff = load_feather(df_loaded)
 
     if x is not None:
         return go.Figure(go.Box(x=dff[x].dropna(), boxpoints="all"))
@@ -316,11 +317,11 @@ def make_boxplot(input_json_df, x):
 
 @app.callback(
     Output('bar-div', 'children'),
-    [Input('json-df-div', 'children')])
+    [Input('df-loaded-div', 'children')])
 # Standard dropdown to select column of interest
-def update_bar_columns(input_json_df):
+def update_bar_columns(df_loaded):
     print('update_bar_columns')
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    dff = load_feather(df_loaded)
     options = [{'label': col,
                 'value': col} for col in dff.columns]
     return html.Div(["Select variable:", dcc.Dropdown(id='bar-dropdown', options=options)])
@@ -328,11 +329,11 @@ def update_bar_columns(input_json_df):
 
 @app.callback(
     Output("bar-chart", "figure"),
-    [Input('json-df-div', 'children'),
+    [Input('df-loaded-div', 'children'),
      Input('bar-dropdown', 'value')])
-def make_barchart(input_json_df, x):
+def make_barchart(df_loaded, x):
     print('make_barchart', x)
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    dff = load_feather(df_loaded)
 
     # Manually group by the column selected - TODO is there an easier way to do this?
     if x is not None:
@@ -361,11 +362,11 @@ def map_color(dff):
 
 @app.callback(
     Output("graph1", "figure"),
-    [Input('json-df-div', 'children'),
+    [Input('df-loaded-div', 'children'),
      *(Input(d, "value") for d in (list(graph_dimensions) + ['regression']))]
 )
-def make_scatter(input_json_df, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
+def make_scatter(df_loaded, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
+    dff = load_feather(df_loaded)
     print('make_scatter', x, y, color, facet_col, facet_row)
 
     facet_row_cats = dff[facet_row].unique() if facet_row is not None else [None]
@@ -429,10 +430,10 @@ def make_scatter(input_json_df, x, y, color=None, facet_col=None, facet_row=None
 
 @app.callback(
     dash.dependencies.Output('graph1-selection', 'children'),
-    [dash.dependencies.Input('json-df-div', 'children')])
-def update_select_columns(input_json_df):
+    [dash.dependencies.Input('df-loaded-div', 'children')])
+def update_select_columns(df_loaded):
     print('update_select_columns')
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    dff = load_feather(df_loaded)
     options = [{'label': col,
                 'value': col} for col in dff.columns]
     return html.Div([html.Div([value + ":", dcc.Dropdown(id=key, options=options)],
@@ -470,13 +471,13 @@ def filename_and_number_to_abbr(filename, number):
 
 
 @app.callback(
-    [Output(component_id='json-df-div', component_property='children'),
+    [Output(component_id='df-loaded-div', component_property='children'),
      Output(component_id='filenames-div', component_property='children')],
     [Input(component_id='file-dropdown', component_property='value')]
 )
-def update_json_div(input_value):
+def update_df_loaded_div(input_value):
 
-    print('update_json_div', input_value)
+    print('update_df_loaded_div', input_value)
     dfs = []
     # Read in files based upon their extension - assume .txt is a whitespace-delimited csv.
     for filename in input_value:
@@ -492,10 +493,8 @@ def update_json_div(input_value):
     for df in dfs:
 
         # Reformat SUBJECTKEY if it doesn't have the underscore
+        # TODO: remove this when unnecessary
         df['SUBJECTKEY'] = df['SUBJECTKEY'].apply(standardise_subjectkey)
-
-        # Set SUBJECTKEY as index in all dfs
-        df.set_index('SUBJECTKEY', inplace=True, verify_integrity=True)
 
         # Set certain columns to have more specific types.
         if 'SEX' in df.columns:
@@ -504,6 +503,9 @@ def update_json_div(input_value):
         for column in ['EVENTNAME', 'SRC_SUBJECT_ID']:
             if column in df.columns:
                 df[column] = df[column].astype('string')
+
+        # Set SUBJECTKEY, EVENTNAME as MultiIndex in all dfs
+        df.set_index(indices, inplace=True, verify_integrity=True, drop=True)
 
     # Join all DFs on their index (that is, SUBJECTKEY), and suffix columns by the filename (if there's
     # more than one file)
@@ -517,8 +519,10 @@ def update_json_div(input_value):
             for (df_number, (df, df_name)) in enumerate(zip(dfs[1:], input_value[1:]), start=1):
                 total_df = total_df.join(df.add_suffix('@'+filename_and_number_to_abbr(df_name, df_number)),
                                          how='outer')
+        # Fill df.feather with the combined DF, and set df-loaded-div to True
 
-        return json.dumps(total_df.to_json(orient='split', date_format='iso')), \
+        total_df.reset_index().to_feather('df.feather')
+        return True, \
             [html.H3('File abbreviations:')] + \
             [dash_table.DataTable(id='abbreviations-table',
                                   columns=[{"name": i, "id": i} for i in ['Filename', 'Abbreviation']],
@@ -529,7 +533,9 @@ def update_json_div(input_value):
                                   )
              ]
 
-    return json.dumps(pd.DataFrame().to_json(orient='split', date_format='iso')), html.Div()
+    # If no DFs are selected, then fill df.feather with an empty DF, and set df-loaded-div to False
+    pd.DataFrame().reset_index().to_feather('df.feather')
+    return False, html.Div()
 
 
 if __name__ == '__main__':

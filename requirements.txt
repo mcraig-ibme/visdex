@@ -5,3 +5,4 @@ dash
 sklearn
 numpy
 scipy
+feather-format

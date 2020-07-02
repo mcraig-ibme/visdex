@@ -1,23 +1,28 @@
-import json
-import pandas as pd
 import dash_table
 import dash_html_components as html
 from dash.dependencies import Input, Output
-from psych_dashboard.app import app
+from psych_dashboard.app import app, indices
+from psych_dashboard.load_feather import load_feather
 
 
 @app.callback(
     Output('table_preview', 'children'),
-    [Input('json-df-div', 'children')])
-def update_preview_table(input_json_df):
+    [Input('df-loaded-div', 'children')])
+def update_preview_table(df_loaded):
     print('update_preview_table')
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
-    # Add the index back in as a column so we can see it in the table preview
+
+    dff = load_feather(df_loaded)
+
+    # Add the indices back in as columns so we can see them in the table preview
     if dff.size > 0:
-        dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
-    return html.Div(dash_table.DataTable(
-        id='table',
-        columns=[{"name": i, "id": i} for i in dff.columns],
-        data=dff.head().to_dict('record'),
-    ),
-                    )
+        for index_level, index in enumerate(indices):
+            dff.insert(loc=index_level, column=index, value=dff.index.get_level_values(index_level))
+
+        return html.Div(dash_table.DataTable(
+            id='table',
+            columns=[{"name": i, "id": i} for i in dff.columns],
+            data=dff.head().to_dict('record'),
+        ),
+                        )
+
+    return html.Div(dash_table.DataTable(id='table'))

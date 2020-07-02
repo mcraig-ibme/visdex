@@ -1,6 +1,4 @@
-import json
 import math
-import pandas as pd
 import numpy as np
 import dash_table
 import dash_core_components as dcc
@@ -9,20 +7,24 @@ import scipy.stats as stats
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from psych_dashboard.app import app
+from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
+from psych_dashboard.load_feather import load_feather
 
 
 @app.callback(
     Output('table_summary', 'children'),
-    [Input('json-df-div', 'children')])
-def update_summary_table(input_json_df):
+    [Input('df-loaded-div', 'children')])
+def update_summary_table(df_loaded):
     print('update_summary_table')
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
+    dff = load_feather(df_loaded)
+
     # Add the index back in as a column so we can see it in the table preview
     if dff.size > 0:
-        dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
+        for index_level, index in enumerate(indices):
+            dff.insert(loc=index_level, column=index, value=dff.index.get_level_values(index_level))
+
         description_df = dff.describe().transpose()
         description_df.insert(loc=0, column='', value=description_df.index)
         return html.Div([html.Div(['nrows:' + str(dff.shape[0]),
@@ -60,29 +62,32 @@ def update_summary_table(input_json_df):
 
 @app.callback(
     Output('heatmap-div', 'children'),
-    [Input('json-df-div', 'children')]
+    [Input('df-loaded-div', 'children')]
 )
-def update_heatmap_dropdown(input_json_df):
-    dff = pd.read_json(json.loads(input_json_df), orient='split')
+def update_heatmap_dropdown(df_loaded):
+    dff = load_feather(df_loaded)
+
     options = [{'label': col,
                 'value': col} for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
     return [html.Div(["Select variables to display:", dcc.Dropdown(id='heatmap-dropdown',
                                                                    options=options,
                                                                    value=[col for col in dff.columns if dff[col].dtype in [np.int64, np.float64]],
                                                                    multi=True,
-                                                                   style={'height': '100px', 'overflowY': 'auto'})])]
+                                                                   style={'height': '100px', 'overflowY': 'auto'}
+                                                                   )])]
 
 
 @app.callback(
     Output('heatmap', 'figure'),
     [Input('heatmap-dropdown', 'value')],
-    [State('json-df-div', 'children')])
-def update_summary_heatmap(dropdown_values, input_json_df):
+    [State('df-loaded-div', 'children')])
+def update_summary_heatmap(dropdown_values, df_loaded):
     print('update_summary_heatmap')
 
     # Guard against the second argument being an empty list, as happens at first invocation
-    if not input_json_df == []:
-        dff = pd.read_json(json.loads(input_json_df), orient='split')
+    if df_loaded is True:
+        dff = load_feather(df_loaded)
+
         # Add the index back in as a column so we can see it in the table preview
         if dff.size > 0 and dropdown_values != []:
             dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
@@ -132,15 +137,15 @@ def update_summary_heatmap(dropdown_values, input_json_df):
 @app.callback(
     Output('kde-figure', 'figure'),
     [Input('heatmap-dropdown', 'value')],
-    [State('json-df-div', 'children')])
-def update_summary_kde(dropdown_values, input_json_df):
+    [State('df-loaded-div', 'children')])
+def update_summary_kde(dropdown_values, df_loaded):
     print('update_summary_kde')
 
     # Guard against the second argument being an empty list, as happens at first invocation
-    if not input_json_df == []:
-        dff = pd.read_json(json.loads(input_json_df), orient='split')
+    if df_loaded is True:
+        dff = load_feather(df_loaded)
 
-        n_columns = len(dropdown_values)
+        n_columns = len(dropdown_values) if dropdown_values is not None else 0
         if n_columns > 0:
             # Use a maximum of 5 columns
             n_cols = min(5, math.ceil(math.sqrt(n_columns)))
@@ -156,18 +161,21 @@ def update_summary_kde(dropdown_values, input_json_df):
                         col_min = this_col.min()
                         col_max = this_col.max()
                         data_range = col_max - col_min
-                        # Generate KDE kernel
-                        kernel = stats.gaussian_kde(this_col.dropna())
-                        pad = 0.1
-                        # Generate linspace
-                        x = np.linspace(col_min - pad*data_range, col_max + pad*data_range, num=101)
-                        # Sample kernel
-                        y = kernel(x)
-                        # Plot KDE line graph using sampled data
-                        fig.add_trace(go.Scatter(x=x, y=y, name=col_name),
-                                      i+1,
-                                      j+1)
-                        # Plot normalised histogram of data
+                        # Guard against a singular matrix in the KDE when a column contains only a single value
+                        if data_range > 0:
+
+                            # Generate KDE kernel
+                            kernel = stats.gaussian_kde(this_col.dropna())
+                            pad = 0.1
+                            # Generate linspace
+                            x = np.linspace(col_min - pad*data_range, col_max + pad*data_range, num=101)
+                            # Sample kernel
+                            y = kernel(x)
+                            # Plot KDE line graph using sampled data
+                            fig.add_trace(go.Scatter(x=x, y=y, name=col_name),
+                                          i+1,
+                                          j+1)
+                        # Plot normalised histogram of data, regardless of KDE completion or not
                         fig.add_trace(go.Histogram(x=this_col, name=col_name, histnorm='probability density'),
                                       i+1,
                                       j+1)
