@@ -16,7 +16,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from psych_dashboard import preview_table, summary, single_scatter
-from psych_dashboard.app import app, indices, graph_types, graph_dimensions, bar_graph_dimensions
+from psych_dashboard.app import app, indices, graph_types, scatter_graph_dimensions, bar_graph_dimensions
 from psych_dashboard.load_feather import load_feather
 
 
@@ -103,7 +103,7 @@ app.layout = html.Div(children=[
     # # Div holds the graph selection elements
     # html.Div(id='graph1-selection',
     #          children=[html.Div([value + ":", dcc.Dropdown(id=key, options=[])], style=style_dict)
-    #                    for key, value in graph_dimensions.items()
+    #                    for key, value in scatter_graph_dimensions.items()
     #                    ]
     #          + [html.Div(["regression:", dcc.Input(id="regression",
     #                                                type='number',
@@ -132,8 +132,7 @@ app.layout = html.Div(children=[
     #     figure=go.Figure(data=go.Bar()),
     # ),
     html.Div(id='graph-group-container', children=[]),
-    generate_graph_button(1),
-    html.Div(id='test-div')
+    generate_graph_button(1)
 ])
 
 
@@ -142,23 +141,23 @@ def generate_scatter_group(n_clicks):
     return html.Div(id={'type': 'filter-graph-group-scatter',
                         'index': n_clicks
                         },
-                    children=[html.Div([value + ":", dcc.Dropdown(id={'type': key, 'index': n_clicks},
-                                                           options=[])],
-                                id={'type': 'div'+str(key), 'index': n_clicks},
-                                style=style_dict
-                                )
-                              for key, value in graph_dimensions.items()
+                    children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'scatter_'+str(key), 'index': n_clicks},
+                                                                  options=[])],
+                                       id={'type': 'div_scatter_'+str(key), 'index': n_clicks},
+                                       style=style_dict
+                                       )
+                              for key, value in scatter_graph_dimensions.items()
                               ]
-                    + [html.Div(["regression:", dcc.Input(id={'type': 'regression', 'index': n_clicks},
+                    + [html.Div(["regression:", dcc.Input(id={'type': 'scatter_regression', 'index': n_clicks},
                                                           type='number',
                                                           min=0,
                                                           step=1,
                                                           )
                                  ],
-                                id={'type': 'divregression', 'index': n_clicks},
+                                id={'type': 'div_scatter_regression', 'index': n_clicks},
                                 style=style_dict)
                        ]
-                    + [dcc.Graph(id={'type': 'gen_graph', 'index': n_clicks},
+                    + [dcc.Graph(id={'type': 'gen_scatter_graph', 'index': n_clicks},
                                  figure=go.Figure(data=go.Scatter()))
                        ]
                     )
@@ -169,14 +168,14 @@ def generate_bar_group(n_clicks):
     return html.Div(id={'type': 'filter-graph-group-bar',
                         'index': n_clicks
                         },
-                    children=[html.Div([value + ":", dcc.Dropdown(id={'type': key+'b', 'index': n_clicks},
+                    children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'bar_'+key, 'index': n_clicks},
                                                                   options=[])],
-                                       id={'type': 'divb'+str(key), 'index': n_clicks},
+                                       id={'type': 'div_bar_'+str(key), 'index': n_clicks},
                                        style=style_dict
                                        )
-                              for key, value in graph_dimensions.items()
+                              for key, value in bar_graph_dimensions.items()
                               ]
-                    + [dcc.Graph(id={'type': 'genb_graph', 'index': n_clicks},
+                    + [dcc.Graph(id={'type': 'gen_bar_graph', 'index': n_clicks},
                                  figure=go.Figure(data=go.Bar()))
                        ]
                     )
@@ -217,7 +216,8 @@ def display_graph_groups(n_clicks, children):
                                                              }
                                                             for value in graph_types
                                                             ],
-                                                   value='Scatter'
+                                                   value='Scatter',
+                                                   style={'width': '50%'}
                                                    ),
                                       # Default graph-group type is Scatter
                                       generate_scatter_group(n_clicks)
@@ -230,19 +230,18 @@ def display_graph_groups(n_clicks, children):
     return children
 
 
-# TODO THIS causes the loss of elements
 @app.callback(
-    [Output({'type': 'div'+str(t), 'index': MATCH}, 'children')
-     for t in (list(graph_dimensions) + ['regression'])],
+    [Output({'type': 'div_scatter_'+str(t), 'index': MATCH}, 'children')
+     for t in (list(scatter_graph_dimensions) + ['regression'])],
     [Input('df-loaded-div', 'children')],
-    list(itertools.chain.from_iterable([State({'type': t, 'index': MATCH}, 'id'),
-                                        State({'type': t, 'index': MATCH}, 'value')
-                                        ] for t in (list(graph_dimensions) + ['regression'])))
-    + [State({'type': 'divx', 'index': MATCH}, 'style')]
+    list(itertools.chain.from_iterable([State({'type': 'scatter_'+t, 'index': MATCH}, 'id'),
+                                        State({'type': 'scatter_'+t, 'index': MATCH}, 'value')
+                                        ] for t in (list(scatter_graph_dimensions) + ['regression'])))
+    + [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')]
 )
-def update_any_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv,
+def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv,
                               style_dict):
-    print('update_any_select_columns')
+    print('update_scatter_select_columns')
     print(x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv)
     print('style_dict')
     print(style_dict)
@@ -258,14 +257,14 @@ def update_any_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_col,
     options = [{'label': col,
                 'value': col} for col in dff.columns]
 
-    return ["x:", dcc.Dropdown(id={'type': 'x', 'index': x['index']}, options=options, value=xv)], \
-           ["y:", dcc.Dropdown(id={'type': 'y', 'index': y['index']}, options=options, value=yv)], \
-           ["color:", dcc.Dropdown(id={'type': 'color', 'index': color['index']}, options=options, value=colorv)], \
-           ["split_horizontally:", dcc.Dropdown(id={'type': 'facet_col', 'index': facet_col['index']},
+    return ["x:", dcc.Dropdown(id={'type': 'scatter_x', 'index': x['index']}, options=options, value=xv)], \
+           ["y:", dcc.Dropdown(id={'type': 'scatter_y', 'index': y['index']}, options=options, value=yv)], \
+           ["color:", dcc.Dropdown(id={'type': 'scatter_color', 'index': color['index']}, options=options, value=colorv)], \
+           ["split_horizontally:", dcc.Dropdown(id={'type': 'scatter_facet_col', 'index': facet_col['index']},
                                                 options=options, value=fcv)], \
-           ["split_vertically:", dcc.Dropdown(id={'type': 'facet_row', 'index': facet_row['index']},
+           ["split_vertically:", dcc.Dropdown(id={'type': 'scatter_facet_row', 'index': facet_row['index']},
                                               options=options, value=frv)], \
-           ["regression degree:", dcc.Input(id={'type': 'regression', 'index': regression['index']},
+           ["regression degree:", dcc.Input(id={'type': 'scatter_regression', 'index': regression['index']},
                                             type='number',
                                             min=0,
                                             step=1,
@@ -273,13 +272,13 @@ def update_any_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_col,
 
 
 @app.callback(
-    Output({'type': 'gen_graph', 'index': MATCH}, "figure"),
+    Output({'type': 'gen_scatter_graph', 'index': MATCH}, "figure"),
     [Input('df-loaded-div', 'children'),
-     *(Input({'type': d, 'index': MATCH}, "value") for d in (list(graph_dimensions) + ['regression']))]
+     *(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in (list(scatter_graph_dimensions) + ['regression']))]
 )
-def make_any_figure(df_loaded, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
+def make_scatter_figure(df_loaded, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
     dff = load_feather(df_loaded)
-    print('make_any_figure', x, y, color, facet_col, facet_row, regression_degree)
+    print('make_scatter_figure', x, y, color, facet_col, facet_row, regression_degree)
     ctx = dash.callback_context
     ctx_msg = json.dumps({
         'states': ctx.states,
@@ -347,6 +346,87 @@ def make_any_figure(df_loaded, x, y, color=None, facet_col=None, facet_row=None,
     fig.update_yaxes(matches='y')
     return fig
 
+
+@app.callback(
+    [Output({'type': 'div_bar_'+str(t), 'index': MATCH}, 'children')
+     for t in bar_graph_dimensions],
+    [Input('df-loaded-div', 'children')],
+    list(itertools.chain.from_iterable([State({'type': 'bar_'+t, 'index': MATCH}, 'id'),
+                                        State({'type': 'bar_'+t, 'index': MATCH}, 'value')
+                                        ] for t in bar_graph_dimensions))
+    + [State({'type': 'div_bar_x', 'index': MATCH}, 'style')]
+)
+def update_bar_select_columns(df_loaded, x, xv, split_by, split_byv,
+                              style_dict):
+    print('update_bar_select_columns')
+    print(x, xv, split_by, split_byv)
+    print('style_dict')
+    print(style_dict)
+    ctx = dash.callback_context
+    ctx_msg = json.dumps(
+        {
+            'states': ctx.states,
+            'triggered': ctx.triggered
+        },
+        indent=2)
+    print(ctx_msg)
+    dff = load_feather(df_loaded)
+    options = [{'label': col,
+                'value': col} for col in dff.columns]
+
+    return ["x:", dcc.Dropdown(id={'type': 'bar_x', 'index': x['index']}, options=options, value=xv)], \
+           ["split by:", dcc.Dropdown(id={'type': 'bar_split_by', 'index': split_by['index']}, options=options, value=split_byv)],
+
+
+@app.callback(
+    Output({'type': 'gen_bar_graph', 'index': MATCH}, "figure"),
+    [Input('df-loaded-div', 'children'),
+     *(Input({'type': 'bar_'+d, 'index': MATCH}, "value") for d in bar_graph_dimensions)]
+)
+def make_bar_figure(df_loaded, x, split_by=None):
+    dff = load_feather(df_loaded)
+    print('make_bar_figure', x, split_by)
+    ctx = dash.callback_context
+    ctx_msg = json.dumps({
+        'states': ctx.states,
+        'triggered': ctx.triggered
+    }, indent=2)
+    print(ctx_msg)
+
+    # Return empty scatter if not enough options are selected, or the data is empty.
+    if dff.columns.size == 0 or x is None:
+        return go.Figure(go.Bar())
+
+    fig = go.Figure()
+    # If color is not provided, then use default
+    # if color is None:
+    #     color_to_use = default_marker_color
+    # # Otherwise, if the dtype is categorical, then we need to map - otherwise, leave as it is
+    # else:
+    #     dff.dropna(inplace=True, subset=[color])
+    #     color_to_use = pd.DataFrame(dff[color])
+    #
+    #     if dff[color].dtype == pd.CategoricalDtype:
+    #         dff['color_to_use'] = map_color(dff[color])
+    #     else:
+    #         color_to_use.set_index(dff.index, inplace=True)
+    #         dff['color_to_use'] = color_to_use
+    if split_by is not None:
+        # get all unique values in split_by column. Filter by each of these, and add a go.Bar for each, and use these as names.
+        split_by_names = sorted(dff[split_by].dropna().unique())
+
+        for name in split_by_names:
+            count_by_value = dff[dff[split_by] == name][x].value_counts()
+
+            fig.add_trace(go.Bar(name=name, x=count_by_value.index, y=count_by_value.values))
+    else:
+
+        count_by_value = dff[x].value_counts()
+
+        fig.add_trace(go.Bar(name=str(x), x=count_by_value.index, y=count_by_value.values))
+    fig.update_layout(coloraxis=dict(colorscale='Bluered_r'))
+
+    return fig
 
 # @app.callback(
 #     Output('box-div', 'children'),
