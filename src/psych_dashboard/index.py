@@ -24,7 +24,8 @@ from psych_dashboard.load_feather import load_feather
 
 global_width = '100%'
 default_marker_color = "crimson"
-file_extensions = ['*.txt', '*.xlsx']
+data_file_extensions = ['*.txt', '*.xlsx']
+filter_file_extensions = ['*.filter']
 header_image = '/assets/UoN_Primary_Logo_RGB.png'
 
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -47,20 +48,35 @@ app.layout = html.Div(children=[
 
     html.H2(children="File selection"),
 
-    html.Label(children='Files Multi-Select'),
+    html.Label(children='Data File Selection'),
     dcc.Dropdown(
-        id='file-dropdown',
+        id='data-file-dropdown',
         options=[{'label': filename,
                   'value': filename} for filename in
-                 [f for f_ in [glob.glob('../data/'+e) for e in file_extensions] for f in f_]
+                 [f for f_ in [glob.glob('../data/'+e) for e in data_file_extensions] for f in f_]
                  ],
-        value=[],
-        multi=True
+        value=None,
+        placeholder='Select data file'
     ),
     dcc.Loading(
         id='loading-filenames-div',
         children=[html.Div(id='filenames-div')],
     ),
+    html.Label(children='Column-Filter File Selection'),
+    dcc.Dropdown(
+        id='column-filter-file-dropdown',
+        options=[{'label': filename,
+                  'value': filename} for filename in
+                 [f for f_ in [glob.glob('../data/'+e) for e in filter_file_extensions] for f in f_]
+                 ],
+        value=None,
+        placeholder='Leave blank to analyse all columns'
+    ),
+    dcc.Loading(
+        id='loading-column-filter-filenames-div',
+        children=[html.Div(id='column-filter-filenames-div')],
+    ),
+    html.Button('Load selected files', id='load-files-button'),
     html.H2(children="Table Preview"),
     dcc.Loading(
         id='loading-table-preview',
@@ -515,80 +531,64 @@ def standardise_subjectkey(subjectkey):
     return subjectkey[0:4]+"_"+subjectkey[4:]
 
 
-def filename_and_number_to_abbr(filename, number):
-    """
-    Converts a given filename and filenumber (its position in the list of filenames) into a unique abbreviation for
-    use in column names etc.
-    """
-    return 'F' + str(number)
-
-
 @app.callback(
-    [Output(component_id='df-loaded-div', component_property='children'),
-     Output(component_id='filenames-div', component_property='children')],
-    [Input(component_id='file-dropdown', component_property='value')]
+    [Output(component_id='df-loaded-div', component_property='children')],
+    [Input('load-files-button', 'n_clicks')],
+    [State('data-file-dropdown', 'value'),
+     State('column-filter-file-dropdown', 'value')]
 )
-def update_df_loaded_div(input_value):
+def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
 
-    print('update_df_loaded_div', input_value)
-    dfs = []
-    # Read in files based upon their extension - assume .txt is a whitespace-delimited csv.
-    for filename in input_value:
+    print('update_df_loaded_div', data_file_value, filter_file_value)
+    # Return early if no data file selected, and fill df.feather with an empty DF, and set df-loaded-div to [False]
+    if data_file_value is None:
+        pd.DataFrame().reset_index().to_feather('df.feather')
+        return [False]
 
-        if filename.endswith('.xlsx'):
+    # Read in data file based upon the extension - assume .txt is a whitespace-delimited csv.
+    if data_file_value.endswith('.xlsx'):
+        df = pd.read_excel(data_file_value)
+    elif data_file_value.endswith('.txt'):
+        df = pd.read_csv(data_file_value, delim_whitespace=True)
+    else:
+        raise FileNotFoundError(data_file_value)
 
-            dfs.append(pd.read_excel(filename))
+    # If filter file is selected, read in filter file, and add the index names if they are not present. Otherwise,
+    # do no filtering
+    if filter_file_value:
+        with open(filter_file_value) as f:
+            variables_of_interest = f.read().splitlines()
+            print(variables_of_interest)
+            # Add index names if they are not present
+            variables_of_interest.extend(index for index in indices if index not in variables_of_interest)
 
-        elif filename.endswith('.txt'):
+        # Verify that the variables of interest exist.
+        missing_vars = [var for var in variables_of_interest if var not in df.columns]
 
-            dfs.append(pd.read_csv(filename, delim_whitespace=True))
+        if missing_vars:
+            raise ValueError(str(missing_vars) + ' is in the filter file but not found in the data file.')
 
-    for df in dfs:
+        # Keep only the columns listed in the filter file
+        df = df[variables_of_interest]
 
-        # Reformat SUBJECTKEY if it doesn't have the underscore
-        # TODO: remove this when unnecessary
-        df['SUBJECTKEY'] = df['SUBJECTKEY'].apply(standardise_subjectkey)
+    # Reformat SUBJECTKEY if it doesn't have the underscore
+    # TODO: remove this when unnecessary
+    df['SUBJECTKEY'] = df['SUBJECTKEY'].apply(standardise_subjectkey)
 
-        # Set certain columns to have more specific types.
-        if 'SEX' in df.columns:
-            df['SEX'] = df['SEX'].astype('category')
+    # Set certain columns to have more specific types.
+    if 'SEX' in df.columns:
+        df['SEX'] = df['SEX'].astype('category')
 
-        for column in ['EVENTNAME', 'SRC_SUBJECT_ID']:
-            if column in df.columns:
-                df[column] = df[column].astype('string')
+    for column in ['EVENTNAME', 'SRC_SUBJECT_ID']:
+        if column in df.columns:
+            df[column] = df[column].astype('string')
 
-        # Set SUBJECTKEY, EVENTNAME as MultiIndex in all dfs
-        df.set_index(indices, inplace=True, verify_integrity=True, drop=True)
+    # Set SUBJECTKEY, EVENTNAME as MultiIndex
+    df.set_index(indices, inplace=True, verify_integrity=True, drop=True)
 
-    # Join all DFs on their index (that is, SUBJECTKEY), and suffix columns by the filename (if there's
-    # more than one file)
-    if len(dfs) >= 1:
-
-        total_df = dfs[0]
-
-        if len(dfs) > 1:
-            total_df = total_df.add_suffix('@'+filename_and_number_to_abbr(input_value[0], 0))
-
-            for (df_number, (df, df_name)) in enumerate(zip(dfs[1:], input_value[1:]), start=1):
-                total_df = total_df.join(df.add_suffix('@'+filename_and_number_to_abbr(df_name, df_number)),
-                                         how='outer')
-        # Fill df.feather with the combined DF, and set df-loaded-div to True
-
-        total_df.reset_index().to_feather('df.feather')
-        return True, \
-            [html.H3('File abbreviations:')] + \
-            [dash_table.DataTable(id='abbreviations-table',
-                                  columns=[{"name": i, "id": i} for i in ['Filename', 'Abbreviation']],
-                                  data=[{'Filename': filename,
-                                         'Abbreviation': filename_and_number_to_abbr(filename, i)
-                                         }
-                                        for i, filename in enumerate(input_value)]
-                                  )
-             ]
-
-    # If no DFs are selected, then fill df.feather with an empty DF, and set df-loaded-div to False
-    pd.DataFrame().reset_index().to_feather('df.feather')
-    return False, html.Div()
+    # Fill df.feather with the combined DF, and set df-loaded-div to [True]
+    df.reset_index().to_feather('df.feather')
+    return [True]
 
 
 if __name__ == '__main__':
