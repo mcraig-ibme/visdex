@@ -25,8 +25,9 @@ from psych_dashboard.load_feather import load_feather
 global_width = '100%'
 default_marker_color = "crimson"
 file_extensions = ['*.txt', '*.xlsx']
+header_image = '/assets/UoN_Primary_Logo_RGB.png'
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+# external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 style_dict = {
         'width': '13%',
@@ -41,6 +42,7 @@ def generate_graph_button(graph_no):
 
 
 app.layout = html.Div(children=[
+    html.Img(src=header_image, height=100),
     html.H1(children='ABCD data exploration dashboard'),
 
     html.H2(children="File selection"),
