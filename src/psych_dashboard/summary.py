@@ -20,44 +20,50 @@ def update_summary_table(df_loaded):
     print('update_summary_table')
     dff = load_feather(df_loaded)
 
+    # If empty, return an empty Div
+    if dff.size == 0:
+        return html.Div()
+
+    for index_level, index in enumerate(indices):
+        dff.insert(loc=index_level, column=index, value=dff.index.get_level_values(index_level))
+
+    description_df = dff.describe().transpose()
     # Add the index back in as a column so we can see it in the table preview
-    if dff.size > 0:
-        for index_level, index in enumerate(indices):
-            dff.insert(loc=index_level, column=index, value=dff.index.get_level_values(index_level))
+    description_df.insert(loc=0, column='column name', value=description_df.index)
 
-        description_df = dff.describe().transpose()
-        description_df.insert(loc=0, column='', value=description_df.index)
-        return html.Div([html.Div(['nrows:' + str(dff.shape[0]),
-                                   'ncols:' + str(dff.shape[1])]
-                                  ),
-                         html.Div(
-                             dash_table.DataTable(
-                                 id='table',
-                                 columns=[{'name': i.upper(),
-                                           'id': i,
-                                           'type': 'numeric',
-                                           'format': {'specifier': '.2f'}} for i in description_df.columns],
-                                 data=description_df.to_dict('record'),
-                                 fixed_rows={'headers': True},
-                                 style_table={'height': '300px', 'overflowY': 'auto'},
-                                 # Highlight any columns that do not have a complete set of records,
-                                 # by comparing count against the length of the DF.
-                                 style_data_conditional=[
-                                     {
-                                         'if': {
-                                             'filter_query': '{{count}} < {}'.format(dff.shape[0]),
-                                             'column_id': 'count'
-                                         },
-                                         'backgroundColor': 'FireBrick',
-                                         'color': 'white'
-                                     }
-                                 ]
-                             )
+    # Reorder the columns so that 50% centile is next to 'mean'
+    description_df = description_df.reindex(columns=['column name', 'count', 'mean', '50%', 'std', 'min', '25%', '75%', 'max'])
+
+    return html.Div([html.Div(['nrows:' + str(dff.shape[0]),
+                               'ncols:' + str(dff.shape[1])]
+                              ),
+                     html.Div(
+                         dash_table.DataTable(
+                             id='table',
+                             columns=[{'name': i.upper(),
+                                       'id': i,
+                                       'type': 'numeric',
+                                       'format': {'specifier': '.2f'}} for i in description_df.columns],
+                             data=description_df.to_dict('record'),
+                             fixed_rows={'headers': True},
+                             style_table={'height': '300px', 'overflowY': 'auto'},
+                             # Highlight any columns that do not have a complete set of records,
+                             # by comparing count against the length of the DF.
+                             style_data_conditional=[
+                                 {
+                                     'if': {
+                                         'filter_query': '{{count}} < {}'.format(dff.shape[0]),
+                                         'column_id': 'count'
+                                     },
+                                     'backgroundColor': 'FireBrick',
+                                     'color': 'white'
+                                 }
+                             ]
                          )
-                         ]
-                        )
+                     )
+                     ]
+                    )
 
-    return html.Div()
 
 
 @app.callback(
