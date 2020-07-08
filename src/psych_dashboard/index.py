@@ -190,13 +190,13 @@ def generate_bar_group(n_clicks):
      State({'type': 'divgraph-type-dd', 'index': MATCH}, 'children')]
 )
 def change_graph_group_type(graph_type, id, children):
-    print('change_graph_group_type', graph_type)
-    if graph_type == 'Bar':
+    print('change_graph_group_type', graph_type, id, children)
+    # Check whether the value of the dropdown matches the type of the existing group. If it doesn't match, then
+    # generate a new group of the right type.
+    if graph_type == 'Bar' and children[-1]['props']['id']['type'] != 'filter-graph-group-bar':
         children[-1] = generate_bar_group(id['index'])
-    elif graph_type == 'Scatter':
+    elif graph_type == 'Scatter' and children[-1]['props']['id']['type'] != 'filter-graph-group-scatter':
         children[-1] = generate_scatter_group(id['index'])
-    else:
-        raise ValueError
     return children
 
 
@@ -204,9 +204,9 @@ def change_graph_group_type(graph_type, id, children):
     Output('graph-group-container', 'children'),
     [Input('add-graph-button1', 'n_clicks')],
     [State('graph-group-container', 'children')])
-def display_graph_groups(n_clicks, children):
+def add_graph_group(n_clicks, children):
     # Add a new graph group each time the button is clicked. The if None guard stops there being an initial graph.
-    print('display_graph_groups')
+    print('add_graph_group')
     if n_clicks is not None:
         # This dropdown controls what type of graph-group to display next to it.
         new_graph_type_dd = html.Div(['Graph type:',
@@ -221,8 +221,13 @@ def display_graph_groups(n_clicks, children):
                                                    value='Scatter',
                                                    style={'width': '50%'}
                                                    ),
-                                      # Default graph-group type is Scatter
-                                      generate_scatter_group(n_clicks)
+                                      # This is a placeholder for the 'filter-graph-group-scatter' or
+                                      # 'filter-graph-group-bar' to be placed here.
+                                      # Because graph-type-dd above is set to Scatter, this will initially be
+                                      # automatically filled with a filter-graph-group-scatter.
+                                      # But on the initial generation of this object, we give it type 'placeholder' to
+                                      # make it easy to check its value in change_graph_group_type()
+                                      html.Div(id={'type': 'placeholder', 'index': n_clicks})
                                       ],
                                      id={'type': 'divgraph-type-dd', 'index': n_clicks},
                                      )
@@ -242,7 +247,7 @@ def display_graph_groups(n_clicks, children):
     + [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')]
 )
 def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv,
-                              style_dict):
+                                  style_dict):
     print('update_scatter_select_columns')
     print(x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv)
     print('style_dict')
@@ -275,12 +280,13 @@ def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_
 
 @app.callback(
     Output({'type': 'gen_scatter_graph', 'index': MATCH}, "figure"),
-    [Input('df-loaded-div', 'children'),
-     *(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in (list(scatter_graph_dimensions) + ['regression']))]
+    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in (list(scatter_graph_dimensions) + ['regression'])),
+     Input({'type': 'scatter_x', 'index': MATCH}, "id")],
+    [State('df-loaded-div', 'children')]
 )
-def make_scatter_figure(df_loaded, x, y, color=None, facet_col=None, facet_row=None, regression_degree=None):
+def make_scatter_figure(x, y, color=None, facet_col=None, facet_row=None, regression_degree=None, id=None, df_loaded=None):
     dff = load_feather(df_loaded)
-    print('make_scatter_figure', x, y, color, facet_col, facet_row, regression_degree)
+    print('make_scatter_figure', x, y, color, facet_col, facet_row, regression_degree, id)
     ctx = dash.callback_context
     ctx_msg = json.dumps({
         'states': ctx.states,
@@ -382,10 +388,11 @@ def update_bar_select_columns(df_loaded, x, xv, split_by, split_byv,
 
 @app.callback(
     Output({'type': 'gen_bar_graph', 'index': MATCH}, "figure"),
-    [Input('df-loaded-div', 'children'),
-     *(Input({'type': 'bar_'+d, 'index': MATCH}, "value") for d in bar_graph_dimensions)]
+    [*(Input({'type': 'bar_'+d, 'index': MATCH}, "value") for d in bar_graph_dimensions)],
+    [State('df-loaded-div', 'children')]
+
 )
-def make_bar_figure(df_loaded, x, split_by=None):
+def make_bar_figure(x, split_by=None, df_loaded=None):
     dff = load_feather(df_loaded)
     print('make_bar_figure', x, split_by)
     ctx = dash.callback_context
