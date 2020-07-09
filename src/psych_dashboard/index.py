@@ -17,10 +17,6 @@ header_image = '/assets/UoN_Primary_Logo_RGB.png'
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 
-def generate_graph_button(graph_no):
-    return html.Button('New Graph', id='add-graph-button'+str(graph_no))
-
-
 app.layout = html.Div(children=[
     html.Img(src=header_image, height=100),
     html.H1(children='ABCD data exploration dashboard'),
@@ -74,7 +70,8 @@ app.layout = html.Div(children=[
     ),
     html.H2(children='Correlation Heatmap'),
     html.Div(id='heatmap-div',
-             children=[html.Div(["Select variables to display:", dcc.Dropdown(id='heatmap-dropdown', options=([]))])]),
+             children=[html.Div(["Select variables to display:",
+                                 dcc.Dropdown(id='heatmap-dropdown', options=([]))])]),
     dcc.Loading(
         id='loading-heatmap',
         children=[
