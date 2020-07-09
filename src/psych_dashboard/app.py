@@ -12,3 +12,10 @@ scatter_graph_dimensions = {"x": "x",
                             "facet_row": "split vertically"}
 bar_graph_dimensions = {"x": "x",
                         "split_by": "split by"}
+default_marker_color = "crimson"
+style_dict = {
+        'width': '13%',
+        'display': 'inline-block',
+        'verticalAlign': "middle",
+        'margin-right': '2em',
+    }
