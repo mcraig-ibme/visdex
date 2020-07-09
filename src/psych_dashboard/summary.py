@@ -65,9 +65,9 @@ def update_summary_table(df_loaded):
                     )
 
 
-
 @app.callback(
-    Output('heatmap-div', 'children'),
+    [Output('heatmap-dropdown', 'options'),
+     Output('heatmap-dropdown', 'value')],
     [Input('df-loaded-div', 'children')]
 )
 def update_heatmap_dropdown(df_loaded):
@@ -75,12 +75,8 @@ def update_heatmap_dropdown(df_loaded):
 
     options = [{'label': col,
                 'value': col} for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
-    return [html.Div(["Select variables to display:", dcc.Dropdown(id='heatmap-dropdown',
-                                                                   options=options,
-                                                                   value=[col for col in dff.columns if dff[col].dtype in [np.int64, np.float64]],
-                                                                   multi=True,
-                                                                   style={'height': '100px', 'overflowY': 'auto'}
-                                                                   )])]
+    return options, \
+        [col for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
 
 
 @app.callback(

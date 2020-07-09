@@ -71,7 +71,15 @@ app.layout = html.Div(children=[
     html.H2(children='Correlation Heatmap'),
     html.Div(id='heatmap-div',
              children=[html.Div(["Select variables to display:",
-                                 dcc.Dropdown(id='heatmap-dropdown', options=([]))])]),
+                                 dcc.Dropdown(id='heatmap-dropdown',
+                                              options=([]),
+                                              multi=True,
+                                              style={'height': '100px', 'overflowY': 'auto'}
+                                              )
+                                 ]
+                                )
+                       ]
+             ),
     dcc.Loading(
         id='loading-heatmap',
         children=[
