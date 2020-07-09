@@ -5,8 +5,6 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
-from dash.exceptions import PreventUpdate
-import dash_table
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -18,8 +16,6 @@ from sklearn.pipeline import Pipeline
 from psych_dashboard import preview_table, summary, single_scatter
 from psych_dashboard.app import app, indices, graph_types, scatter_graph_dimensions, bar_graph_dimensions
 from psych_dashboard.load_feather import load_feather
-
-
 
 
 global_width = '100%'
@@ -262,8 +258,8 @@ def add_graph_group(n_clicks, children):
                                         ] for t in (list(scatter_graph_dimensions) + ['regression'])))
     + [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')]
 )
-def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv,
-                                  style_dict):
+def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv,
+                                  regression, regv, style_dict):
     print('update_scatter_select_columns')
     print(x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv)
     print('style_dict')
@@ -282,7 +278,8 @@ def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_
 
     return ["x:", dcc.Dropdown(id={'type': 'scatter_x', 'index': x['index']}, options=options, value=xv)], \
            ["y:", dcc.Dropdown(id={'type': 'scatter_y', 'index': y['index']}, options=options, value=yv)], \
-           ["color:", dcc.Dropdown(id={'type': 'scatter_color', 'index': color['index']}, options=options, value=colorv)], \
+           ["color:", dcc.Dropdown(id={'type': 'scatter_color', 'index': color['index']},
+                                   options=options, value=colorv)], \
            ["split_horizontally:", dcc.Dropdown(id={'type': 'scatter_facet_col', 'index': facet_col['index']},
                                                 options=options, value=fcv)], \
            ["split_vertically:", dcc.Dropdown(id={'type': 'scatter_facet_row', 'index': facet_row['index']},
@@ -292,6 +289,13 @@ def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_
                                             min=0,
                                             step=1,
                                             value=regv)]
+
+
+def filter_facet(dff, facet, facet_cats, i):
+    if facet is not None:
+        return dff[dff[facet] == facet_cats[i]]
+
+    return dff
 
 
 @app.callback(
@@ -346,7 +350,7 @@ def make_scatter_figure(x, y, color=None, facet_col=None, facet_row=None, regres
                                      # hovertemplate=['SUBJECT_ID: ' + str(i) + ', DATASET_ID: ' + str(j) +
                                      #                '<extra></extra>'
                                      #                for i, j in zip(working_dff.index, working_dff.DATASET_ID)],
-            ),
+                                     ),
                           i + 1,
                           j + 1)
 
@@ -399,7 +403,8 @@ def update_bar_select_columns(df_loaded, x, xv, split_by, split_byv,
                 'value': col} for col in dff.columns]
 
     return ["x:", dcc.Dropdown(id={'type': 'bar_x', 'index': x['index']}, options=options, value=xv)], \
-           ["split by:", dcc.Dropdown(id={'type': 'bar_split_by', 'index': split_by['index']}, options=options, value=split_byv)],
+           ["split by:", dcc.Dropdown(id={'type': 'bar_split_by', 'index': split_by['index']},
+                                      options=options, value=split_byv)],
 
 
 @app.callback(
@@ -423,21 +428,10 @@ def make_bar_figure(x, split_by=None, df_loaded=None):
         return go.Figure(go.Bar())
 
     fig = go.Figure()
-    # If color is not provided, then use default
-    # if color is None:
-    #     color_to_use = default_marker_color
-    # # Otherwise, if the dtype is categorical, then we need to map - otherwise, leave as it is
-    # else:
-    #     dff.dropna(inplace=True, subset=[color])
-    #     color_to_use = pd.DataFrame(dff[color])
-    #
-    #     if dff[color].dtype == pd.CategoricalDtype:
-    #         dff['color_to_use'] = map_color(dff[color])
-    #     else:
-    #         color_to_use.set_index(dff.index, inplace=True)
-    #         dff['color_to_use'] = color_to_use
+
     if split_by is not None:
-        # get all unique values in split_by column. Filter by each of these, and add a go.Bar for each, and use these as names.
+        # get all unique values in split_by column.
+        # Filter by each of these, and add a go.Bar for each, and use these as names.
         split_by_names = sorted(dff[split_by].dropna().unique())
 
         for name in split_by_names:
@@ -452,68 +446,6 @@ def make_bar_figure(x, split_by=None, df_loaded=None):
     fig.update_layout(coloraxis=dict(colorscale='Bluered_r'))
 
     return fig
-
-# @app.callback(
-#     Output('box-div', 'children'),
-#     [Input('df-loaded-div', 'children')])
-# # Standard dropdown to select column of interest
-# def update_box_columns(df_loaded):
-#     print('update_box_columns')
-#     dff = load_feather(df_loaded)
-#     options = [{'label': col,
-#                 'value': col} for col in dff.columns]
-#     return html.Div(["Select variable:", dcc.Dropdown(id='box-dropdown', options=options)])
-#
-#
-# @app.callback(
-#     Output("box-plot", "figure"),
-#     [Input('df-loaded-div', 'children'),
-#      Input('box-dropdown', 'value')])
-# def make_boxplot(df_loaded, x):
-#     print('make_boxplot', x)
-#     dff = load_feather(df_loaded)
-#
-#     if x is not None:
-#         return go.Figure(go.Box(x=dff[x].dropna(), boxpoints="all"))
-#
-#     return go.Figure()
-#
-#
-# @app.callback(
-#     Output('bar-div', 'children'),
-#     [Input('df-loaded-div', 'children')])
-# # Standard dropdown to select column of interest
-# def update_bar_columns(df_loaded):
-#     print('update_bar_columns')
-#     dff = load_feather(df_loaded)
-#     options = [{'label': col,
-#                 'value': col} for col in dff.columns]
-#     return html.Div(["Select variable:", dcc.Dropdown(id='bar-dropdown', options=options)])
-#
-#
-# @app.callback(
-#     Output("bar-chart", "figure"),
-#     [Input('df-loaded-div', 'children'),
-#      Input('bar-dropdown', 'value')])
-# def make_barchart(df_loaded, x):
-#     print('make_barchart', x)
-#     dff = load_feather(df_loaded)
-#
-#     # Manually group by the column selected - TODO is there an easier way to do this?
-#     if x is not None:
-#         grouped_df = dff[x].to_frame(0).groupby(0)
-#
-#         return go.Figure(data=go.Bar(x=[key for key, _ in grouped_df],
-#                                      y=[item.size for key, item in grouped_df]))
-#
-#     return go.Figure(data=go.Bar())
-
-
-def filter_facet(dff, facet, facet_cats, i):
-    if facet is not None:
-        return dff[dff[facet] == facet_cats[i]]
-
-    return dff
 
 
 def map_color(dff):
