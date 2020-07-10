@@ -1,12 +1,15 @@
 import math
 import numpy as np
+import pandas as pd
 import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 import scipy.stats as stats
 from dash.dependencies import Input, Output, State
+from dash_bio import ManhattanPlot
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import plotly.express as px
 from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
@@ -185,3 +188,70 @@ def update_summary_kde(dropdown_values, df_loaded):
             return fig
 
     return go.Figure(go.Scatter())
+
+
+@app.callback(
+    Output('manhattan-dd', 'options'),
+    [Input('df-loaded-div', 'children')],
+)
+def update_manhattan_dropdown(df_loaded):
+    if df_loaded:
+        dff = load_feather(df_loaded)
+
+        return [{'label': col,
+                 'value': col} for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
+    else:
+        return []
+
+
+@app.callback(
+    Output('manhattan-figure', 'figure'),
+    [Input('manhattan-dd', 'value')],
+    [State('df-loaded-div', 'children')]
+)
+def plot_manhattan(manhattan_variable, df_loaded):
+    print('plot_manhattan')
+    if not df_loaded or manhattan_variable is None:
+        return go.Figure()
+
+    dff = load_feather(df_loaded).dropna()
+    print(dff.dtypes)
+    # Calculate p-value of corr coeff per variable against the manhattan variable
+    p = dict()
+    columns_to_calculate = [col for col in dff.columns.drop(manhattan_variable) if dff[col].dtype in [np.int64, np.float64]]
+
+    for variable in columns_to_calculate:
+        # TODO: currently only allows int64 and float64
+        if dff[variable].dtype in [np.int64, np.float64]:
+            print(dff[manhattan_variable].values, dff[variable].values)
+            _, p[variable] = stats.pearsonr(dff[manhattan_variable].values, dff[variable].values)
+
+    logs = dict()
+    for variable in p:
+        logs[variable] = -np.log10(p[variable])
+
+    print('p')
+    print(p)
+    print('logs')
+    print(logs)
+    print(pd.DataFrame.from_dict(logs, orient='index'))
+
+
+    # Divide reference p-value by number of variables to get corrected p-value
+    ref_pval = 0.01
+    corrected_ref_pval = ref_pval / len(columns_to_calculate)
+
+    # Transform by -log10
+    transformed_corrected_ref_pval = -np.log10(corrected_ref_pval)
+    print(transformed_corrected_ref_pval)
+
+    fig = px.scatter(pd.DataFrame.from_dict(logs, orient='index'))
+
+    fig.update_layout(shapes=[
+        dict(
+            type='line',
+            yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
+            xref='x', x0=0, x1=len(logs)-1
+        )
+    ])
+    return fig

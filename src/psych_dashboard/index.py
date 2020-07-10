@@ -97,6 +97,20 @@ app.layout = html.Div(children=[
                       )
             ]
     ),
+    html.H2('Manhattan Plot'),
+    dcc.Loading(
+        id='loading-manhattan-dd',
+        children=dcc.Dropdown(id='manhattan-dd')
+    ),
+    dcc.Loading(
+        id='loading-manhattan-figure',
+        children=[
+            dcc.Graph(id='manhattan-figure',
+                      figure=go.Figure()
+                      )
+        ]
+    ),
+
 
     # Hidden div for holding the boolean identifying whether a DF is loaded
     html.Div(id='df-loaded-div', style={'display': 'none'}, children=[]),
