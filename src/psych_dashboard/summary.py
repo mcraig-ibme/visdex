@@ -1,12 +1,16 @@
 import math
 import numpy as np
+import pandas as pd
 import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 import scipy.stats as stats
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
+from dash_bio import ManhattanPlot
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import plotly.express as px
 from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
@@ -34,6 +38,8 @@ def update_summary_table(df_loaded):
     # Reorder the columns so that 50% centile is next to 'mean'
     description_df = description_df.reindex(columns=['column name', 'count', 'mean', '50%', 'std', 'min', '25%', '75%', 'max'])
 
+    # description_df['countna'] = [dff[col].isna().sum() for col in dff]
+    # dff.info()
     return html.Div([html.Div(['nrows:' + str(dff.shape[0]),
                                'ncols:' + str(dff.shape[1])]
                               ),
@@ -185,3 +191,137 @@ def update_summary_kde(dropdown_values, df_loaded):
             return fig
 
     return go.Figure(go.Scatter())
+
+
+# TODO: currently only allows int64 and float64
+valid_manhattan_dtypes = [np.int64, np.float64]
+
+
+@app.callback(
+    Output('manhattan-dd', 'options'),
+    [Input('df-loaded-div', 'children')],
+)
+def update_manhattan_dropdown(df_loaded):
+    if df_loaded:
+        dff = load_feather(df_loaded)
+
+        return [{'label': col,
+                 'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
+    else:
+        return []
+
+
+def pvalues_against_one_variable(dff, manhattan_variable):
+    p = pd.Series()
+    for variable in dff.columns.drop(manhattan_variable):
+        if dff[variable].dtype in valid_manhattan_dtypes:
+            # print(dff[manhattan_variable].values, dff[variable].values)
+            _, p[variable] = stats.pearsonr(dff[manhattan_variable].values, dff[variable].values)
+    return p
+
+
+def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
+    # Filter columns to those with valid types.
+    if manhattan_variable is None:
+        manhattan_variables = [col for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
+    else:
+        if isinstance(manhattan_variable, list):
+            manhattan_variables = manhattan_variable
+        else:
+            manhattan_variables = [manhattan_variable]
+
+    columns_to_calculate = [col for col in dff.columns if
+                            dff[col].dtype in valid_manhattan_dtypes]
+    # print(manhattan_variables)
+    # print('making p')
+    # print(columns_to_calculate, manhattan_variables)
+    p = pd.DataFrame(index=columns_to_calculate)
+    # print('made p')
+    # print(p)
+    # calculate p-value of each correlation
+    for m in manhattan_variables:
+        # print(pvalues_against_one_variable(dff, m))
+        # print(pvalues_against_one_variable(dff, m).reindex(p.index))
+        p[m] = pvalues_against_one_variable(dff, m).reindex(p.index)
+        # print(p)
+    # apply -log10 transformation to each p-value
+    logs = pd.DataFrame()
+    for variable in p:
+        logs[variable] = -np.log10(p[variable])
+    # print('logs', logs)
+    # Divide reference p-value by number of variables to get corrected p-value
+    corrected_ref_pval = ref_pval / ((len(columns_to_calculate) - 1) * len(manhattan_variables))
+    # Transform corrected p-value by -log10
+    transformed_corrected_ref_pval = -np.log10(corrected_ref_pval)
+
+    return logs, transformed_corrected_ref_pval
+
+
+@app.callback(
+    Output('manhattan-figure', 'figure'),
+    [Input('manhattan-dd', 'value'),
+     Input('manhattan-pval-input', 'value'),
+     Input('manhattan-logscale-check', 'value')],
+    [State('df-loaded-div', 'children')]
+)
+def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
+    print('plot_manhattan')
+    if not df_loaded or manhattan_variable is None:
+        return go.Figure()
+
+    if pvalue <= 0. or pvalue is None:
+        raise PreventUpdate
+
+    dff = load_feather(df_loaded).dropna()
+
+    # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
+    logs, transformed_corrected_ref_pval = calculate_manhattan_data(dff, manhattan_variable, float(pvalue))
+
+    fig = px.scatter(logs, log_y=logscale == ['LOG'])
+
+    fig.update_layout(shapes=[
+        dict(
+            type='line',
+            yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
+            xref='x', x0=0, x1=len(logs)-1
+        )
+    ],
+        xaxis_title='variable',
+        yaxis_title='-log10(p)',
+    )
+    return fig
+
+
+@app.callback(
+    Output('manhattan-all-figure', 'figure'),
+    [Input('manhattan-all-pval-input', 'value'),
+     Input('df-loaded-div', 'children'),
+     Input('manhattan-all-logscale-check', 'value')]
+)
+def plot_all_manhattan(pvalue, df_loaded, logscale):
+    # TODO: reuse the correlation/pvalue calculations between heatmap and manhattan plot
+    print('plot_manhattan')
+    if not df_loaded:
+        return go.Figure()
+
+    if pvalue <= 0. or pvalue is None:
+        raise PreventUpdate
+
+    dff = load_feather(df_loaded).dropna()
+
+    # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
+    logs, transformed_corrected_ref_pval = calculate_manhattan_data(dff, None, float(pvalue))
+
+    fig = px.scatter(logs, log_y=logscale == ['LOG'])
+
+    fig.update_layout(shapes=[
+        dict(
+            type='line',
+            yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
+            xref='x', x0=0, x1=len(logs)-1
+        )
+    ],
+        xaxis_title='variable',
+        yaxis_title='-log10(p)',
+    )
+    return fig

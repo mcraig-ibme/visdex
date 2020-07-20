@@ -88,6 +88,29 @@ app.layout = html.Div(children=[
                       )
             ]
     ),
+    html.H2('Manhattan Plot'),
+    dcc.Loading(
+        id='loading-manhattan-all-figure',
+        children=[
+            dcc.Input(id='manhattan-all-pval-input',
+                      type='number',
+                      value=0.05,
+                      step=0.0001,
+                      debounce=True,
+                      style={'display': 'inline-block'}),
+            dcc.Checklist(
+                id='manhattan-all-logscale-check',
+                options=[
+                    {'label': 'logscale y-axis', 'value': 'LOG'}
+                ],
+                value=[],
+                style={'display': 'inline-block'}
+            ),
+            dcc.Graph(id='manhattan-all-figure',
+                      figure=go.Figure()
+                      )
+        ]
+    ),
     html.H2(children='Per-variable Histograms and KDEs'),
     dcc.Loading(
         id='loading-kde-figure',
@@ -97,6 +120,34 @@ app.layout = html.Div(children=[
                       )
             ]
     ),
+    html.H2('Manhattan Plot with choice of base variable'),
+    dcc.Loading(
+        id='loading-manhattan-dd',
+        children=dcc.Dropdown(id='manhattan-dd', multi=True)
+    ),
+    dcc.Loading(
+        id='loading-manhattan-figure',
+        children=[
+            dcc.Input(id='manhattan-pval-input',
+                      type='number',
+                      value=0.05,
+                      step=0.0001,
+                      debounce=True,
+                      style={'display': 'inline-block'}),
+            dcc.Checklist(
+                id='manhattan-logscale-check',
+                options=[
+                    {'label': 'logscale y-axis', 'value': 'LOG'}
+                ],
+                value=[],
+                style={'display': 'inline-block'}
+            ),
+            dcc.Graph(id='manhattan-figure',
+                      figure=go.Figure()
+                      )
+        ]
+    ),
+
 
     # Hidden div for holding the boolean identifying whether a DF is loaded
     html.Div(id='df-loaded-div', style={'display': 'none'}, children=[]),
