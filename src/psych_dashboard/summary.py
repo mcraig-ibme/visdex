@@ -260,10 +260,11 @@ def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
 @app.callback(
     Output('manhattan-figure', 'figure'),
     [Input('manhattan-dd', 'value'),
-     Input('manhattan-pval-input', 'value')],
+     Input('manhattan-pval-input', 'value'),
+     Input('manhattan-logscale-check', 'value')],
     [State('df-loaded-div', 'children')]
 )
-def plot_manhattan(manhattan_variable, pvalue, df_loaded):
+def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     print('plot_manhattan')
     if not df_loaded or manhattan_variable is None:
         return go.Figure()
@@ -276,7 +277,7 @@ def plot_manhattan(manhattan_variable, pvalue, df_loaded):
     # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
     logs, transformed_corrected_ref_pval = calculate_manhattan_data(dff, manhattan_variable, float(pvalue))
 
-    fig = px.scatter(logs)
+    fig = px.scatter(logs, log_y=logscale == ['LOG'])
 
     fig.update_layout(shapes=[
         dict(
@@ -294,9 +295,10 @@ def plot_manhattan(manhattan_variable, pvalue, df_loaded):
 @app.callback(
     Output('manhattan-all-figure', 'figure'),
     [Input('manhattan-all-pval-input', 'value'),
-     Input('df-loaded-div', 'children')]
+     Input('df-loaded-div', 'children'),
+     Input('manhattan-all-logscale-check', 'value')]
 )
-def plot_all_manhattan(pvalue, df_loaded):
+def plot_all_manhattan(pvalue, df_loaded, logscale):
     # TODO: reuse the correlation/pvalue calculations between heatmap and manhattan plot
     print('plot_manhattan')
     if not df_loaded:
@@ -310,7 +312,7 @@ def plot_all_manhattan(pvalue, df_loaded):
     # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
     logs, transformed_corrected_ref_pval = calculate_manhattan_data(dff, None, float(pvalue))
 
-    fig = px.scatter(logs)
+    fig = px.scatter(logs, log_y=logscale == ['LOG'])
 
     fig.update_layout(shapes=[
         dict(
