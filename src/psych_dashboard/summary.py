@@ -15,6 +15,7 @@ from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
 from psych_dashboard.load_feather import load_feather, load_filtered_feather
+from itertools import combinations_with_replacement
 
 
 @app.callback(
@@ -127,7 +128,18 @@ def update_summary_heatmap(dropdown_values, df_loaded):
             dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
             selected_columns = list(dropdown_values)
             print('selected_columns', selected_columns)
-            corr = dff[selected_columns].corr(min_periods=1)
+            dff.dropna(inplace=True)
+
+            # Create and populate correlation matrix and p-values matrix using stats.pearsonr
+            corr = pd.DataFrame(columns=selected_columns, index=selected_columns)
+            pvalues = pd.DataFrame(columns=selected_columns, index=selected_columns)
+            for v1, v2 in combinations_with_replacement(selected_columns, 2):
+                corr[v1][v2], pvalues[v1][v2] = stats.pearsonr(dff[v1].values, dff[v2].values)
+                # Populate the other half of the matrix
+                if v1 != v2:
+                    corr[v2][v1] = corr[v1][v2]
+                    pvalues[v2][v1] = pvalues[v1][v2]
+
             print('corr', corr)
             corr.fillna(0, inplace=True)
             cluster_method = 'hierarchical'
