@@ -14,35 +14,52 @@ import plotly.express as px
 from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
-from psych_dashboard.load_feather import load_feather
+from psych_dashboard.load_feather import load_feather, load_filtered_feather
 
 
 @app.callback(
-    Output('table_summary', 'children'),
-    [Input('df-loaded-div', 'children')])
-def update_summary_table(df_loaded):
+    [Output('table_summary', 'children'),
+     Output('df-filtered-loaded-div', 'children')],
+    [Input('df-loaded-div', 'children'),
+     Input('missing-values-input', 'value')])
+def update_summary_table(df_loaded, missing_value_cutoff):
     print('update_summary_table')
     dff = load_feather(df_loaded)
 
     # If empty, return an empty Div
     if dff.size == 0:
-        return html.Div()
+        return html.Div(), False
 
     for index_level, index in enumerate(indices):
         dff.insert(loc=index_level, column=index, value=dff.index.get_level_values(index_level))
 
     description_df = dff.describe().transpose()
+
+    # Add largely empty rows to the summary table for non-numeric columns.
+    for col in dff.columns:
+        if col not in description_df.index:
+            description_df.loc[col] = [dff.count()[col]] + [np.nan] * 7
+
+    # Create a filtered version of the DF which doesn't have the index columns.
+    dff_filtered = dff.drop(indices, axis=1)
+    # Take out the columns which are filtered out by failing the 'missing values' threshold.
+    dropped_columns = []
+    if missing_value_cutoff not in [None, '']:
+        for col in description_df.index:
+            if 100*description_df['count'][col]/len(dff.index) < 100. - float(missing_value_cutoff):
+                dff_filtered.drop(col, axis=1, inplace=True)
+                dropped_columns.append(col)
+    # Save the filtered dff to feather file. This is the file that will be used for all further processing.
+    dff_filtered.reset_index().to_feather('df_filtered.feather')
+
     # Add the index back in as a column so we can see it in the table preview
     description_df.insert(loc=0, column='column name', value=description_df.index)
 
     # Reorder the columns so that 50% centile is next to 'mean'
     description_df = description_df.reindex(columns=['column name', 'count', 'mean', '50%', 'std', 'min', '25%', '75%', 'max'])
 
-    # description_df['countna'] = [dff[col].isna().sum() for col in dff]
-    # dff.info()
-    return html.Div([html.Div(['nrows:' + str(dff.shape[0]),
-                               'ncols:' + str(dff.shape[1])]
-                              ),
+    return html.Div([html.Div('#rows: ' + str(dff.shape[0])),
+                     html.Div('#columns: ' + str(dff.shape[1])),
                      html.Div(
                          dash_table.DataTable(
                              id='table',
@@ -63,21 +80,30 @@ def update_summary_table(df_loaded):
                                      },
                                      'backgroundColor': 'FireBrick',
                                      'color': 'white'
-                                 }
-                             ]
+                                  }] +
+                                 [{
+                                     'if': {
+                                        'filter_query': '{{column name}} = {}'.format(i)
+                                     },
+                                     'backgroundColor': 'Grey',
+                                     'color': 'white'
+    }
+                                  for i in dropped_columns
+                                  ]
                          )
                      )
                      ]
-                    )
+                    ), True
 
 
 @app.callback(
     [Output('heatmap-dropdown', 'options'),
      Output('heatmap-dropdown', 'value')],
-    [Input('df-loaded-div', 'children')]
+    [Input('df-filtered-loaded-div', 'children')]
 )
 def update_heatmap_dropdown(df_loaded):
-    dff = load_feather(df_loaded)
+    print('update_heatmap_dropdown', df_loaded)
+    dff = load_filtered_feather(df_loaded)
 
     options = [{'label': col,
                 'value': col} for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
@@ -94,7 +120,7 @@ def update_summary_heatmap(dropdown_values, df_loaded):
 
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
-        dff = load_feather(df_loaded)
+        dff = load_filtered_feather(df_loaded)
 
         # Add the index back in as a column so we can see it in the table preview
         if dff.size > 0 and dropdown_values != []:
@@ -151,7 +177,7 @@ def update_summary_kde(dropdown_values, df_loaded):
 
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
-        dff = load_feather(df_loaded)
+        dff = load_filtered_feather(df_loaded)
 
         n_columns = len(dropdown_values) if dropdown_values is not None else 0
         if n_columns > 0:
@@ -199,11 +225,11 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 
 @app.callback(
     Output('manhattan-dd', 'options'),
-    [Input('df-loaded-div', 'children')],
+    [Input('df-filtered-loaded-div', 'children')],
 )
 def update_manhattan_dropdown(df_loaded):
     if df_loaded:
-        dff = load_feather(df_loaded)
+        dff = load_filtered_feather(df_loaded)
 
         return [{'label': col,
                  'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
@@ -262,7 +288,7 @@ def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
     [Input('manhattan-dd', 'value'),
      Input('manhattan-pval-input', 'value'),
      Input('manhattan-logscale-check', 'value')],
-    [State('df-loaded-div', 'children')]
+    [State('df-filtered-loaded-div', 'children')]
 )
 def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     print('plot_manhattan')
@@ -272,7 +298,7 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     if pvalue <= 0. or pvalue is None:
         raise PreventUpdate
 
-    dff = load_feather(df_loaded).dropna()
+    dff = load_filtered_feather(df_loaded).dropna()
 
     # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
     logs, transformed_corrected_ref_pval = calculate_manhattan_data(dff, manhattan_variable, float(pvalue))
@@ -295,7 +321,7 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
 @app.callback(
     Output('manhattan-all-figure', 'figure'),
     [Input('manhattan-all-pval-input', 'value'),
-     Input('df-loaded-div', 'children'),
+     Input('df-filtered-loaded-div', 'children'),
      Input('manhattan-all-logscale-check', 'value')]
 )
 def plot_all_manhattan(pvalue, df_loaded, logscale):
@@ -307,7 +333,7 @@ def plot_all_manhattan(pvalue, df_loaded, logscale):
     if pvalue <= 0. or pvalue is None:
         raise PreventUpdate
 
-    dff = load_feather(df_loaded).dropna()
+    dff = load_filtered_feather(df_loaded).dropna()
 
     # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
     logs, transformed_corrected_ref_pval = calculate_manhattan_data(dff, None, float(pvalue))

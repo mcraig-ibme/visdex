@@ -12,7 +12,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from psych_dashboard.app import app, scatter_graph_dimensions, default_marker_color
-from psych_dashboard.load_feather import load_feather
+from psych_dashboard.load_feather import load_filtered_feather
 
 
 @app.callback(
@@ -38,7 +38,7 @@ def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_
         },
         indent=2)
     print(ctx_msg)
-    dff = load_feather(df_loaded)
+    dff = load_filtered_feather(df_loaded)
     options = [{'label': col,
                 'value': col} for col in dff.columns]
 
@@ -71,7 +71,7 @@ def filter_facet(dff, facet, facet_cats, i):
     [State('df-loaded-div', 'children')]
 )
 def make_scatter_figure(x, y, color=None, facet_col=None, facet_row=None, regression_degree=None, id=None, df_loaded=None):
-    dff = load_feather(df_loaded)
+    dff = load_filtered_feather(df_loaded)
     print('make_scatter_figure', x, y, color, facet_col, facet_row, regression_degree, id)
     ctx = dash.callback_context
     ctx_msg = json.dumps({

@@ -5,7 +5,7 @@ import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 from psych_dashboard.app import app, bar_graph_dimensions
-from psych_dashboard.load_feather import load_feather
+from psych_dashboard.load_feather import load_filtered_feather
 
 
 @app.callback(
@@ -31,7 +31,7 @@ def update_bar_select_columns(df_loaded, x, xv, split_by, split_byv,
         },
         indent=2)
     print(ctx_msg)
-    dff = load_feather(df_loaded)
+    dff = load_filtered_feather(df_loaded)
     options = [{'label': col,
                 'value': col} for col in dff.columns]
 
@@ -47,7 +47,7 @@ def update_bar_select_columns(df_loaded, x, xv, split_by, split_byv,
 
 )
 def make_bar_figure(x, split_by=None, df_loaded=None):
-    dff = load_feather(df_loaded)
+    dff = load_filtered_feather(df_loaded)
     print('make_bar_figure', x, split_by)
     ctx = dash.callback_context
     ctx_msg = json.dumps({

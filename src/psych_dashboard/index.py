@@ -60,7 +60,14 @@ app.layout = html.Div(children=[
                      style={'width': global_width})
         ]
     ),
-    html.H2(children="Table Summary"),
+    html.H2(children="Table Summary and Filter"),
+    html.Div('\nFilter out all columns missing at least X percentage of rows:'),
+    dcc.Input(id='missing-values-input',
+              type="number",
+              min=0,
+              max=100,
+              debounce=True,
+              value=None),
     dcc.Loading(
         id='loading-table-summary',
         children=[
@@ -70,7 +77,7 @@ app.layout = html.Div(children=[
     ),
     html.H2(children='Correlation Heatmap'),
     html.Div(id='heatmap-div',
-             children=[html.Div(["Select variables to display:",
+             children=[html.Div(["Select (numerical) variables to display:",
                                  dcc.Dropdown(id='heatmap-dropdown',
                                               options=([]),
                                               multi=True,
@@ -151,6 +158,7 @@ app.layout = html.Div(children=[
 
     # Hidden div for holding the boolean identifying whether a DF is loaded
     html.Div(id='df-loaded-div', style={'display': 'none'}, children=[]),
+    html.Div(id='df-filtered-loaded-div', style={'display': 'none'}, children=[]),
 
     # Container to hold all the exploratory graphs
     html.Div(id='graph-group-container', children=[]),
@@ -223,8 +231,11 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
 
     # Fill df.feather with the combined DF, and set df-loaded-div to [True]
     df.reset_index().to_feather('df.feather')
+
     return [True]
 
 
 if __name__ == '__main__':
+    pd.DataFrame().reset_index().to_feather('df.feather')
+    pd.DataFrame().reset_index().to_feather('df_filtered.feather')
     app.run_server(debug=True)
