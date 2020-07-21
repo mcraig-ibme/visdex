@@ -14,7 +14,8 @@ import plotly.express as px
 from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
-from psych_dashboard.load_feather import load_feather, load_filtered_feather
+from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval
+from itertools import combinations_with_replacement, product
 
 
 @app.callback(
@@ -127,7 +128,18 @@ def update_summary_heatmap(dropdown_values, df_loaded):
             dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
             selected_columns = list(dropdown_values)
             print('selected_columns', selected_columns)
-            corr = dff[selected_columns].corr(min_periods=1)
+            dff.dropna(inplace=True)
+
+            # Create and populate correlation matrix and p-values matrix using stats.pearsonr
+            corr = pd.DataFrame(columns=selected_columns, index=selected_columns)
+            pvalues = pd.DataFrame(columns=selected_columns, index=selected_columns)
+            for v1, v2 in combinations_with_replacement(selected_columns, 2):
+                corr[v1][v2], pvalues[v1][v2] = stats.pearsonr(dff[v1].values, dff[v2].values)
+                # Populate the other half of the matrix
+                if v1 != v2:
+                    corr[v2][v1] = corr[v1][v2]
+                    pvalues[v2][v1] = pvalues[v1][v2]
+
             print('corr', corr)
             corr.fillna(0, inplace=True)
             cluster_method = 'hierarchical'
@@ -153,10 +165,14 @@ def update_summary_heatmap(dropdown_values, df_loaded):
             # TODO: when re-calculating the clustering.
             # Sort corr columns
             half_sorted_corr = corr[[x for _, x in sorted(zip(clx, selected_columns))]]
+            half_sorted_pval = pvalues[[x for _, x in sorted(zip(clx, selected_columns))]]
             print(half_sorted_corr)
             # Sort corr rows
             sorted_corr = half_sorted_corr.reindex([x for _, x in sorted(zip(clx, selected_columns))])
+            sorted_pval = half_sorted_pval.reindex([x for _, x in sorted(zip(clx, selected_columns))])
 
+            sorted_corr.reset_index().to_feather('corr.feather')
+            sorted_pval.reset_index().to_feather('pval.feather')
             return go.Figure(go.Heatmap(z=np.fliplr(np.triu(sorted_corr)),
                                         x=sorted_corr.columns[::-1],
                                         y=sorted_corr.columns,
@@ -237,50 +253,58 @@ def update_manhattan_dropdown(df_loaded):
         return []
 
 
-def pvalues_against_one_variable(dff, manhattan_variable):
-    p = pd.Series()
-    for variable in dff.columns.drop(manhattan_variable):
-        if dff[variable].dtype in valid_manhattan_dtypes:
-            # print(dff[manhattan_variable].values, dff[variable].values)
-            _, p[variable] = stats.pearsonr(dff[manhattan_variable].values, dff[variable].values)
-    return p
-
-
 def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
     # Filter columns to those with valid types.
+
     if manhattan_variable is None:
-        manhattan_variables = [col for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
+        manhattan_variables = dff.columns
     else:
         if isinstance(manhattan_variable, list):
             manhattan_variables = manhattan_variable
         else:
             manhattan_variables = [manhattan_variable]
 
-    columns_to_calculate = [col for col in dff.columns if
-                            dff[col].dtype in valid_manhattan_dtypes]
-    # print(manhattan_variables)
-    # print('making p')
-    # print(columns_to_calculate, manhattan_variables)
-    p = pd.DataFrame(index=columns_to_calculate)
-    # print('made p')
-    # print(p)
-    # calculate p-value of each correlation
-    for m in manhattan_variables:
-        # print(pvalues_against_one_variable(dff, m))
-        # print(pvalues_against_one_variable(dff, m).reindex(p.index))
-        p[m] = pvalues_against_one_variable(dff, m).reindex(p.index)
-        # print(p)
-    # apply -log10 transformation to each p-value
-    logs = pd.DataFrame()
-    for variable in p:
-        logs[variable] = -np.log10(p[variable])
-    # print('logs', logs)
-    # Divide reference p-value by number of variables to get corrected p-value
-    corrected_ref_pval = ref_pval / ((len(columns_to_calculate) - 1) * len(manhattan_variables))
+    # Create DF to hold the results of the calculations, and perform the log calculation
+    logs = pd.DataFrame(columns=dff.columns, index=manhattan_variables)
+    for variable in dff:
+        logs[variable] = -np.log10(dff[variable])
+
+    # Now blank out any duplicates including the diagonal
+    for ind in logs.index:
+        for col in logs.columns:
+            if ind in logs.columns and col in logs.index and logs[col][ind] == logs[ind][col]:
+                logs[ind][col] = np.nan
+
+    # Divide reference p-value by number of variable pairs to get corrected p-value
+    corrected_ref_pval = ref_pval / (logs.notna().sum().sum())
     # Transform corrected p-value by -log10
     transformed_corrected_ref_pval = -np.log10(corrected_ref_pval)
 
     return logs, transformed_corrected_ref_pval
+
+
+def combine_index_column_names(ind, col):
+    """
+    Combine the two values into a single string
+    :param ind:
+    :param col:
+    :return:
+    """
+    return str(ind) + ' x ' + str(col)
+
+
+def flattened(df):
+    """
+    Convert a DF into a Series, where the index of each element is a combination of the index/col from the original DF
+    :param df:
+    :return:
+    """
+    names = [combine_index_column_names(a,b) for (a, b) in product(df.index, df.columns)]
+    s = pd.Series(index=names)
+
+    for (a, b) in product(df.index, df.columns):
+        s[combine_index_column_names(a,b)] = df[b][a]
+    return s
 
 
 @app.callback(
@@ -291,25 +315,24 @@ def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
     [State('df-filtered-loaded-div', 'children')]
 )
 def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
-    print('plot_manhattan')
-    if not df_loaded or manhattan_variable is None:
+    print('plot_manhattan', manhattan_variable)
+    if not df_loaded or manhattan_variable is None or manhattan_variable == []:
         return go.Figure()
 
     if pvalue <= 0. or pvalue is None:
         raise PreventUpdate
 
-    dff = load_filtered_feather(df_loaded).dropna()
-
     # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
-    logs, transformed_corrected_ref_pval = calculate_manhattan_data(dff, manhattan_variable, float(pvalue))
+    logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable, float(pvalue))
 
-    fig = px.scatter(logs, log_y=logscale == ['LOG'])
+    flattened_logs = flattened(logs).dropna()
+    fig = px.scatter(flattened_logs, log_y=logscale == ['LOG'])
 
     fig.update_layout(shapes=[
         dict(
             type='line',
             yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
-            xref='x', x0=0, x1=len(logs)-1
+            xref='x', x0=0, x1=len(flattened_logs)-1
         )
     ],
         annotations=[
@@ -338,7 +361,6 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
      Input('manhattan-all-logscale-check', 'value')]
 )
 def plot_all_manhattan(pvalue, df_loaded, logscale):
-    # TODO: reuse the correlation/pvalue calculations between heatmap and manhattan plot
     print('plot_manhattan')
     if not df_loaded:
         return go.Figure()
@@ -346,18 +368,18 @@ def plot_all_manhattan(pvalue, df_loaded, logscale):
     if pvalue <= 0. or pvalue is None:
         raise PreventUpdate
 
-    dff = load_filtered_feather(df_loaded).dropna()
-
     # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
-    logs, transformed_corrected_ref_pval = calculate_manhattan_data(dff, None, float(pvalue))
+    logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), None, float(pvalue))
 
-    fig = px.scatter(logs, log_y=logscale == ['LOG'])
+    flattened_logs = flattened(logs).dropna()
+    # TODO: apply clustering ordering
+    fig = px.scatter(flattened_logs, log_y=logscale == ['LOG'])
 
     fig.update_layout(shapes=[
         dict(
             type='line',
             yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
-            xref='x', x0=0, x1=len(logs)-1
+            xref='x', x0=0, x1=len(flattened_logs)-1
         )
     ],
         annotations=[
