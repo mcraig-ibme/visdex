@@ -312,6 +312,19 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
             xref='x', x0=0, x1=len(logs)-1
         )
     ],
+        annotations=[
+            dict(
+                x=0,
+                y=transformed_corrected_ref_pval if logscale != ['LOG'] else np.log10(transformed_corrected_ref_pval),
+                xref='x',
+                yref='y',
+                text='{:f}'.format(transformed_corrected_ref_pval),
+                showarrow=True,
+                arrowhead=7,
+                ax=-50,
+                ay=0
+            ),
+            ],
         xaxis_title='variable',
         yaxis_title='-log10(p)',
     )
@@ -347,6 +360,19 @@ def plot_all_manhattan(pvalue, df_loaded, logscale):
             xref='x', x0=0, x1=len(logs)-1
         )
     ],
+        annotations=[
+            dict(
+                x=0,
+                y=transformed_corrected_ref_pval if logscale != ['LOG'] else np.log10(transformed_corrected_ref_pval),
+                xref='x',
+                yref='y',
+                text='{:f}'.format(transformed_corrected_ref_pval),
+                showarrow=True,
+                arrowhead=7,
+                ax=-50,
+                ay=0
+            ),
+            ],
         xaxis_title='variable',
         yaxis_title='-log10(p)',
     )
