@@ -15,7 +15,7 @@ from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
 from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval
-from itertools import combinations_with_replacement
+from itertools import combinations_with_replacement, product
 
 
 @app.callback(
@@ -283,6 +283,30 @@ def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
     return logs, transformed_corrected_ref_pval
 
 
+def combine_index_column_names(ind, col):
+    """
+    Combine the two values into a single string
+    :param ind:
+    :param col:
+    :return:
+    """
+    return str(ind) + ' x ' + str(col)
+
+
+def flattened(df):
+    """
+    Convert a DF into a Series, where the index of each element is a combination of the index/col from the original DF
+    :param df:
+    :return:
+    """
+    names = [combine_index_column_names(a,b) for (a, b) in product(df.index, df.columns)]
+    s = pd.Series(index=names)
+
+    for (a, b) in product(df.index, df.columns):
+        s[combine_index_column_names(a,b)] = df[b][a]
+    return s
+
+
 @app.callback(
     Output('manhattan-figure', 'figure'),
     [Input('manhattan-dd', 'value'),
@@ -298,18 +322,17 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     if pvalue <= 0. or pvalue is None:
         raise PreventUpdate
 
-    dff = load_filtered_feather(df_loaded).dropna()
-
     # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
     logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable, float(pvalue))
 
-    fig = px.scatter(logs, log_y=logscale == ['LOG'])
+    flattened_logs = flattened(logs).dropna()
+    fig = px.scatter(flattened_logs, log_y=logscale == ['LOG'])
 
     fig.update_layout(shapes=[
         dict(
             type='line',
             yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
-            xref='x', x0=0, x1=len(logs)-1
+            xref='x', x0=0, x1=len(flattened_logs)-1
         )
     ],
         annotations=[
@@ -338,7 +361,6 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
      Input('manhattan-all-logscale-check', 'value')]
 )
 def plot_all_manhattan(pvalue, df_loaded, logscale):
-    # TODO: reuse the correlation/pvalue calculations between heatmap and manhattan plot
     print('plot_manhattan')
     if not df_loaded:
         return go.Figure()
@@ -346,18 +368,18 @@ def plot_all_manhattan(pvalue, df_loaded, logscale):
     if pvalue <= 0. or pvalue is None:
         raise PreventUpdate
 
-    dff = load_filtered_feather(df_loaded).dropna()
-
     # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
     logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), None, float(pvalue))
 
-    fig = px.scatter(logs, log_y=logscale == ['LOG'])
+    flattened_logs = flattened(logs).dropna()
+    # TODO: apply clustering ordering
+    fig = px.scatter(flattened_logs, log_y=logscale == ['LOG'])
 
     fig.update_layout(shapes=[
         dict(
             type='line',
             yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
-            xref='x', x0=0, x1=len(logs)-1
+            xref='x', x0=0, x1=len(flattened_logs)-1
         )
     ],
         annotations=[
