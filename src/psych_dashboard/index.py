@@ -316,4 +316,6 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
 if __name__ == '__main__':
     pd.DataFrame().reset_index().to_feather('df.feather')
     pd.DataFrame().reset_index().to_feather('df_filtered.feather')
+    pd.DataFrame().reset_index().to_feather('corr.feather')
+    pd.DataFrame().reset_index().to_feather('pval.feather')
     app.run_server(debug=True)
