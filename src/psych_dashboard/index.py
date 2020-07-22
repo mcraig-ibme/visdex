@@ -194,6 +194,8 @@ app.layout = html.Div(children=[
     # Hidden div for holding the boolean identifying whether a DF is loaded
     html.Div(id='df-loaded-div', style={'display': 'none'}, children=[]),
     html.Div(id='df-filtered-loaded-div', style={'display': 'none'}, children=[]),
+    html.Div(id='corr-loaded-div', style={'display': 'none'}, children=[]),
+    html.Div(id='pval-loaded-div', style={'display': 'none'}, children=[]),
 
     # Container to hold all the exploratory graphs
     html.Div(id='graph-group-container', children=[]),

@@ -114,7 +114,10 @@ def update_heatmap_dropdown(df_loaded):
 
 
 @app.callback(
-    Output('heatmap', 'figure'),
+    [Output('heatmap', 'figure'),
+     Output('corr-loaded-div', 'children'),
+     Output('pval-loaded-div', 'children'),
+     ],
     [Input('heatmap-dropdown', 'value')],
     [State('df-loaded-div', 'children')])
 def update_summary_heatmap(dropdown_values, df_loaded):
@@ -180,9 +183,9 @@ def update_summary_heatmap(dropdown_values, df_loaded):
                                         zmin=-1,
                                         zmax=1,
                                         colorscale='RdBu')
-                             )
+                             ), True, True
 
-    return go.Figure(go.Heatmap())
+    return go.Figure(go.Heatmap()), False, False
 
 
 @app.callback(
@@ -242,11 +245,11 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 
 @app.callback(
     Output('manhattan-dd', 'options'),
-    [Input('df-filtered-loaded-div', 'children')],
+    [Input('pval-loaded-div', 'children')],
 )
 def update_manhattan_dropdown(df_loaded):
     if df_loaded:
-        dff = load_filtered_feather(df_loaded)
+        dff = load_pval(df_loaded)
 
         return [{'label': col,
                  'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
@@ -358,7 +361,7 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
 @app.callback(
     Output('manhattan-all-figure', 'figure'),
     [Input('manhattan-all-pval-input', 'value'),
-     Input('df-filtered-loaded-div', 'children'),
+     Input('pval-loaded-div', 'children'),
      Input('manhattan-all-logscale-check', 'value')]
 )
 def plot_all_manhattan(pvalue, df_loaded, logscale):
