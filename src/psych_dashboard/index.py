@@ -1,6 +1,7 @@
 import glob
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
@@ -56,7 +57,7 @@ app.layout = html.Div(children=[
     html.Img(src=header_image, height=100),
     create_header('ABCD data exploration dashboard'),
 
-    html.H2(children="File selection"),
+    html.H1(children="File selection"),
 
     html.Label(children='Data File Selection'),
     dcc.Dropdown(
@@ -87,95 +88,108 @@ app.layout = html.Div(children=[
         children=[html.Div(id='column-filter-filenames-div')],
     ),
     html.Button('Load selected files', id='load-files-button'),
-    html.H2(children="Table Preview"),
-    dcc.Loading(
-        id='loading-table-preview',
-        children=[
-            html.Div(id='table_preview',
-                     style={'width': global_width})
-        ]
+    html.Div([
+        html.H1('Summary', style={'display': 'inline-block'}),
+        dbc.Button(
+            "-",
+            id="collapse-summary-button",
+            style={'display': 'inline-block', 'margin-left': '10px', 'width': '40px'}
+        ),
+        ],
     ),
-    html.H2(children="Table Summary and Filter"),
-    html.Div('\nFilter out all columns missing at least X percentage of rows:'),
-    dcc.Input(id='missing-values-input',
-              type="number",
-              min=0,
-              max=100,
-              debounce=True,
-              value=None),
-    dcc.Loading(
-        id='loading-table-summary',
-        children=[
-            html.Div(id='table_summary',
-                     style={'width': global_width})
-            ]
-    ),
-    html.H2(children='Correlation Heatmap'),
-    html.Div(id='heatmap-div',
-             children=[html.Div(["Select (numerical) variables to display:",
-                                 dcc.Dropdown(id='heatmap-dropdown',
-                                              options=([]),
-                                              multi=True,
-                                              style={'height': '100px', 'overflowY': 'auto'}
-                                              )
-                                 ]
-                                )
-                       ]
-             ),
-    dcc.Loading(
-        id='loading-heatmap',
-        children=[
-            dcc.Graph(id='heatmap',
-                      figure=go.Figure()
-                      )
-            ]
-    ),
-    html.H2('Manhattan Plot'),
-    dcc.Loading(
-        id='loading-manhattan-dd',
-        children=[dcc.Dropdown(id='manhattan-dd',
-                               multi=True,
-                               style={'display': 'inline-block', 'width': '80%'}),
-                  dcc.Checklist(id='manhattan-all-values-check',
-                                options=[
-                                    {'label': 'select all', 'value': 'all'}
-                                ],
-                                value=['all'],
-                                style={'display': 'inline-block', 'width': '10%'})
-                  ]
-    ),
-    dcc.Loading(
-        id='loading-manhattan-figure',
-        children=[
-            dcc.Input(id='manhattan-pval-input',
-                      type='number',
-                      value=0.05,
-                      step=0.0001,
-                      debounce=True,
-                      style={'display': 'inline-block'}),
-            dcc.Checklist(
-                id='manhattan-logscale-check',
-                options=[
-                    {'label': 'logscale y-axis', 'value': 'LOG'}
-                ],
-                value=[],
-                style={'display': 'inline-block'}
-            ),
-            dcc.Graph(id='manhattan-figure',
-                      figure=go.Figure()
-                      )
-        ]
-    ),
-    html.H2(children='Per-variable Histograms and KDEs'),
-    dcc.Loading(
-        id='loading-kde-figure',
-        children=[
-            dcc.Graph(id='kde-figure',
-                      figure=go.Figure()
-                      )
-            ]
-    ),
-
+    dbc.Collapse(id='summary-collapse',
+                 children=[
+                     html.H2(children="Table Preview"),
+                     dcc.Loading(
+                         id='loading-table-preview',
+                         children=[
+                             html.Div(id='table_preview',
+                                      style={'width': global_width})
+                         ]
+                     ),
+                     html.H3(children="Table Summary and Filter"),
+                     html.Div('\nFilter out all columns missing at least X percentage of rows:'),
+                     dcc.Input(id='missing-values-input',
+                               type="number",
+                               min=0,
+                               max=100,
+                               debounce=True,
+                               value=None),
+                     dcc.Loading(
+                         id='loading-table-summary',
+                         children=[
+                             html.Div(id='table_summary',
+                                      style={'width': global_width})
+                             ]
+                     ),
+                     html.H2(children='Correlation Heatmap'),
+                     html.Div(id='heatmap-div',
+                              children=[html.Div(["Select (numerical) variables to display:",
+                                                  dcc.Dropdown(id='heatmap-dropdown',
+                                                               options=([]),
+                                                               multi=True,
+                                                               style={'height': '100px', 'overflowY': 'auto'}
+                                                               )
+                                                  ]
+                                                 )
+                                        ]
+                              ),
+                     dcc.Loading(
+                         id='loading-heatmap',
+                         children=[
+                             dcc.Graph(id='heatmap',
+                                       figure=go.Figure()
+                                       )
+                             ]
+                     ),
+                     html.H2('Manhattan Plot'),
+                     dcc.Loading(
+                         id='loading-manhattan-dd',
+                         children=[dcc.Dropdown(id='manhattan-dd',
+                                                multi=True,
+                                                style={'display': 'inline-block', 'width': '80%'}),
+                                   dcc.Checklist(id='manhattan-all-values-check',
+                                                 options=[
+                                                     {'label': 'select all', 'value': 'all'}
+                                                 ],
+                                                 value=['all'],
+                                                 style={'display': 'inline-block', 'width': '10%'})
+                                   ]
+                     ),
+                     dcc.Loading(
+                         id='loading-manhattan-figure',
+                         children=[
+                             dcc.Input(id='manhattan-pval-input',
+                                       type='number',
+                                       value=0.05,
+                                       step=0.0001,
+                                       debounce=True,
+                                       style={'display': 'inline-block'}),
+                             dcc.Checklist(
+                                 id='manhattan-logscale-check',
+                                 options=[
+                                     {'label': 'logscale y-axis', 'value': 'LOG'}
+                                 ],
+                                 value=[],
+                                 style={'display': 'inline-block'}
+                             ),
+                             dcc.Graph(id='manhattan-figure',
+                                       figure=go.Figure()
+                                       )
+                         ]
+                     ),
+                     html.H2(children='Per-variable Histograms and KDEs'),
+                     dcc.Loading(
+                         id='loading-kde-figure',
+                         children=[
+                             dcc.Graph(id='kde-figure',
+                                       figure=go.Figure()
+                                       )
+                             ]
+                     ),
+                     ],
+                 is_open=True
+                 ),
 
 
     # Hidden div for holding the boolean identifying whether a DF is loaded
@@ -184,11 +198,51 @@ app.layout = html.Div(children=[
     html.Div(id='corr-loaded-div', style={'display': 'none'}, children=[]),
     html.Div(id='pval-loaded-div', style={'display': 'none'}, children=[]),
 
-    # Container to hold all the exploratory graphs
-    html.Div(id='graph-group-container', children=[]),
-    # Button at the page bottom to add a new graph
-    html.Button('New Graph', id='add-graph-button')
+    # html.H1('Exploratory graphs', style={'margin-top': '10px', 'margin-bottom': '10px'}),
+    html.Div([
+        html.H1('Exploratory graphs', style={'display': 'inline-block', 'margin-top': '10px', 'margin-bottom': '10px'}),
+        dbc.Button(
+            "-",
+            id="collapse-explore-button",
+            style={'display': 'inline-block', 'margin-left': '10px', 'width': '40px'}
+        ),
+        ],
+    ),
+    dbc.Collapse(id='explore-collapse',
+                 children=[
+                     # Container to hold all the exploratory graphs
+                     html.Div(id='graph-group-container', children=[]),
+                     # Button at the page bottom to add a new graph
+                     html.Button('New Graph', id='add-graph-button', style={'margin-top': '10px'})
+                     ],
+                 is_open=True)
 ])
+
+
+@app.callback(
+    [Output("summary-collapse", "is_open"),
+     Output("collapse-summary-button", "children")],
+    [Input("collapse-summary-button", "n_clicks")],
+    [State("summary-collapse", "is_open")],
+)
+def toggle_collapse_summary(n, is_open):
+    print('toggle_collapse_summary', n, is_open)
+    if n:
+        return not is_open, "+" if is_open else "-"
+    return is_open, "-"
+
+
+@app.callback(
+    [Output("explore-collapse", "is_open"),
+     Output("collapse-explore-button", "children")],
+    [Input("collapse-explore-button", "n_clicks")],
+    [State("explore-collapse", "is_open")],
+)
+def toggle_collapse_explore(n, is_open):
+    print('toggle_collapse_explore', n, is_open)
+    if n:
+        return not is_open, "+" if is_open else "-"
+    return is_open, "-"
 
 
 def standardise_subjectkey(subjectkey):
