@@ -2,7 +2,9 @@ import math
 import numpy as np
 import pandas as pd
 import dash_table
+import dash
 import dash_html_components as html
+import dash_core_components as dcc
 import scipy.stats as stats
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -121,7 +123,7 @@ def update_heatmap_dropdown(df_loaded):
     [Input('heatmap-dropdown', 'value')],
     [State('df-loaded-div', 'children')])
 def update_summary_heatmap(dropdown_values, df_loaded):
-    print('update_summary_heatmap')
+    print('update_summary_heatmap', dropdown_values, df_loaded)
 
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
@@ -244,17 +246,58 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 
 
 @app.callback(
-    Output('manhattan-dd', 'options'),
-    [Input('pval-loaded-div', 'children')],
+    Output('loading-manhattan-dd', 'children'),
+    [Input('manhattan-all-values-check', 'value'),
+     Input('pval-loaded-div', 'children'),
+     Input('manhattan-dd', 'value')]
 )
-def update_manhattan_dropdown(df_loaded):
+def select_manhattan_variables(checkbox_val, df_loaded, dd_values):
+    print('select_manhattan_variables', checkbox_val, df_loaded, dd_values)
+    ctx = dash.callback_context
+
+    # Process based upon the trigger
     if df_loaded:
         dff = load_pval(df_loaded)
+        dd_options = [{'label': col,
+                       'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
 
-        return [{'label': col,
-                 'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
+        # If the underlying data has changed, then select all and set the dropdown to all values
+        if ctx.triggered[0]['prop_id'] == 'pval-loaded-div.children':
+            print('pval triggered')
+            checkbox_val = ['all']
+            dd_values = [col for col in dff.columns if
+                         dff[col].dtype in valid_manhattan_dtypes]
+        # If the checkbox has changed, then select either all or none
+        elif ctx.triggered[0]['prop_id'] == 'manhattan-all-values-check.value':
+            print('check triggered')
+            if checkbox_val == ['all']:
+                dd_values = [col for col in dff.columns if
+                             dff[col].dtype in valid_manhattan_dtypes]
+            else:
+                dd_values = []
+        # If the dropdown value has changed, then compare current value to all possible values,
+        # and set checkbox to 'all' if all values have been selected.
+        elif ctx.triggered[0]['prop_id'] == 'manhattan-dd.value':
+            if sorted(dd_values) == sorted([col for col in dff.columns if
+                                            dff[col].dtype in valid_manhattan_dtypes]):
+                checkbox_val = ['all']
+            else:
+                checkbox_val = []
+        else:
+            raise PreventUpdate
     else:
-        return []
+        dd_options = []
+
+    return [dcc.Dropdown(id='manhattan-dd',
+                         multi=True,
+                         value=dd_values,
+                         options=dd_options,
+                         style={'display': 'inline-block', 'width': '80%'}),
+            dcc.Checklist(id='manhattan-all-values-check',
+                          options=[{'label': 'select all', 'value': 'all'}],
+                          value=checkbox_val,
+                          style={'display': 'inline-block', 'width': '10%'})
+            ]
 
 
 def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
@@ -330,53 +373,6 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable, float(pvalue))
 
     flattened_logs = flattened(logs).dropna()
-    fig = px.scatter(flattened_logs, log_y=logscale == ['LOG'])
-
-    fig.update_layout(shapes=[
-        dict(
-            type='line',
-            yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
-            xref='x', x0=0, x1=len(flattened_logs)-1
-        )
-    ],
-        annotations=[
-            dict(
-                x=0,
-                y=transformed_corrected_ref_pval if logscale != ['LOG'] else np.log10(transformed_corrected_ref_pval),
-                xref='x',
-                yref='y',
-                text='{:f}'.format(transformed_corrected_ref_pval),
-                showarrow=True,
-                arrowhead=7,
-                ax=-50,
-                ay=0
-            ),
-            ],
-        xaxis_title='variable',
-        yaxis_title='-log10(p)',
-    )
-    return fig
-
-
-@app.callback(
-    Output('manhattan-all-figure', 'figure'),
-    [Input('manhattan-all-pval-input', 'value'),
-     Input('pval-loaded-div', 'children'),
-     Input('manhattan-all-logscale-check', 'value')]
-)
-def plot_all_manhattan(pvalue, df_loaded, logscale):
-    print('plot_manhattan')
-    if not df_loaded:
-        return go.Figure()
-
-    if pvalue <= 0. or pvalue is None:
-        raise PreventUpdate
-
-    # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
-    logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), None, float(pvalue))
-
-    flattened_logs = flattened(logs).dropna()
-    # TODO: apply clustering ordering
     fig = px.scatter(flattened_logs, log_y=logscale == ['LOG'])
 
     fig.update_layout(shapes=[
