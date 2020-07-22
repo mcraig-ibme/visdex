@@ -17,9 +17,44 @@ header_image = '/assets/UoN_Primary_Logo_RGB.png'
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 
+def create_header(title):
+    return html.Div(id='app-header', children=[
+            html.A(
+                id='drs-link', children=[
+                    html.H1('DRS |'),
+                ],
+                href="https://digitalresearch.nottingham.ac.uk/",
+                style={'display': 'inline-block',
+                       'margin-left': '10px',
+                       'margin-right': '10px',
+                       'text-decoration': 'none',
+                       'align': 'center'
+                       }
+            ),
+            html.H2(
+                title,
+                style={'display': 'inline-block', }
+            ),
+            html.A(
+                id='uni-link', children=[
+                    html.H1('UoN'),
+                ],
+                href="https://www.nottingham.ac.uk/",
+                style={'display': 'inline-block',
+                       'float': 'right',
+                       'margin-right': '10px',
+                       'text-decoration': 'none',
+                       'color': '#FFFFFF',
+                       }
+            ),
+        ],
+        style={'width': '100%', 'display': 'inline-block', 'color': 'white'}
+        )
+
+
 app.layout = html.Div(children=[
     html.Img(src=header_image, height=100),
-    html.H1(children='ABCD data exploration dashboard'),
+    create_header('ABCD data exploration dashboard'),
 
     html.H2(children="File selection"),
 
