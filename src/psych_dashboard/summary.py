@@ -120,10 +120,11 @@ def update_heatmap_dropdown(df_loaded):
      Output('corr-loaded-div', 'children'),
      Output('pval-loaded-div', 'children'),
      ],
-    [Input('heatmap-dropdown', 'value')],
+    [Input('heatmap-dropdown', 'value'),
+     Input('heatmap-clustering-input', 'value')],
     [State('df-loaded-div', 'children')])
-def update_summary_heatmap(dropdown_values, df_loaded):
-    print('update_summary_heatmap', dropdown_values, df_loaded)
+def update_summary_heatmap(dropdown_values, clusters, df_loaded):
+    print('update_summary_heatmap', dropdown_values, clusters, df_loaded)
 
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
@@ -140,7 +141,7 @@ def update_summary_heatmap(dropdown_values, df_loaded):
             corr = pd.DataFrame(columns=selected_columns, index=selected_columns)
             pvalues = pd.DataFrame(columns=selected_columns, index=selected_columns)
             for v1, v2 in combinations_with_replacement(selected_columns, 2):
-                corr[v1][v2], pvalues[v1][v2] = stats.pearsonr(dff[v1].values, dff[v2].values)
+                corr[v1][v2], pvalues[v1][v2] = stats.pearsonr(dff[v1].to_numpy(), dff[v2].to_numpy())
                 # Populate the other half of the matrix
                 if v1 != v2:
                     corr[v2][v1] = corr[v1][v2]
@@ -157,7 +158,7 @@ def update_summary_heatmap(dropdown_values, df_loaded):
                 clx, _ = vq(w_corr, centroids)
 
             elif cluster_method == 'hierarchical':
-                cluster = AgglomerativeClustering(n_clusters=3, affinity='euclidean', linkage='ward')
+                cluster = AgglomerativeClustering(n_clusters=clusters, affinity='euclidean', linkage='ward')
                 cluster.fit_predict(corr)
                 clx = cluster.labels_
             else:
@@ -179,7 +180,12 @@ def update_summary_heatmap(dropdown_values, df_loaded):
 
             sorted_corr.reset_index().to_feather('corr.feather')
             sorted_pval.reset_index().to_feather('pval.feather')
-            return go.Figure(go.Heatmap(z=np.fliplr(np.triu(sorted_corr)),
+            print(np.triu(sorted_corr))
+            triangular = sorted_corr.to_numpy()
+            print(np.tril_indices(triangular.shape[0], -1))
+            triangular[np.tril_indices(triangular.shape[0], -1)] = np.nan
+            print(triangular)
+            return go.Figure(go.Heatmap(z=np.fliplr(triangular),
                                         x=sorted_corr.columns[::-1],
                                         y=sorted_corr.columns,
                                         zmin=-1,
@@ -291,8 +297,8 @@ def select_manhattan_variables(checkbox_val, df_loaded, dd_values):
     return [dcc.Dropdown(id='manhattan-dd',
                          multi=True,
                          value=dd_values,
-                         options=dd_options,
-                         style={'display': 'inline-block', 'width': '80%'}),
+                         options=dd_options),
+                         # style={'display': 'inline-block', 'width': '80%'}),
             dcc.Checklist(id='manhattan-all-values-check',
                           options=[{'label': 'select all', 'value': 'all'}],
                           value=checkbox_val,
