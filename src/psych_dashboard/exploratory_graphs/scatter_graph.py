@@ -72,19 +72,12 @@ max_marker_size = 10
 
 @app.callback(
     Output({'type': 'gen_scatter_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in (list(scatter_graph_dimensions) + ['regression'])),
-     Input({'type': 'scatter_x', 'index': MATCH}, "id")],
+    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in (list(scatter_graph_dimensions) + ['regression']))],
     [State('df-loaded-div', 'children')]
 )
-def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=None, regression_degree=None, id=None, df_loaded=None):
+def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=None, regression_degree=None, df_loaded=None):
+    print('make_scatter_figure')
     dff = load_filtered_feather(df_loaded)
-    print('make_scatter_figure', x, y, color, size, facet_col, facet_row, regression_degree, id)
-    ctx = dash.callback_context
-    ctx_msg = json.dumps({
-        'states': ctx.states,
-        'triggered': ctx.triggered
-    }, indent=2)
-    print(ctx_msg)
 
     facet_row_cats = dff[facet_row].unique() if facet_row is not None else [None]
     facet_col_cats = dff[facet_col].unique() if facet_col is not None else [None]
@@ -160,10 +153,12 @@ def map_color(dff):
 
 def map_size(series, min_out, max_out):
     """Maps the range of series to [min_size, max_size]"""
+    print('map_size', series)
+    if series.empty:
+        return []
+
     min_in = min(series)
     max_in = max(series)
     slope = 1.0 * (max_out - min_out) / (max_in - min_in)
-    print(series)
     series = min_out + slope * (series - min_in)
-    print(series)
     return series
