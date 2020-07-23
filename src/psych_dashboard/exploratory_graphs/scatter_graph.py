@@ -24,10 +24,10 @@ from psych_dashboard.load_feather import load_filtered_feather
                                         ] for t in (list(scatter_graph_dimensions) + ['regression'])))
     + [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')]
 )
-def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv,
+def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, size, sizev, facet_col, fcv, facet_row, frv,
                                   regression, regv, style_dict):
     print('update_scatter_select_columns')
-    print(x, xv, y, yv, color, colorv, facet_col, fcv, facet_row, frv, regression, regv)
+    print(x, xv, y, yv, color, colorv, size, sizev, facet_col, fcv, facet_row, frv, regression, regv)
     print('style_dict')
     print(style_dict)
     ctx = dash.callback_context
@@ -46,6 +46,8 @@ def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, facet_
            ["y:", dcc.Dropdown(id={'type': 'scatter_y', 'index': y['index']}, options=options, value=yv)], \
            ["color:", dcc.Dropdown(id={'type': 'scatter_color', 'index': color['index']},
                                    options=options, value=colorv)], \
+           ["size:", dcc.Dropdown(id={'type': 'scatter_size', 'index': size['index']},
+                                   options=options, value=sizev)], \
            ["split_horizontally:", dcc.Dropdown(id={'type': 'scatter_facet_col', 'index': facet_col['index']},
                                                 options=options, value=fcv)], \
            ["split_vertically:", dcc.Dropdown(id={'type': 'scatter_facet_row', 'index': facet_row['index']},
@@ -64,21 +66,18 @@ def filter_facet(dff, facet, facet_cats, i):
     return dff
 
 
+min_marker_size = 2
+max_marker_size = 10
+
+
 @app.callback(
     Output({'type': 'gen_scatter_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in (list(scatter_graph_dimensions) + ['regression'])),
-     Input({'type': 'scatter_x', 'index': MATCH}, "id")],
+    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in (list(scatter_graph_dimensions) + ['regression']))],
     [State('df-loaded-div', 'children')]
 )
-def make_scatter_figure(x, y, color=None, facet_col=None, facet_row=None, regression_degree=None, id=None, df_loaded=None):
+def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=None, regression_degree=None, df_loaded=None):
+    print('make_scatter_figure')
     dff = load_filtered_feather(df_loaded)
-    print('make_scatter_figure', x, y, color, facet_col, facet_row, regression_degree, id)
-    ctx = dash.callback_context
-    ctx_msg = json.dumps({
-        'states': ctx.states,
-        'triggered': ctx.triggered
-    }, indent=2)
-    print(ctx_msg)
 
     facet_row_cats = dff[facet_row].unique() if facet_row is not None else [None]
     facet_col_cats = dff[facet_col].unique() if facet_col is not None else [None]
@@ -101,6 +100,8 @@ def make_scatter_figure(x, y, color=None, facet_col=None, facet_row=None, regres
         else:
             color_to_use.set_index(dff.index, inplace=True)
             dff['color_to_use'] = color_to_use
+    if size is not None:
+        dff.dropna(inplace=True, subset=[size])
     for i in range(len(facet_row_cats)):
         for j in range(len(facet_col_cats)):
             working_dff = dff
@@ -113,9 +114,10 @@ def make_scatter_figure(x, y, color=None, facet_col=None, facet_row=None, regres
                                          'color_to_use'] if 'color_to_use' in working_dff.columns else color_to_use,
                                                  coloraxis="coloraxis",
                                                  showscale=True),
-                                     # hovertemplate=['SUBJECT_ID: ' + str(i) + ', DATASET_ID: ' + str(j) +
-                                     #                '<extra></extra>'
-                                     #                for i, j in zip(working_dff.index, working_dff.DATASET_ID)],
+                                     marker_size=map_size(working_dff[size], min_marker_size, max_marker_size) if size is not None else max_marker_size,
+                                     hovertemplate=['SUBJECTKEY: ' + str(i) + '<br>EVENTNAME: ' + str(j) +
+                                                    '<extra></extra>'
+                                                    for (i, j) in working_dff.index],
                                      ),
                           i + 1,
                           j + 1)
@@ -147,3 +149,16 @@ def map_color(dff):
     if all([value == 0 for value in all_values]):
         all_values = pd.Series([1 for _ in all_values])
     return all_values
+
+
+def map_size(series, min_out, max_out):
+    """Maps the range of series to [min_size, max_size]"""
+    print('map_size', series)
+    if series.empty:
+        return []
+
+    min_in = min(series)
+    max_in = max(series)
+    slope = 1.0 * (max_out - min_out) / (max_in - min_in)
+    series = min_out + slope * (series - min_in)
+    return series

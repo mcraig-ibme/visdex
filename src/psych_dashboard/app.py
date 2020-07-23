@@ -9,6 +9,7 @@ graph_types = ['Scatter', 'Bar']
 scatter_graph_dimensions = {"x": "x",
                             "y": "y",
                             "color": "color (will drop NAs)",
+                            "size": "size",
                             "facet_col": "split horizontally",
                             "facet_row": "split vertically"}
 bar_graph_dimensions = {"x": "x",
