@@ -342,15 +342,13 @@ def combine_index_column_names(ind, col):
 
 def flattened(df):
     """
-    Convert a DF into a Series, where the index of each element is a combination of the index/col from the original DF
+    Convert a DF into a Series, where the MultiIndex of each element is a combination of the index/col from the original DF
     :param df:
     :return:
     """
-    names = [combine_index_column_names(a,b) for (a, b) in product(df.index, df.columns)]
-    s = pd.Series(index=names)
-
+    s = pd.Series(index=pd.MultiIndex.from_tuples(product(df.index, df.columns), names=['first', 'second']))
     for (a, b) in product(df.index, df.columns):
-        s[combine_index_column_names(a,b)] = df[b][a]
+        s[a, b] = df[b][a]
     return s
 
 
@@ -373,7 +371,12 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable, float(pvalue))
 
     flattened_logs = flattened(logs).dropna()
-    fig = px.scatter(flattened_logs, log_y=logscale == ['LOG'])
+
+    fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index] for i in range(0, 2)],
+                               y=flattened_logs.values,
+                               mode='markers'
+                               ),
+                    )
 
     fig.update_layout(shapes=[
         dict(
@@ -397,5 +400,6 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
             ],
         xaxis_title='variable',
         yaxis_title='-log10(p)',
+        yaxis_type='log' if logscale == ['LOG'] else None
     )
     return fig
