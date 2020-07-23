@@ -124,11 +124,16 @@ app.layout = html.Div(children=[
                      ),
                      html.H2(children='Correlation Heatmap'),
                      html.Div(id='heatmap-div',
-                              children=[html.Div(["Select (numerical) variables to display:",
+                              children=[dcc.Input(id='heatmap-clustering-input',
+                                                  type="number",
+                                                  min=1,
+                                                  debounce=True,
+                                                  value=2),
+                                        html.Div(["Select (numerical) variables to display:",
                                                   dcc.Dropdown(id='heatmap-dropdown',
                                                                options=([]),
                                                                multi=True,
-                                                               style={'height': '100px', 'overflowY': 'auto'}
+                                                               # style={'height': '100px', 'overflowY': 'auto'}
                                                                )
                                                   ]
                                                  )
@@ -146,8 +151,8 @@ app.layout = html.Div(children=[
                      dcc.Loading(
                          id='loading-manhattan-dd',
                          children=[dcc.Dropdown(id='manhattan-dd',
-                                                multi=True,
-                                                style={'display': 'inline-block', 'width': '80%'}),
+                                                multi=True),
+                                                # style={'display': 'inline-block', 'width': '80%'}),
                                    dcc.Checklist(id='manhattan-all-values-check',
                                                  options=[
                                                      {'label': 'select all', 'value': 'all'}
