@@ -184,7 +184,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             print(np.triu(sorted_corr))
             triangular = sorted_corr.to_numpy()
             print(np.tril_indices(triangular.shape[0], -1))
-            triangular[np.tril_indices(triangular.shape[0], -1)] = np.nan
+            triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
             print(triangular)
             return go.Figure(go.Heatmap(z=np.fliplr(triangular),
                                         x=sorted_corr.columns[::-1],
@@ -379,8 +379,8 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
 
     flattened_logs = flattened(logs).dropna()
 
-    fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index] for i in range(0, 2)],
-                               y=flattened_logs.values,
+    fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
+                               y=np.flip(flattened_logs.values),
                                mode='markers'
                                ),
                     )
