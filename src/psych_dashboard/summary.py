@@ -196,17 +196,19 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                             )
 
             fig.update_layout(xaxis_showgrid=False,
-                              yaxis_showgrid=False)
+                              yaxis_showgrid=False,
+                              plot_bgcolor='rgba(0,0,0,0)')
 
             return fig, True, True
 
     fig = go.Figure(go.Heatmap())
     fig.update_layout(xaxis_showgrid=False,
                       xaxis_zeroline=False,
-                      xaxis_range=[0,1],
+                      xaxis_range=[0, 1],
                       yaxis_showgrid=False,
                       yaxis_zeroline=False,
-                      yaxis_range=[0,1])
+                      yaxis_range=[0, 1],
+                      plot_bgcolor='rgba(0,0,0,0)')
 
     return fig, False, False
 
