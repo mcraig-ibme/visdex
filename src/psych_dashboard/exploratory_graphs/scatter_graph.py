@@ -95,7 +95,7 @@ def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=N
         dff.dropna(inplace=True, subset=[color])
         color_to_use = pd.DataFrame(dff[color])
 
-        if dff[color].dtype == pd.CategoricalDtype:
+        if color in dff.select_dtypes(include='object').columns:
             dff['color_to_use'] = map_color(dff[color])
         else:
             color_to_use.set_index(dff.index, inplace=True)
@@ -107,6 +107,7 @@ def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=N
             working_dff = dff
             working_dff = filter_facet(working_dff, facet_row, facet_row_cats, i)
             working_dff = filter_facet(working_dff, facet_col, facet_col_cats, j)
+
             fig.add_trace(go.Scatter(x=working_dff[x],
                                      y=working_dff[y],
                                      mode='markers',

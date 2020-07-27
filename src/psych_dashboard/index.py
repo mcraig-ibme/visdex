@@ -302,12 +302,12 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
     df['SUBJECTKEY'] = df['SUBJECTKEY'].apply(standardise_subjectkey)
 
     # Set certain columns to have more specific types.
-    if 'SEX' in df.columns:
-        df['SEX'] = df['SEX'].astype('category')
-
-    for column in ['EVENTNAME', 'SRC_SUBJECT_ID']:
-        if column in df.columns:
-            df[column] = df[column].astype('string')
+    # if 'SEX' in df.columns:
+    #     df['SEX'] = df['SEX'].astype('category')
+    #
+    # for column in ['EVENTNAME', 'SRC_SUBJECT_ID']:
+    #     if column in df.columns:
+    #         df[column] = df[column].astype('string')
 
     # Set SUBJECTKEY, EVENTNAME as MultiIndex
     df.set_index(indices, inplace=True, verify_integrity=True, drop=True)

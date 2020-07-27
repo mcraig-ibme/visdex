@@ -53,6 +53,7 @@ def update_summary_table(df_loaded, missing_value_cutoff):
             if description_df['% missing values'][col] > float(missing_value_cutoff):
                 dff_filtered.drop(col, axis=1, inplace=True)
                 dropped_columns.append(col)
+
     # Save the filtered dff to feather file. This is the file that will be used for all further processing.
     dff_filtered.reset_index().to_feather('df_filtered.feather')
 
