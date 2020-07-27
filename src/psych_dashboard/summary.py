@@ -187,8 +187,8 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
 
             fig = go.Figure(go.Heatmap(z=np.fliplr(triangular),
-                                       x=sorted_corr.columns[::-1],
-                                       y=sorted_corr.columns,
+                                       x=sorted_corr.columns[-1:0:-1],
+                                       y=sorted_corr.columns[:-1],
                                        zmin=-1,
                                        zmax=1,
                                        colorscale='RdBu',
