@@ -181,20 +181,34 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
 
             sorted_corr.reset_index().to_feather('corr.feather')
             sorted_pval.reset_index().to_feather('pval.feather')
-            print(np.triu(sorted_corr))
-            triangular = sorted_corr.to_numpy()
-            print(np.tril_indices(triangular.shape[0], -1))
-            triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
-            print(triangular)
-            return go.Figure(go.Heatmap(z=np.fliplr(triangular),
-                                        x=sorted_corr.columns[::-1],
-                                        y=sorted_corr.columns,
-                                        zmin=-1,
-                                        zmax=1,
-                                        colorscale='RdBu')
-                             ), True, True
 
-    return go.Figure(go.Heatmap()), False, False
+            # Remove the upper triangle and diagonal
+            triangular = sorted_corr.to_numpy()
+            triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
+
+            fig = go.Figure(go.Heatmap(z=np.fliplr(triangular),
+                                       x=sorted_corr.columns[::-1],
+                                       y=sorted_corr.columns,
+                                       zmin=-1,
+                                       zmax=1,
+                                       colorscale='RdBu',
+                                       ),
+                            )
+
+            fig.update_layout(xaxis_showgrid=False,
+                              yaxis_showgrid=False)
+
+            return fig, True, True
+
+    fig = go.Figure(go.Heatmap())
+    fig.update_layout(xaxis_showgrid=False,
+                      xaxis_zeroline=False,
+                      xaxis_range=[0,1],
+                      yaxis_showgrid=False,
+                      yaxis_zeroline=False,
+                      yaxis_range=[0,1])
+
+    return fig, False, False
 
 
 @app.callback(
