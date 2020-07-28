@@ -79,8 +79,19 @@ def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=N
     print('make_scatter_figure')
     dff = load_filtered_feather(df_loaded)
 
-    facet_row_cats = dff[facet_row].unique() if facet_row is not None else [None]
-    facet_col_cats = dff[facet_col].unique() if facet_col is not None else [None]
+    facet_row_cats = list(dff[facet_row].unique()) if facet_row is not None else [None]
+    facet_col_cats = list(dff[facet_col].unique()) if facet_col is not None else [None]
+
+    try:
+        if len(facet_row_cats) > 1:
+            facet_row_cats.remove(None)
+    except ValueError:
+        pass
+    try:
+        if len(facet_col_cats) > 1:
+            facet_col_cats.remove(None)
+    except ValueError:
+        pass
 
     # Return empty scatter if not enough options are selected, or the data is empty.
     if dff.columns.size == 0 or x is None or y is None:
