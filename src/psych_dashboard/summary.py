@@ -15,7 +15,7 @@ import plotly.express as px
 from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
-from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval, load_corr, load_logs
+from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval, load_corr, load_logs, load_flattened_logs
 from itertools import combinations_with_replacement, product
 from functools import wraps
 
@@ -473,7 +473,7 @@ def flattened(df):
     :param df:
     :return:
     """
-    s = pd.Series(index=pd.MultiIndex.from_tuples(product(df.index, df.columns), names=['first', 'second']))
+    s = pd.Series(index=pd.MultiIndex.from_tuples(product(df.index, df.columns), names=['first', 'second']), name='value')
     for (a, b) in product(df.index, df.columns):
         s[a, b] = df[b][a]
     return s
@@ -497,17 +497,20 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
 
     ctx = dash.callback_context
 
-    # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
+    # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold.
+    # Save logs and flattened logs to feather files
     # Skip this and reuse the previous values if we're just changing the log scale.
-    if ctx.triggered[0]['prop_id'] == 'manhattan-logscale-check.value':
+    if ctx.triggered[0]['prop_id'] not in ['manhattan-logscale-check.value', 'manhattan-pval-input.value']:
+        logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable,
+                                                                        float(pvalue))
+        logs.reset_index().to_feather('logs.feather')
+        flattened_logs = flattened(logs).dropna()
+        flattened_logs.reset_index().to_feather('flattened_logs.feather')
+    else:
         print('using logscale shortcut')
         logs = load_logs(True)
+        flattened_logs = load_flattened_logs(True)
         transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
-    else:
-        logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable, float(pvalue))
-        logs.reset_index().to_feather('logs.feather')
-
-    flattened_logs = flattened(logs).dropna()
 
     fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
                                y=np.flip(flattened_logs.values),
