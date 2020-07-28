@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import pandas as pd
+import time
 import dash_table
 import dash
 import dash_html_components as html
@@ -14,8 +15,24 @@ import plotly.express as px
 from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
-from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval
+from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval, load_corr, load_logs, load_flattened_logs
 from itertools import combinations_with_replacement, product
+from functools import wraps
+
+timing_dict = dict()
+
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time.time()
+        result = f(*args, **kw)
+        te = time.time()
+        print('#### func:%r took: %2.4f sec' %
+              (f.__name__, te-ts))
+        timing_dict[f.__name__] = te-ts
+        return result
+    return wrap
 
 
 @app.callback(
@@ -23,6 +40,7 @@ from itertools import combinations_with_replacement, product
      Output('df-filtered-loaded-div', 'children')],
     [Input('df-loaded-div', 'children'),
      Input('missing-values-input', 'value')])
+@timing
 def update_summary_table(df_loaded, missing_value_cutoff):
     print('update_summary_table')
     dff = load_feather(df_loaded)
@@ -106,6 +124,7 @@ def update_summary_table(df_loaded, missing_value_cutoff):
      Output('heatmap-dropdown', 'value')],
     [Input('df-filtered-loaded-div', 'children')]
 )
+@timing
 def update_heatmap_dropdown(df_loaded):
     print('update_heatmap_dropdown', df_loaded)
     dff = load_filtered_feather(df_loaded)
@@ -124,31 +143,76 @@ def update_heatmap_dropdown(df_loaded):
     [Input('heatmap-dropdown', 'value'),
      Input('heatmap-clustering-input', 'value')],
     [State('df-loaded-div', 'children')])
+@timing
 def update_summary_heatmap(dropdown_values, clusters, df_loaded):
     print('update_summary_heatmap', dropdown_values, clusters, df_loaded)
-
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
         dff = load_filtered_feather(df_loaded)
+        corr_dff = load_corr(df_loaded)
+        pval_dff = load_pval(df_loaded)
+
+        ts = time.time()
 
         # Add the index back in as a column so we can see it in the table preview
         if dff.size > 0 and dropdown_values != []:
             dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
-            selected_columns = list(dropdown_values)
-            print('selected_columns', selected_columns)
             dff.dropna(inplace=True)
 
-            # Create and populate correlation matrix and p-values matrix using stats.pearsonr
-            corr = pd.DataFrame(columns=selected_columns, index=selected_columns)
-            pvalues = pd.DataFrame(columns=selected_columns, index=selected_columns)
-            for v1, v2 in combinations_with_replacement(selected_columns, 2):
-                corr[v1][v2], pvalues[v1][v2] = stats.pearsonr(dff[v1].to_numpy(), dff[v2].to_numpy())
-                # Populate the other half of the matrix
-                if v1 != v2:
-                    corr[v2][v1] = corr[v1][v2]
-                    pvalues[v2][v1] = pvalues[v1][v2]
+            # The columns we want to have calculated
+            selected_columns = list(dropdown_values)
+            print('selected_columns', selected_columns)
 
-            print('corr', corr)
+            # Work out which columns/rows are needed anew, and which are already populated
+            # TODO: note that if we load in a new file with some of the same column names, then this old correlation
+            # TODO: data may be used erroneously.
+            previous_cols = corr_dff.columns
+            overlap = set(selected_columns).intersection(set(previous_cols))
+            print('these are needed and already available:', overlap)
+            required_new = set(selected_columns).difference(set(previous_cols))
+            print('these are needed and not already available:', required_new)
+
+            # If there is no overlap, then skip this step and create a brand new empty dataframe instead.
+            if len(overlap) != 0:
+                # Copy across existing corr and pval data rather than recalculating
+                corr = corr_dff[overlap][overlap]
+                pvalues = pval_dff[overlap][overlap]
+
+                # Create nan elements in correlation matrix and p-values matrix for those values which
+                # will be calculated
+                if len(required_new) != 0:
+                    corr = corr.append([pd.Series(np.nan, index=corr.columns, name=col) for col in required_new])
+                    pvalues = pvalues.append([pd.Series(np.nan, index=pvalues.columns, name=col) for col in required_new])
+                    for col in required_new:
+                        corr[col] = np.nan
+                        pvalues[col] = np.nan
+
+            # Reorder the corr and pvalues matrices to match the input order from the dropdown
+                corr = corr.reindex(selected_columns)
+                corr = corr[selected_columns]
+                pvalues = pvalues.reindex(selected_columns)
+                pvalues = pvalues[selected_columns]
+
+            else:
+                corr = pd.DataFrame(index=selected_columns, columns=selected_columns)
+                pvalues = pd.DataFrame(index=selected_columns, columns=selected_columns)
+
+            te = time.time()
+            timing_dict['update_summary_heatmap-init-corr'] = te - ts
+            ts = time.time()
+            # Populate missing elements in correlation matrix and p-values matrix using stats.pearsonr
+            for v1, v2 in product(selected_columns, required_new):
+                if v1 <= v2:
+                    corr[v1][v2], pvalues[v1][v2] = stats.pearsonr(dff[v1].to_numpy(), dff[v2].to_numpy())
+                    # Populate the other half of the matrix
+                    if v1 != v2:
+                        corr[v2][v1] = corr[v1][v2]
+                        pvalues[v2][v1] = pvalues[v1][v2]
+
+            te = time.time()
+            timing_dict['update_summary_heatmap-corr'] = te - ts
+            ts = time.time()
+
             corr.fillna(0, inplace=True)
             cluster_method = 'hierarchical'
             if cluster_method == 'Kmeans':
@@ -165,6 +229,10 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             else:
                 raise ValueError
 
+            te = time.time()
+            timing_dict['update_summary_heatmap-cluster'] = te - ts
+            ts = time.time()
+
             print(clx)
             print([x for _,x in sorted(zip(clx, selected_columns))])
 
@@ -173,19 +241,28 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # TODO: when re-calculating the clustering.
             # Sort corr columns
             sorted_column_order = [x for _, x in sorted(zip(clx, selected_columns))]
+
             half_sorted_corr = corr[sorted_column_order]
             half_sorted_pval = pvalues[sorted_column_order]
-            print(half_sorted_corr)
+
             # Sort corr rows
             sorted_corr = half_sorted_corr.reindex(sorted_column_order)
             sorted_pval = half_sorted_pval.reindex(sorted_column_order)
 
+            te = time.time()
+            timing_dict['update_summary_heatmap-reorder'] = te - ts
+            ts = time.time()
+
             sorted_corr.reset_index().to_feather('corr.feather')
             sorted_pval.reset_index().to_feather('pval.feather')
-
+            te = time.time()
+            timing_dict['update_summary_heatmap-save'] = te - ts
+            ts = time.time()
             # Remove the upper triangle and diagonal
             triangular = sorted_corr.to_numpy()
             triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
+            te = time.time()
+            timing_dict['update_summary_heatmap-triangular'] = te - ts
 
             fig = go.Figure(go.Heatmap(z=np.fliplr(triangular),
                                        x=sorted_corr.columns[-1::-1],
@@ -216,7 +293,6 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                               for i in np.where(y)[0]
                               ]
                               )
-
             return fig, True, True
 
     fig = go.Figure(go.Heatmap())
@@ -235,6 +311,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
     Output('kde-figure', 'figure'),
     [Input('heatmap-dropdown', 'value')],
     [State('df-loaded-div', 'children')])
+@timing
 def update_summary_kde(dropdown_values, df_loaded):
     print('update_summary_kde')
 
@@ -292,6 +369,7 @@ valid_manhattan_dtypes = [np.int64, np.float64]
      Input('pval-loaded-div', 'children'),
      Input('manhattan-dd', 'value')]
 )
+@timing
 def select_manhattan_variables(checkbox_val, df_loaded, dd_values):
     print('select_manhattan_variables', checkbox_val, df_loaded, dd_values)
     ctx = dash.callback_context
@@ -341,7 +419,16 @@ def select_manhattan_variables(checkbox_val, df_loaded, dd_values):
             ]
 
 
-def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
+def calculate_transformed_corrected_pval(ref_pval, logs):
+    # Divide reference p-value by number of variable pairs to get corrected p-value
+    corrected_ref_pval = ref_pval / (logs.notna().sum().sum())
+    # Transform corrected p-value by -log10
+    transformed_corrected_ref_pval = -np.log10(corrected_ref_pval)
+    return transformed_corrected_ref_pval
+
+
+@timing
+def calculate_manhattan_data(dff, manhattan_variable):
     # Filter columns to those with valid types.
 
     if manhattan_variable is None:
@@ -363,14 +450,10 @@ def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
             if ind in logs.columns and col in logs.index and logs[col][ind] == logs[ind][col]:
                 logs[ind][col] = np.nan
 
-    # Divide reference p-value by number of variable pairs to get corrected p-value
-    corrected_ref_pval = ref_pval / (logs.notna().sum().sum())
-    # Transform corrected p-value by -log10
-    transformed_corrected_ref_pval = -np.log10(corrected_ref_pval)
-
-    return logs, transformed_corrected_ref_pval
+    return logs
 
 
+@timing
 def combine_index_column_names(ind, col):
     """
     Combine the two values into a single string
@@ -381,13 +464,14 @@ def combine_index_column_names(ind, col):
     return str(ind) + ' x ' + str(col)
 
 
+@timing
 def flattened(df):
     """
     Convert a DF into a Series, where the MultiIndex of each element is a combination of the index/col from the original DF
     :param df:
     :return:
     """
-    s = pd.Series(index=pd.MultiIndex.from_tuples(product(df.index, df.columns), names=['first', 'second']))
+    s = pd.Series(index=pd.MultiIndex.from_tuples(product(df.index, df.columns), names=['first', 'second']), name='value')
     for (a, b) in product(df.index, df.columns):
         s[a, b] = df[b][a]
     return s
@@ -400,6 +484,7 @@ def flattened(df):
      Input('manhattan-logscale-check', 'value')],
     [State('df-filtered-loaded-div', 'children')]
 )
+@timing
 def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     print('plot_manhattan', manhattan_variable)
     if not df_loaded or manhattan_variable is None or manhattan_variable == []:
@@ -408,10 +493,22 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     if pvalue <= 0. or pvalue is None:
         raise PreventUpdate
 
-    # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold
-    logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable, float(pvalue))
+    ctx = dash.callback_context
 
-    flattened_logs = flattened(logs).dropna()
+    # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold.
+    # Save logs and flattened logs to feather files
+    # Skip this and reuse the previous values if we're just changing the log scale.
+    if ctx.triggered[0]['prop_id'] not in ['manhattan-logscale-check.value', 'manhattan-pval-input.value']:
+        logs = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable)
+        logs.reset_index().to_feather('logs.feather')
+        flattened_logs = flattened(logs).dropna()
+        flattened_logs.reset_index().to_feather('flattened_logs.feather')
+        transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
+    else:
+        print('using logscale shortcut')
+        logs = load_logs(True)
+        flattened_logs = load_flattened_logs(True)
+        transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
 
     fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
                                y=np.flip(flattened_logs.values),
@@ -443,4 +540,5 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
         yaxis_title='-log10(p)',
         yaxis_type='log' if logscale == ['LOG'] else None
     )
+    print(pd.DataFrame(timing_dict.items()))
     return fig
