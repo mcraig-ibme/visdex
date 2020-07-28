@@ -202,11 +202,12 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             ts = time.time()
             # Populate missing elements in correlation matrix and p-values matrix using stats.pearsonr
             for v1, v2 in product(selected_columns, required_new):
-                corr[v1][v2], pvalues[v1][v2] = stats.pearsonr(dff[v1].to_numpy(), dff[v2].to_numpy())
-                # Populate the other half of the matrix
-                if v1 != v2:
-                    corr[v2][v1] = corr[v1][v2]
-                    pvalues[v2][v1] = pvalues[v1][v2]
+                if v1 <= v2:
+                    corr[v1][v2], pvalues[v1][v2] = stats.pearsonr(dff[v1].to_numpy(), dff[v2].to_numpy())
+                    # Populate the other half of the matrix
+                    if v1 != v2:
+                        corr[v2][v1] = corr[v1][v2]
+                        pvalues[v2][v1] = pvalues[v1][v2]
 
             te = time.time()
             timing_dict['update_summary_heatmap-corr'] = te - ts
