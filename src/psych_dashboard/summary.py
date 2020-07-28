@@ -200,6 +200,23 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                               yaxis_showgrid=False,
                               plot_bgcolor='rgba(0,0,0,0)')
 
+            # Find the indices where the sorted classes from the clustering change. Use these indices to plot vertical
+            # lines on the heatmap to demarcate the different categories visually
+            y = np.concatenate((np.array([0]), np.diff(sorted(clx))))
+            fig.update_layout(shapes=[
+                                  dict(
+                                      type='line',
+                                      yref='y',
+                                      y0=-0.5,
+                                      y1=len(sorted_corr.columns)-1.5,
+                                      xref='x',
+                                      x0=len(sorted_corr.columns)-float(i)-0.5,
+                                      x1=len(sorted_corr.columns)-float(i)-0.5
+                                  )
+                              for i in np.where(y)[0]
+                              ]
+                              )
+
             return fig, True, True
 
     fig = go.Figure(go.Heatmap())
