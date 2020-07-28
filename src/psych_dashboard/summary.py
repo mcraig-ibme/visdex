@@ -172,12 +172,13 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # TODO: each cluster - that would reduce the undesirable behaviour whereby currently the clusters can jump about
             # TODO: when re-calculating the clustering.
             # Sort corr columns
-            half_sorted_corr = corr[[x for _, x in sorted(zip(clx, selected_columns))]]
-            half_sorted_pval = pvalues[[x for _, x in sorted(zip(clx, selected_columns))]]
+            sorted_column_order = [x for _, x in sorted(zip(clx, selected_columns))]
+            half_sorted_corr = corr[sorted_column_order]
+            half_sorted_pval = pvalues[sorted_column_order]
             print(half_sorted_corr)
             # Sort corr rows
-            sorted_corr = half_sorted_corr.reindex([x for _, x in sorted(zip(clx, selected_columns))])
-            sorted_pval = half_sorted_pval.reindex([x for _, x in sorted(zip(clx, selected_columns))])
+            sorted_corr = half_sorted_corr.reindex(sorted_column_order)
+            sorted_pval = half_sorted_pval.reindex(sorted_column_order)
 
             sorted_corr.reset_index().to_feather('corr.feather')
             sorted_pval.reset_index().to_feather('pval.feather')
