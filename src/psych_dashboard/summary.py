@@ -172,29 +172,63 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # TODO: each cluster - that would reduce the undesirable behaviour whereby currently the clusters can jump about
             # TODO: when re-calculating the clustering.
             # Sort corr columns
-            half_sorted_corr = corr[[x for _, x in sorted(zip(clx, selected_columns))]]
-            half_sorted_pval = pvalues[[x for _, x in sorted(zip(clx, selected_columns))]]
+            sorted_column_order = [x for _, x in sorted(zip(clx, selected_columns))]
+            half_sorted_corr = corr[sorted_column_order]
+            half_sorted_pval = pvalues[sorted_column_order]
             print(half_sorted_corr)
             # Sort corr rows
-            sorted_corr = half_sorted_corr.reindex([x for _, x in sorted(zip(clx, selected_columns))])
-            sorted_pval = half_sorted_pval.reindex([x for _, x in sorted(zip(clx, selected_columns))])
+            sorted_corr = half_sorted_corr.reindex(sorted_column_order)
+            sorted_pval = half_sorted_pval.reindex(sorted_column_order)
 
             sorted_corr.reset_index().to_feather('corr.feather')
             sorted_pval.reset_index().to_feather('pval.feather')
-            print(np.triu(sorted_corr))
-            triangular = sorted_corr.to_numpy()
-            print(np.tril_indices(triangular.shape[0], -1))
-            triangular[np.tril_indices(triangular.shape[0], -1)] = np.nan
-            print(triangular)
-            return go.Figure(go.Heatmap(z=np.fliplr(triangular),
-                                        x=sorted_corr.columns[::-1],
-                                        y=sorted_corr.columns,
-                                        zmin=-1,
-                                        zmax=1,
-                                        colorscale='RdBu')
-                             ), True, True
 
-    return go.Figure(go.Heatmap()), False, False
+            # Remove the upper triangle and diagonal
+            triangular = sorted_corr.to_numpy()
+            triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
+
+            fig = go.Figure(go.Heatmap(z=np.fliplr(triangular),
+                                       x=sorted_corr.columns[-1::-1],
+                                       y=sorted_corr.columns[:-1],
+                                       zmin=-1,
+                                       zmax=1,
+                                       colorscale='RdBu',
+                                       ),
+                            )
+
+            fig.update_layout(xaxis_showgrid=False,
+                              yaxis_showgrid=False,
+                              plot_bgcolor='rgba(0,0,0,0)')
+
+            # Find the indices where the sorted classes from the clustering change. Use these indices to plot vertical
+            # lines on the heatmap to demarcate the different categories visually
+            y = np.concatenate((np.array([0]), np.diff(sorted(clx))))
+            fig.update_layout(shapes=[
+                                  dict(
+                                      type='line',
+                                      yref='y',
+                                      y0=-0.5,
+                                      y1=len(sorted_corr.columns)-1.5,
+                                      xref='x',
+                                      x0=len(sorted_corr.columns)-float(i)-0.5,
+                                      x1=len(sorted_corr.columns)-float(i)-0.5
+                                  )
+                              for i in np.where(y)[0]
+                              ]
+                              )
+
+            return fig, True, True
+
+    fig = go.Figure(go.Heatmap())
+    fig.update_layout(xaxis_showgrid=False,
+                      xaxis_zeroline=False,
+                      xaxis_range=[0, 1],
+                      yaxis_showgrid=False,
+                      yaxis_zeroline=False,
+                      yaxis_range=[0, 1],
+                      plot_bgcolor='rgba(0,0,0,0)')
+
+    return fig, False, False
 
 
 @app.callback(
@@ -379,8 +413,8 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
 
     flattened_logs = flattened(logs).dropna()
 
-    fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index] for i in range(0, 2)],
-                               y=flattened_logs.values,
+    fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
+                               y=np.flip(flattened_logs.values),
                                mode='markers'
                                ),
                     )
