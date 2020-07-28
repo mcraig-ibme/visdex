@@ -49,3 +49,14 @@ def load_pval(df_loaded):
         dff.set_index('index', inplace=True)
     return dff
 
+
+def load_logs(df_loaded):
+    """
+    Utility function for the common task of reading p-value DF from feather file, and setting the MultiIndex. This is called
+    every time the main DF, filtered by missing values, needs to be accessed.
+    """
+    dff = pd.read_feather('logs.feather')
+
+    if df_loaded and len(dff) > 0:
+        dff.set_index('index', inplace=True)
+    return dff
