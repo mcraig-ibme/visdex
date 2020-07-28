@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import pandas as pd
+import time
 import dash_table
 import dash
 import dash_html_components as html
@@ -16,6 +17,22 @@ from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
 from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval
 from itertools import combinations_with_replacement, product
+from functools import wraps
+
+timing_dict = dict()
+
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time.time()
+        result = f(*args, **kw)
+        te = time.time()
+        print('#### func:%r took: %2.4f sec' %
+              (f.__name__, te-ts))
+        timing_dict[f.__name__] = te-ts
+        return result
+    return wrap
 
 
 @app.callback(
@@ -23,6 +40,7 @@ from itertools import combinations_with_replacement, product
      Output('df-filtered-loaded-div', 'children')],
     [Input('df-loaded-div', 'children'),
      Input('missing-values-input', 'value')])
+@timing
 def update_summary_table(df_loaded, missing_value_cutoff):
     print('update_summary_table')
     dff = load_feather(df_loaded)
@@ -106,6 +124,7 @@ def update_summary_table(df_loaded, missing_value_cutoff):
      Output('heatmap-dropdown', 'value')],
     [Input('df-filtered-loaded-div', 'children')]
 )
+@timing
 def update_heatmap_dropdown(df_loaded):
     print('update_heatmap_dropdown', df_loaded)
     dff = load_filtered_feather(df_loaded)
@@ -124,9 +143,9 @@ def update_heatmap_dropdown(df_loaded):
     [Input('heatmap-dropdown', 'value'),
      Input('heatmap-clustering-input', 'value')],
     [State('df-loaded-div', 'children')])
+@timing
 def update_summary_heatmap(dropdown_values, clusters, df_loaded):
     print('update_summary_heatmap', dropdown_values, clusters, df_loaded)
-
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
         dff = load_filtered_feather(df_loaded)
@@ -216,7 +235,6 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                               for i in np.where(y)[0]
                               ]
                               )
-
             return fig, True, True
 
     fig = go.Figure(go.Heatmap())
@@ -235,6 +253,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
     Output('kde-figure', 'figure'),
     [Input('heatmap-dropdown', 'value')],
     [State('df-loaded-div', 'children')])
+@timing
 def update_summary_kde(dropdown_values, df_loaded):
     print('update_summary_kde')
 
@@ -292,6 +311,7 @@ valid_manhattan_dtypes = [np.int64, np.float64]
      Input('pval-loaded-div', 'children'),
      Input('manhattan-dd', 'value')]
 )
+@timing
 def select_manhattan_variables(checkbox_val, df_loaded, dd_values):
     print('select_manhattan_variables', checkbox_val, df_loaded, dd_values)
     ctx = dash.callback_context
@@ -341,6 +361,7 @@ def select_manhattan_variables(checkbox_val, df_loaded, dd_values):
             ]
 
 
+@timing
 def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
     # Filter columns to those with valid types.
 
@@ -371,6 +392,7 @@ def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
     return logs, transformed_corrected_ref_pval
 
 
+@timing
 def combine_index_column_names(ind, col):
     """
     Combine the two values into a single string
@@ -381,6 +403,7 @@ def combine_index_column_names(ind, col):
     return str(ind) + ' x ' + str(col)
 
 
+@timing
 def flattened(df):
     """
     Convert a DF into a Series, where the MultiIndex of each element is a combination of the index/col from the original DF
@@ -400,6 +423,7 @@ def flattened(df):
      Input('manhattan-logscale-check', 'value')],
     [State('df-filtered-loaded-div', 'children')]
 )
+@timing
 def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     print('plot_manhattan', manhattan_variable)
     if not df_loaded or manhattan_variable is None or manhattan_variable == []:
@@ -443,4 +467,5 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
         yaxis_title='-log10(p)',
         yaxis_type='log' if logscale == ['LOG'] else None
     )
+    print(pd.DataFrame(timing_dict.items()))
     return fig
