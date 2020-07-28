@@ -428,7 +428,7 @@ def calculate_transformed_corrected_pval(ref_pval, logs):
 
 
 @timing
-def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
+def calculate_manhattan_data(dff, manhattan_variable):
     # Filter columns to those with valid types.
 
     if manhattan_variable is None:
@@ -450,9 +450,7 @@ def calculate_manhattan_data(dff, manhattan_variable, ref_pval):
             if ind in logs.columns and col in logs.index and logs[col][ind] == logs[ind][col]:
                 logs[ind][col] = np.nan
 
-    transformed_corrected_ref_pval = calculate_transformed_corrected_pval(ref_pval, logs)
-
-    return logs, transformed_corrected_ref_pval
+    return logs
 
 
 @timing
@@ -501,11 +499,11 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     # Save logs and flattened logs to feather files
     # Skip this and reuse the previous values if we're just changing the log scale.
     if ctx.triggered[0]['prop_id'] not in ['manhattan-logscale-check.value', 'manhattan-pval-input.value']:
-        logs, transformed_corrected_ref_pval = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable,
-                                                                        float(pvalue))
+        logs = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable)
         logs.reset_index().to_feather('logs.feather')
         flattened_logs = flattened(logs).dropna()
         flattened_logs.reset_index().to_feather('flattened_logs.feather')
+        transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
     else:
         print('using logscale shortcut')
         logs = load_logs(True)
