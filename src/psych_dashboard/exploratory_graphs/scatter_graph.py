@@ -59,6 +59,27 @@ def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, size, 
                                             value=regv)]
 
 
+def make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats):
+    """
+    Combine the supplied name of the row and column facets, and the categories detected within them, to create labels
+    for each of the subplots.
+    If facets are used in both directions, then format is
+    SEX=M, AGE=12
+    whereas if facets are used in only one direction, it is
+    SEX=M.
+    None is returned if no facets in use.
+    """
+    if facet_row is not None and facet_col is not None:
+        return [str(facet_row) + '=' + str(row) + ', ' + str(facet_col) + '=' + str(col)
+                for row, col in itertools.product(facet_row_cats, facet_col_cats)]
+    elif facet_row is not None:
+        return [str(facet_row) + '=' + str(row) for row in facet_row_cats]
+    elif facet_col is not None:
+        return [str(facet_col) + '=' + str(col) for col in facet_col_cats]
+    else:
+        return None
+
+
 def filter_facet(dff, facet, facet_cats, i):
     if facet is not None:
         return dff[dff[facet] == facet_cats[i]]
@@ -97,7 +118,11 @@ def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=N
     if dff.columns.size == 0 or x is None or y is None:
         return px.scatter()
 
-    fig = make_subplots(len(facet_row_cats), len(facet_col_cats))
+    # Create titles for each of the subplots, and initialise the subplots with them.
+    subplot_titles = make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats)
+    fig = make_subplots(rows=len(facet_row_cats), cols=len(facet_col_cats),
+                        subplot_titles=subplot_titles)
+    
     # If color is not provided, then use default
     if color is None:
         color_to_use = default_marker_color
@@ -131,8 +156,8 @@ def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=N
                                                     '<extra></extra>'
                                                     for (i, j) in working_dff.index],
                                      ),
-                          i + 1,
-                          j + 1)
+                          row=i + 1,
+                          col=j + 1)
 
             # Add regression lines
             print('regression_degree', regression_degree)
@@ -147,7 +172,9 @@ def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=N
                                       ('linear', LinearRegression(fit_intercept=False))])
                     reg = model.fit(np.vstack(X), Y)
                     Y_pred = reg.predict(np.vstack(X))
-                    fig.add_trace(go.Scatter(name='line of best fit', x=X, y=Y_pred, mode='lines'))
+                    fig.add_trace(go.Scatter(name='line of best fit', x=X, y=Y_pred, mode='lines'),
+                                  row=i + 1,
+                                  col=j + 1)
 
     fig.update_layout(coloraxis=dict(colorscale='Bluered_r'), showlegend=False, )
     fig.update_xaxes(matches='x')
