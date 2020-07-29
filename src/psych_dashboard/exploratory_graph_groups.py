@@ -2,7 +2,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
-from psych_dashboard.app import app, graph_types, scatter_graph_dimensions, bar_graph_dimensions, style_dict
+from psych_dashboard.app import app, graph_types, dd_scatter_dims, input_scatter_dims, bar_dims, style_dict
 
 
 def generate_scatter_group(n_clicks):
@@ -15,16 +15,17 @@ def generate_scatter_group(n_clicks):
                                        id={'type': 'div_scatter_'+str(key), 'index': n_clicks},
                                        style=style_dict
                                        )
-                              for key, value in scatter_graph_dimensions.items()
+                              for key, value in dd_scatter_dims.items()
                               ]
-                    + [html.Div(["regression:", dcc.Input(id={'type': 'scatter_regression', 'index': n_clicks},
-                                                          type='number',
-                                                          min=0,
-                                                          step=1,
-                                                          )
+                    + [html.Div([value + ":", dcc.Input(id={'type': 'scatter_'+str(key), 'index': n_clicks},
+                                                        type='number',
+                                                        min=0,
+                                                        step=1,
+                                                        )
                                  ],
-                                id={'type': 'div_scatter_regression', 'index': n_clicks},
+                                id={'type': 'div_scatter_'+str(key), 'index': n_clicks},
                                 style=style_dict)
+                       for key, value in input_scatter_dims.items()
                        ]
                     + [dcc.Graph(id={'type': 'gen_scatter_graph', 'index': n_clicks},
                                  figure=go.Figure(data=go.Scatter()))
@@ -42,7 +43,7 @@ def generate_bar_group(n_clicks):
                                        id={'type': 'div_bar_'+str(key), 'index': n_clicks},
                                        style=style_dict
                                        )
-                              for key, value in bar_graph_dimensions.items()
+                              for key, value in bar_dims.items()
                               ]
                     + [dcc.Graph(id={'type': 'gen_bar_graph', 'index': n_clicks},
                                  figure=go.Figure(data=go.Bar()))

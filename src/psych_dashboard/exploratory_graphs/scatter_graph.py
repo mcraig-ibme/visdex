@@ -11,52 +11,47 @@ import plotly.express as px
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
-from psych_dashboard.app import app, scatter_graph_dimensions, default_marker_color
+from psych_dashboard.app import app, dd_scatter_dims, input_scatter_dims, all_scatter_dims, default_marker_color
 from psych_dashboard.load_feather import load_filtered_feather
 
 
 @app.callback(
     [Output({'type': 'div_scatter_'+str(t), 'index': MATCH}, 'children')
-     for t in (list(scatter_graph_dimensions) + ['regression'])],
+     for t in list(all_scatter_dims)],
     [Input('df-loaded-div', 'children')],
+    [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')] +
     list(itertools.chain.from_iterable([State({'type': 'scatter_'+t, 'index': MATCH}, 'id'),
                                         State({'type': 'scatter_'+t, 'index': MATCH}, 'value')
-                                        ] for t in (list(scatter_graph_dimensions) + ['regression'])))
-    + [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')]
+                                        ] for t in list(all_scatter_dims)))
 )
-def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, size, sizev, facet_col, fcv, facet_row, frv,
-                                  regression, regv, style_dict):
+def update_scatter_select_columns(df_loaded, style_dict, *args):
     print('update_scatter_select_columns')
-    print(x, xv, y, yv, color, colorv, size, sizev, facet_col, fcv, facet_row, frv, regression, regv)
-    print('style_dict')
-    print(style_dict)
-    ctx = dash.callback_context
-    ctx_msg = json.dumps(
-        {
-            'states': ctx.states,
-            'triggered': ctx.triggered
-        },
-        indent=2)
-    print(ctx_msg)
-    dff = load_filtered_feather(df_loaded)
-    options = [{'label': col,
-                'value': col} for col in dff.columns]
+    # Generate the list of argument names based on the input order
+    keys = itertools.chain.from_iterable([str(list(all_scatter_dims.keys())[i]),
+                                               str(list(all_scatter_dims.keys())[i])+'_val']
+                                              for i in range(0, int(len(args)/2))
+                                              )
 
-    return ["x:", dcc.Dropdown(id={'type': 'scatter_x', 'index': x['index']}, options=options, value=xv)], \
-           ["y:", dcc.Dropdown(id={'type': 'scatter_y', 'index': y['index']}, options=options, value=yv)], \
-           ["color:", dcc.Dropdown(id={'type': 'scatter_color', 'index': color['index']},
-                                   options=options, value=colorv)], \
-           ["size:", dcc.Dropdown(id={'type': 'scatter_size', 'index': size['index']},
-                                   options=options, value=sizev)], \
-           ["split_horizontally:", dcc.Dropdown(id={'type': 'scatter_facet_col', 'index': facet_col['index']},
-                                                options=options, value=fcv)], \
-           ["split_vertically:", dcc.Dropdown(id={'type': 'scatter_facet_row', 'index': facet_row['index']},
-                                              options=options, value=frv)], \
-           ["regression degree:", dcc.Input(id={'type': 'scatter_regression', 'index': regression['index']},
-                                            type='number',
-                                            min=0,
-                                            step=1,
-                                            value=regv)]
+    # Convert inputs to a dict called 'args_dict'
+    args_dict = dict(zip(keys, args))
+
+    dff = load_filtered_feather(df_loaded)
+    dd_options = [{'label': col,
+                   'value': col} for col in dff.columns]
+
+    return tuple([[dd_scatter_dims[dim] + ":",
+                   dcc.Dropdown(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
+                                options=dd_options,
+                                value=args_dict[dim+'_val'])
+                   ] for dim in dd_scatter_dims.keys()] +
+                 [[input_scatter_dims[dim] + ":",
+                   dcc.Input(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
+                             type='number',
+                             min=0,
+                             step=1,
+                             value=args_dict[dim+'_val'])
+                   ] for dim in input_scatter_dims.keys()]
+                 )
 
 
 def make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats):
@@ -93,7 +88,7 @@ max_marker_size = 10
 
 @app.callback(
     Output({'type': 'gen_scatter_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in (list(scatter_graph_dimensions) + ['regression']))],
+    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in all_scatter_dims)],
     [State('df-loaded-div', 'children')]
 )
 def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=None, regression_degree=None, df_loaded=None):

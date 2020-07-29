@@ -4,21 +4,23 @@ import dash
 import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
-from psych_dashboard.app import app, bar_graph_dimensions
+from psych_dashboard.app import app, bar_dims
 from psych_dashboard.load_feather import load_filtered_feather
 
 
 @app.callback(
     [Output({'type': 'div_bar_'+str(t), 'index': MATCH}, 'children')
-     for t in bar_graph_dimensions],
+     for t in bar_dims],
     [Input('df-loaded-div', 'children')],
     list(itertools.chain.from_iterable([State({'type': 'bar_'+t, 'index': MATCH}, 'id'),
                                         State({'type': 'bar_'+t, 'index': MATCH}, 'value')
-                                        ] for t in bar_graph_dimensions))
+                                        ] for t in bar_dims))
     + [State({'type': 'div_bar_x', 'index': MATCH}, 'style')]
 )
 def update_bar_select_columns(df_loaded, x, xv, split_by, split_byv,
                               style_dict):
+    """ This function is triggered by a change to
+    """
     print('update_bar_select_columns')
     print(x, xv, split_by, split_byv)
     print('style_dict')
@@ -42,7 +44,7 @@ def update_bar_select_columns(df_loaded, x, xv, split_by, split_byv,
 
 @app.callback(
     Output({'type': 'gen_bar_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'bar_'+d, 'index': MATCH}, "value") for d in bar_graph_dimensions)],
+    [*(Input({'type': 'bar_'+d, 'index': MATCH}, "value") for d in bar_dims)],
     [State('df-loaded-div', 'children')]
 
 )
