@@ -15,8 +15,10 @@ dd_scatter_dims = {"x": "x",
 input_scatter_dims = {"regression": "regression degree"}
 all_scatter_dims = {**dd_scatter_dims, **input_scatter_dims}
 
-bar_dims = {"x": "x",
-                  "split_by": "split by"}
+dd_bar_dims = {"x": "x",
+               "split_by": "split by"}
+input_bar_dims = {}
+all_bar_dims = {**dd_bar_dims, **input_bar_dims}
 default_marker_color = "crimson"
 style_dict = {
         'width': '13%',
