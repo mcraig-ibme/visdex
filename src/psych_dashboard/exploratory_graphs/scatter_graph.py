@@ -169,11 +169,14 @@ def make_scatter_figure(*args):
                     X = working_dff[args_dict['x']]
                     model = Pipeline([('poly', PolynomialFeatures(degree=args_dict['regression'])),
                                       ('linear', LinearRegression(fit_intercept=False))])
-                    reg = model.fit(np.vstack(X), Y)
-                    Y_pred = reg.predict(np.vstack(X))
-                    fig.add_trace(go.Scatter(name='line of best fit', x=X, y=Y_pred, mode='lines'),
-                                  row=i + 1,
-                                  col=j + 1)
+                    try:
+                        reg = model.fit(np.vstack(X), Y)
+                        Y_pred = reg.predict(np.vstack(X))
+                        fig.add_trace(go.Scatter(name='line of best fit', x=X, y=Y_pred, mode='lines'),
+                                      row=i + 1,
+                                      col=j + 1)
+                    except (TypeError, ValueError):
+                        pass
 
     fig.update_layout(coloraxis=dict(colorscale='Bluered_r'), showlegend=False, )
     fig.update_xaxes(matches='x')
