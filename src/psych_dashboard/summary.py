@@ -43,7 +43,7 @@ def timing(f):
 @timing
 def update_summary_table(df_loaded, missing_value_cutoff):
     print('update_summary_table')
-    dff = load_feather(df_loaded)
+    dff = load_feather()
 
     # If empty, return an empty Div
     if dff.size == 0:
@@ -127,7 +127,7 @@ def update_summary_table(df_loaded, missing_value_cutoff):
 @timing
 def update_heatmap_dropdown(df_loaded):
     print('update_heatmap_dropdown', df_loaded)
-    dff = load_filtered_feather(df_loaded)
+    dff = load_filtered_feather()
 
     options = [{'label': col,
                 'value': col} for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
@@ -145,12 +145,12 @@ def update_heatmap_dropdown(df_loaded):
     [State('df-loaded-div', 'children')])
 @timing
 def update_summary_heatmap(dropdown_values, clusters, df_loaded):
-    print('update_summary_heatmap', dropdown_values, clusters, df_loaded)
+    print('update_summary_heatmap', dropdown_values, clusters)
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
-        dff = load_filtered_feather(df_loaded)
-        corr_dff = load_corr(df_loaded)
-        pval_dff = load_pval(df_loaded)
+        dff = load_filtered_feather()
+        corr_dff = load_corr()
+        pval_dff = load_pval()
 
         ts = time.time()
 
@@ -317,7 +317,7 @@ def update_summary_kde(dropdown_values, df_loaded):
 
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
-        dff = load_filtered_feather(df_loaded)
+        dff = load_filtered_feather()
 
         n_columns = len(dropdown_values) if dropdown_values is not None else 0
         if n_columns > 0:
@@ -376,7 +376,7 @@ def select_manhattan_variables(checkbox_val, df_loaded, dd_values):
 
     # Process based upon the trigger
     if df_loaded:
-        dff = load_pval(df_loaded)
+        dff = load_pval()
         dd_options = [{'label': col,
                        'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
 
@@ -499,15 +499,15 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     # Save logs and flattened logs to feather files
     # Skip this and reuse the previous values if we're just changing the log scale.
     if ctx.triggered[0]['prop_id'] not in ['manhattan-logscale-check.value', 'manhattan-pval-input.value']:
-        logs = calculate_manhattan_data(load_pval(df_loaded), manhattan_variable)
+        logs = calculate_manhattan_data(load_pval(), manhattan_variable)
         logs.reset_index().to_feather('logs.feather')
         flattened_logs = flattened(logs).dropna()
         flattened_logs.reset_index().to_feather('flattened_logs.feather')
         transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
     else:
         print('using logscale shortcut')
-        logs = load_logs(True)
-        flattened_logs = load_flattened_logs(True)
+        logs = load_logs()
+        flattened_logs = load_flattened_logs()
         transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
 
     fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],

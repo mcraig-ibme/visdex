@@ -11,7 +11,7 @@ from psych_dashboard.load_feather import load_feather
 def update_preview_table(df_loaded):
     print('update_preview_table')
 
-    dff = load_feather(df_loaded)
+    dff = load_feather()
 
     # Add the indices back in as columns so we can see them in the table preview
     if dff.size > 0:

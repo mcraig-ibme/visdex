@@ -11,52 +11,47 @@ import plotly.express as px
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
-from psych_dashboard.app import app, scatter_graph_dimensions, default_marker_color
+from psych_dashboard.app import app, dd_scatter_dims, input_scatter_dims, all_scatter_dims, default_marker_color
 from psych_dashboard.load_feather import load_filtered_feather
 
 
 @app.callback(
     [Output({'type': 'div_scatter_'+str(t), 'index': MATCH}, 'children')
-     for t in (list(scatter_graph_dimensions) + ['regression'])],
+     for t in list(all_scatter_dims)],
     [Input('df-loaded-div', 'children')],
+    [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')] +
     list(itertools.chain.from_iterable([State({'type': 'scatter_'+t, 'index': MATCH}, 'id'),
                                         State({'type': 'scatter_'+t, 'index': MATCH}, 'value')
-                                        ] for t in (list(scatter_graph_dimensions) + ['regression'])))
-    + [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')]
+                                        ] for t in list(all_scatter_dims)))
 )
-def update_scatter_select_columns(df_loaded, x, xv, y, yv, color, colorv, size, sizev, facet_col, fcv, facet_row, frv,
-                                  regression, regv, style_dict):
+def update_scatter_select_columns(df_loaded, style_dict, *args):
     print('update_scatter_select_columns')
-    print(x, xv, y, yv, color, colorv, size, sizev, facet_col, fcv, facet_row, frv, regression, regv)
-    print('style_dict')
-    print(style_dict)
-    ctx = dash.callback_context
-    ctx_msg = json.dumps(
-        {
-            'states': ctx.states,
-            'triggered': ctx.triggered
-        },
-        indent=2)
-    print(ctx_msg)
-    dff = load_filtered_feather(df_loaded)
-    options = [{'label': col,
-                'value': col} for col in dff.columns]
+    # Generate the list of argument names based on the input order
+    keys = itertools.chain.from_iterable([str(list(all_scatter_dims.keys())[i]),
+                                          str(list(all_scatter_dims.keys())[i])+'_val']
+                                         for i in range(0, int(len(args)/2))
+                                         )
 
-    return ["x:", dcc.Dropdown(id={'type': 'scatter_x', 'index': x['index']}, options=options, value=xv)], \
-           ["y:", dcc.Dropdown(id={'type': 'scatter_y', 'index': y['index']}, options=options, value=yv)], \
-           ["color:", dcc.Dropdown(id={'type': 'scatter_color', 'index': color['index']},
-                                   options=options, value=colorv)], \
-           ["size:", dcc.Dropdown(id={'type': 'scatter_size', 'index': size['index']},
-                                   options=options, value=sizev)], \
-           ["split_horizontally:", dcc.Dropdown(id={'type': 'scatter_facet_col', 'index': facet_col['index']},
-                                                options=options, value=fcv)], \
-           ["split_vertically:", dcc.Dropdown(id={'type': 'scatter_facet_row', 'index': facet_row['index']},
-                                              options=options, value=frv)], \
-           ["regression degree:", dcc.Input(id={'type': 'scatter_regression', 'index': regression['index']},
-                                            type='number',
-                                            min=0,
-                                            step=1,
-                                            value=regv)]
+    # Convert inputs to a dict called 'args_dict'
+    args_dict = dict(zip(keys, args))
+
+    dff = load_filtered_feather()
+    dd_options = [{'label': col,
+                   'value': col} for col in dff.columns]
+
+    return tuple([[dd_scatter_dims[dim] + ":",
+                   dcc.Dropdown(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
+                                options=dd_options,
+                                value=args_dict[dim+'_val'])
+                   ] for dim in dd_scatter_dims.keys()] +
+                 [[input_scatter_dims[dim] + ":",
+                   dcc.Input(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
+                             type='number',
+                             min=0,
+                             step=1,
+                             value=args_dict[dim+'_val'])
+                   ] for dim in input_scatter_dims.keys()]
+                 )
 
 
 def make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats):
@@ -93,15 +88,19 @@ max_marker_size = 10
 
 @app.callback(
     Output({'type': 'gen_scatter_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in (list(scatter_graph_dimensions) + ['regression']))],
-    [State('df-loaded-div', 'children')]
+    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in all_scatter_dims)],
 )
-def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=None, regression_degree=None, df_loaded=None):
+def make_scatter_figure(*args):
     print('make_scatter_figure')
-    dff = load_filtered_feather(df_loaded)
+    # Generate the list of argument names based on the input order
+    keys = [str(list(all_scatter_dims.keys())[i]) for i in range(0, int(len(args)))]
 
-    facet_row_cats = list(dff[facet_row].unique()) if facet_row is not None else [None]
-    facet_col_cats = list(dff[facet_col].unique()) if facet_col is not None else [None]
+    # Convert inputs to a dict called 'args_dict'
+    args_dict = dict(zip(keys, args))
+    dff = load_filtered_feather()
+
+    facet_row_cats = list(dff[args_dict['facet_row']].unique()) if args_dict['facet_row'] is not None else [None]
+    facet_col_cats = list(dff[args_dict['facet_col']].unique()) if args_dict['facet_col'] is not None else [None]
 
     try:
         if len(facet_row_cats) > 1:
@@ -115,43 +114,43 @@ def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=N
         pass
 
     # Return empty scatter if not enough options are selected, or the data is empty.
-    if dff.columns.size == 0 or x is None or y is None:
+    if dff.columns.size == 0 or args_dict['x'] is None or args_dict['y'] is None:
         return px.scatter()
 
     # Create titles for each of the subplots, and initialise the subplots with them.
-    subplot_titles = make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats)
+    subplot_titles = make_subplot_titles(args_dict['facet_row'], facet_row_cats, args_dict['facet_col'], facet_col_cats)
     fig = make_subplots(rows=len(facet_row_cats), cols=len(facet_col_cats),
                         subplot_titles=subplot_titles)
     
     # If color is not provided, then use default
-    if color is None:
+    if args_dict['color'] is None:
         color_to_use = default_marker_color
     # Otherwise, if the dtype is categorical, then we need to map - otherwise, leave as it is
     else:
-        dff.dropna(inplace=True, subset=[color])
-        color_to_use = pd.DataFrame(dff[color])
+        dff.dropna(inplace=True, subset=[args_dict['color']])
+        color_to_use = pd.DataFrame(dff[args_dict['color']])
 
-        if color in dff.select_dtypes(include='object').columns:
-            dff['color_to_use'] = map_color(dff[color])
+        if args_dict['color'] in dff.select_dtypes(include='object').columns:
+            dff['color_to_use'] = map_color(dff[args_dict['color']])
         else:
             color_to_use.set_index(dff.index, inplace=True)
             dff['color_to_use'] = color_to_use
-    if size is not None:
-        dff.dropna(inplace=True, subset=[size])
+    if args_dict['size'] is not None:
+        dff.dropna(inplace=True, subset=[args_dict['size']])
     for i in range(len(facet_row_cats)):
         for j in range(len(facet_col_cats)):
             working_dff = dff
-            working_dff = filter_facet(working_dff, facet_row, facet_row_cats, i)
-            working_dff = filter_facet(working_dff, facet_col, facet_col_cats, j)
+            working_dff = filter_facet(working_dff, args_dict['facet_row'], facet_row_cats, i)
+            working_dff = filter_facet(working_dff, args_dict['facet_col'], facet_col_cats, j)
 
-            fig.add_trace(go.Scatter(x=working_dff[x],
-                                     y=working_dff[y],
+            fig.add_trace(go.Scatter(x=working_dff[args_dict['x']],
+                                     y=working_dff[args_dict['y']],
                                      mode='markers',
                                      marker=dict(color=working_dff[
                                          'color_to_use'] if 'color_to_use' in working_dff.columns else color_to_use,
                                                  coloraxis="coloraxis",
                                                  showscale=True),
-                                     marker_size=map_size(working_dff[size], min_marker_size, max_marker_size) if size is not None else max_marker_size,
+                                     marker_size=map_size(working_dff[args_dict['size']], min_marker_size, max_marker_size) if args_dict['size'] is not None else max_marker_size,
                                      hovertemplate=['SUBJECTKEY: ' + str(i) + '<br>EVENTNAME: ' + str(j) +
                                                     '<extra></extra>'
                                                     for (i, j) in working_dff.index],
@@ -160,21 +159,24 @@ def make_scatter_figure(x, y, color=None, size=None, facet_col=None, facet_row=N
                           col=j + 1)
 
             # Add regression lines
-            print('regression_degree', regression_degree)
-            if regression_degree is not None:
+            print('regression', args_dict['regression'])
+            if args_dict['regression'] is not None:
                 working_dff.dropna(inplace=True)
                 # Guard against fitting an empty graph
                 if len(working_dff) > 0:
-                    working_dff.sort_values(by=x, inplace=True)
-                    Y = working_dff[y]
-                    X = working_dff[x]
-                    model = Pipeline([('poly', PolynomialFeatures(degree=regression_degree)),
+                    working_dff.sort_values(by=args_dict['x'], inplace=True)
+                    Y = working_dff[args_dict['y']]
+                    X = working_dff[args_dict['x']]
+                    model = Pipeline([('poly', PolynomialFeatures(degree=args_dict['regression'])),
                                       ('linear', LinearRegression(fit_intercept=False))])
-                    reg = model.fit(np.vstack(X), Y)
-                    Y_pred = reg.predict(np.vstack(X))
-                    fig.add_trace(go.Scatter(name='line of best fit', x=X, y=Y_pred, mode='lines'),
-                                  row=i + 1,
-                                  col=j + 1)
+                    try:
+                        reg = model.fit(np.vstack(X), Y)
+                        Y_pred = reg.predict(np.vstack(X))
+                        fig.add_trace(go.Scatter(name='line of best fit', x=X, y=Y_pred, mode='lines'),
+                                      row=i + 1,
+                                      col=j + 1)
+                    except (TypeError, ValueError):
+                        pass
 
     fig.update_layout(coloraxis=dict(colorscale='Bluered_r'), showlegend=False, )
     fig.update_xaxes(matches='x')
