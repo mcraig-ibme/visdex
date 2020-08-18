@@ -25,7 +25,7 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 )
 def select_manhattan_variables(df_loaded, *args):
     print('select_manhattan_variables', *args)
-
+    # Generate the list of argument names based on the input order
     keys = itertools.chain.from_iterable([str(list(all_manhattan_dims.keys())[i]),
                                           str(list(all_manhattan_dims.keys())[i]) + '_val']
                                          for i in range(0, int(len(args) / 2))
@@ -37,7 +37,7 @@ def select_manhattan_variables(df_loaded, *args):
     dff = load_pval()
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
-    print(args_dict['logscale_val'])
+
     return tuple([[dd_manhattan_dims[dim] + ":",
                    dcc.Dropdown(id={'type': 'manhattan_'+dim, 'index': args_dict[dim]['index']},
                                 options=dd_options,
@@ -89,16 +89,6 @@ def calculate_manhattan_data(dff, manhattan_variable):
                 logs[ind][col] = np.nan
 
     return logs
-
-
-def combine_index_column_names(ind, col):
-    """
-    Combine the two values into a single string
-    :param ind:
-    :param col:
-    :return:
-    """
-    return str(ind) + ' x ' + str(col)
 
 
 def flattened(df):

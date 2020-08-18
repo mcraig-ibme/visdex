@@ -91,7 +91,7 @@ max_marker_size = 10
     [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in all_scatter_dims)],
 )
 def make_scatter_figure(*args):
-    print('make_scatter_figure')
+    print('make_scatter_figure', *args)
     # Generate the list of argument names based on the input order
     keys = [str(list(all_scatter_dims.keys())[i]) for i in range(0, int(len(args)))]
 

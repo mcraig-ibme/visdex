@@ -16,6 +16,7 @@ from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
 from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval, load_corr, load_logs, load_flattened_logs
+from psych_dashboard.exploratory_graphs.manhattan_graph import calculate_transformed_corrected_pval, calculate_manhattan_data, flattened
 from itertools import combinations_with_replacement, product
 from functools import wraps
 
@@ -417,64 +418,6 @@ def select_manhattan_variables(checkbox_val, df_loaded, dd_values):
                           value=checkbox_val,
                           style={'display': 'inline-block', 'width': '10%'})
             ]
-
-
-def calculate_transformed_corrected_pval(ref_pval, logs):
-    # Divide reference p-value by number of variable pairs to get corrected p-value
-    corrected_ref_pval = ref_pval / (logs.notna().sum().sum())
-    # Transform corrected p-value by -log10
-    transformed_corrected_ref_pval = -np.log10(corrected_ref_pval)
-    return transformed_corrected_ref_pval
-
-
-@timing
-def calculate_manhattan_data(dff, manhattan_variable):
-    # Filter columns to those with valid types.
-
-    if manhattan_variable is None:
-        manhattan_variables = dff.columns
-    else:
-        if isinstance(manhattan_variable, list):
-            manhattan_variables = manhattan_variable
-        else:
-            manhattan_variables = [manhattan_variable]
-
-    # Create DF to hold the results of the calculations, and perform the log calculation
-    logs = pd.DataFrame(columns=dff.columns, index=manhattan_variables)
-    for variable in dff:
-        logs[variable] = -np.log10(dff[variable])
-
-    # Now blank out any duplicates including the diagonal
-    for ind in logs.index:
-        for col in logs.columns:
-            if ind in logs.columns and col in logs.index and logs[col][ind] == logs[ind][col]:
-                logs[ind][col] = np.nan
-
-    return logs
-
-
-@timing
-def combine_index_column_names(ind, col):
-    """
-    Combine the two values into a single string
-    :param ind:
-    :param col:
-    :return:
-    """
-    return str(ind) + ' x ' + str(col)
-
-
-@timing
-def flattened(df):
-    """
-    Convert a DF into a Series, where the MultiIndex of each element is a combination of the index/col from the original DF
-    :param df:
-    :return:
-    """
-    s = pd.Series(index=pd.MultiIndex.from_tuples(product(df.index, df.columns), names=['first', 'second']), name='value')
-    for (a, b) in product(df.index, df.columns):
-        s[a, b] = df[b][a]
-    return s
 
 
 @app.callback(
