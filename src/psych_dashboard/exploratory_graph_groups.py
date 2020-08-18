@@ -2,53 +2,88 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
-from psych_dashboard.app import app, graph_types, dd_scatter_dims, input_scatter_dims, dd_bar_dims, input_bar_dims, dd_manhattan_dims, input_manhattan_dims, check_manhattan_dims, style_dict
+from psych_dashboard.app import app, graph_types, all_scatter_components, all_bar_components, input_manhattan_dims, check_manhattan_dims, style_dict
 
 
 def generate_scatter_group(n_clicks):
-    print('generate_scatter_group')
+    print('generate_scatter_group', n_clicks)
+    children = list()
+    for component in all_scatter_components:
+        name = component['name']
+        if component['component_type'] == 'Dropdown':
+            print(component, 'Dropdown')
+            children.append(html.Div([component['label'] + ":", dcc.Dropdown(id={'type': 'scatter_'+str(name), 'index': n_clicks},
+                                                                  options=[])],
+                                       id={'type': 'div_scatter_'+str(name), 'index': n_clicks},
+                                       style=style_dict
+                                       ))
+        elif component['component_type'] == 'Input':
+            print(component, 'Input')
+            children.append(html.Div([component['label'] + ":", dcc.Input(id={'type': 'scatter_'+str(name), 'index': n_clicks},
+                                                                          type='number',
+                                                                          min=0,
+                                                                          step=1,)],
+                                       id={'type': 'div_scatter_'+str(name), 'index': n_clicks},
+                                       style=style_dict
+                                       ))
+    children.append(dcc.Graph(id={'type': 'gen_scatter_graph', 'index': n_clicks},
+                    figure=go.Figure(data=go.Scatter()))
+                    )
+    print('children exploratory', children)
+
     return html.Div(id={'type': 'filter-graph-group-scatter',
                         'index': n_clicks
                         },
-                    children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'scatter_'+str(key), 'index': n_clicks},
-                                                                  options=[])],
-                                       id={'type': 'div_scatter_'+str(key), 'index': n_clicks},
-                                       style=style_dict
-                                       )
-                              for key, value in dd_scatter_dims.items()
-                              ]
-                    + [html.Div([value + ":", dcc.Input(id={'type': 'scatter_'+str(key), 'index': n_clicks},
-                                                        type='number',
-                                                        min=0,
-                                                        step=1,
-                                                        )
-                                 ],
-                                id={'type': 'div_scatter_'+str(key), 'index': n_clicks},
-                                style=style_dict)
-                       for key, value in input_scatter_dims.items()
-                       ]
-                    + [dcc.Graph(id={'type': 'gen_scatter_graph', 'index': n_clicks},
-                                 figure=go.Figure(data=go.Scatter()))
-                       ]
+                    children=children
                     )
 
 
 def generate_bar_group(n_clicks):
     print('generate_bar_group')
+    children = list()
+    for component in all_bar_components:
+        if component['component_type'] == 'Dropdown':
+            print(component, 'Dropdown')
+            children.append(html.Div([component['label'] + ":",
+                                      dcc.Dropdown(id={'type': 'bar_' + str(component['name']), 'index': n_clicks},
+                                                   options=[])],
+                                     id={'type': 'div_bar_' + str(component['name']), 'index': n_clicks},
+                                     style=style_dict
+                                     ))
+        elif component['component_type'] == 'Input':
+            print(component, 'Input')
+            children.append(html.Div([component['label'] + ":",
+                                      dcc.Input(id={'type': 'bar_' + str(component['name']), 'index': n_clicks},
+                                                type='number',
+                                                min=0,
+                                                step=1, )],
+                                     id={'type': 'div_bar_' + str(component['name']), 'index': n_clicks},
+                                     style=style_dict
+                                     ))
+    children.append(dcc.Graph(id={'type': 'gen_bar_graph', 'index': n_clicks},
+                              figure=go.Figure(data=go.Bar()))
+                    )
+    print(children)
+
     return html.Div(id={'type': 'filter-graph-group-bar',
                         'index': n_clicks
                         },
-                    children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'bar_'+key, 'index': n_clicks},
-                                                                  options=[])],
-                                       id={'type': 'div_bar_'+str(key), 'index': n_clicks},
-                                       style=style_dict
-                                       )
-                              for key, value in dd_bar_dims.items()
-                              ]
-                    + [dcc.Graph(id={'type': 'gen_bar_graph', 'index': n_clicks},
-                                 figure=go.Figure(data=go.Bar()))
-                       ]
+                    children=children
                     )
+    # return html.Div(id={'type': 'filter-graph-group-bar',
+    #                     'index': n_clicks
+    #                     },
+    #                 children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'bar_'+key, 'index': n_clicks},
+    #                                                               options=[])],
+    #                                    id={'type': 'div_bar_'+str(key), 'index': n_clicks},
+    #                                    style=style_dict
+    #                                    )
+    #                           for key, value in dd_bar_dims.items()
+    #                           ]
+    #                 + [dcc.Graph(id={'type': 'gen_bar_graph', 'index': n_clicks},
+    #                              figure=go.Figure(data=go.Bar()))
+    #                    ]
+    #                 )
 
 
 def generate_manhattan_group(n_clicks):
@@ -104,8 +139,9 @@ def change_graph_group_type(graph_type, id, children):
         children[-1] = generate_bar_group(id['index'])
     elif graph_type == 'Scatter' and children[-1]['props']['id']['type'] != 'filter-graph-group-scatter':
         children[-1] = generate_scatter_group(id['index'])
-    elif graph_type == 'Manhattan' and children[-1]['props']['id']['type'] != 'filter-graph-group-manhattan':
-        children[-1] = generate_manhattan_group(id['index'])
+    # elif graph_type == 'Manhattan' and children[-1]['props']['id']['type'] != 'filter-graph-group-manhattan':
+    #     children[-1] = generate_manhattan_group(id['index'])
+    print('children change', children)
     return children
 
 

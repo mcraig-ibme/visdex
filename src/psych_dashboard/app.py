@@ -6,19 +6,73 @@ server = app.server
 
 indices = ['SUBJECTKEY', 'EVENTNAME']
 graph_types = ['Scatter', 'Bar', 'Manhattan']
-dd_scatter_dims = {"x": "x",
-                   "y": "y",
-                   "color": "color (will drop NAs)",
-                   "size": "size",
-                   "facet_col": "split horizontally",
-                   "facet_row": "split vertically"}
-input_scatter_dims = {"regression": "regression degree"}
-all_scatter_dims = {**dd_scatter_dims, **input_scatter_dims}
 
-dd_bar_dims = {"x": "x",
-               "split_by": "split by"}
-input_bar_dims = {}
-all_bar_dims = {**dd_bar_dims, **input_bar_dims}
+all_scatter_components = [{'component_type': 'Dropdown',
+                     'name': 'x',
+                     'label': 'x',
+                     'starting_value': None,
+                     'other_args': {'multi': False,
+                                    'starting_options': []}
+                     },
+                    {'component_type': 'Dropdown',
+                     'name': 'y',
+                     'label': 'y',
+                     'starting_value': None,
+                     'other_args': {'multi': False,
+                                    'starting_options': []}
+                     },
+                    {'component_type': 'Dropdown',
+                     'name': 'color',
+                     'label': 'color',
+                     'starting_value': None,
+                     'other_args': {'multi': False,
+                                    'starting_options': []}
+                     },
+                    {'component_type': 'Dropdown',
+                     'name': 'size',
+                     'label': 'size',
+                     'starting_value': None,
+                     'other_args': {'multi': False,
+                                    'starting_options': []}
+                     },
+                    {'component_type': 'Dropdown',
+                     'name': 'facet_col',
+                     'label': 'split horizontally',
+                     'starting_value': None,
+                     'other_args': {'multi': False,
+                                    'starting_options': []}
+                     },
+                    {'component_type': 'Dropdown',
+                     'name': 'facet_row',
+                     'label': 'split vertically',
+                     'starting_value': None,
+                     'other_args': {'multi': False,
+                                    'starting_options': []}
+                     },
+                    {'component_type': 'Input',
+                     'name': 'regression',
+                     'label': 'regression degree',
+                     'starting_value': None,
+                     'other_args': {'type': 'number',
+                                    'min': 0,
+                                    'step': 1}
+                     },
+                    ]
+
+all_bar_components = [{'component_type': 'Dropdown',
+                       'name': 'x',
+                       'label': 'x',
+                       'starting_value': None,
+                       'starting_options': [],
+                       'other_args': {'multi': False,
+                                      'starting_options': []}},
+                      {'component_type': 'Dropdown',
+                       'name': 'split_by',
+                       'label': 'split by',
+                       'starting_value': None,
+                       'other_args': {'multi': False,
+                                      'starting_options': []}},
+                      ]
 
 dd_manhattan_dims = {"base_variable": "base variable"}
 input_manhattan_dims = {"pvalue": "p-value"}

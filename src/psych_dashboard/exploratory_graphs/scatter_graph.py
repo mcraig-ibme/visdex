@@ -4,6 +4,7 @@ import dash
 import pandas as pd
 import numpy as np
 import dash_core_components as dcc
+import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
@@ -11,24 +12,24 @@ import plotly.express as px
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
-from psych_dashboard.app import app, dd_scatter_dims, input_scatter_dims, all_scatter_dims, default_marker_color
+from psych_dashboard.app import app, all_scatter_components, default_marker_color
 from psych_dashboard.load_feather import load_filtered_feather
 
 
 @app.callback(
     [Output({'type': 'div_scatter_'+str(t), 'index': MATCH}, 'children')
-     for t in list(all_scatter_dims)],
+     for t in [component['name'] for component in all_scatter_components]],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')] +
     list(itertools.chain.from_iterable([State({'type': 'scatter_'+t, 'index': MATCH}, 'id'),
                                         State({'type': 'scatter_'+t, 'index': MATCH}, 'value')
-                                        ] for t in list(all_scatter_dims)))
+                                        ] for t in [component['name'] for component in all_scatter_components]))
 )
 def update_scatter_select_columns(df_loaded, style_dict, *args):
     print('update_scatter_select_columns')
     # Generate the list of argument names based on the input order
-    keys = itertools.chain.from_iterable([str(list(all_scatter_dims.keys())[i]),
-                                          str(list(all_scatter_dims.keys())[i])+'_val']
+    keys = itertools.chain.from_iterable([str([component['name'] for component in all_scatter_components][i]),
+                                          str([component['name'] for component in all_scatter_components][i])+'_val']
                                          for i in range(0, int(len(args)/2))
                                          )
 
@@ -39,19 +40,42 @@ def update_scatter_select_columns(df_loaded, style_dict, *args):
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns]
 
-    return tuple([[dd_scatter_dims[dim] + ":",
-                   dcc.Dropdown(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
-                                options=dd_options,
-                                value=args_dict[dim+'_val'])
-                   ] for dim in dd_scatter_dims.keys()] +
-                 [[input_scatter_dims[dim] + ":",
-                   dcc.Input(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
-                             type='number',
-                             min=0,
-                             step=1,
-                             value=args_dict[dim+'_val'])
-                   ] for dim in input_scatter_dims.keys()]
-                 )
+    print('args_dict', args_dict)
+    children = list()
+    for component in all_scatter_components:
+        name = component['name']
+        if component['component_type'] == 'Dropdown':
+            print(component, 'Dropdown')
+            print('index', args_dict[name]['index'])
+            children.append(html.Div([component['label'] + ":",
+                                      dcc.Dropdown(id={'type': 'scatter_' + str(name), 'index': args_dict[name]['index']},
+                                                   options=dd_options)],
+                                     id={'type': 'div_scatter_' + str(name), 'index': args_dict[name]['index']},
+                                     ))
+        elif component['component_type'] == 'Input':
+            print(component, 'Input')
+            children.append(html.Div([component['label'] + ":",
+                                      dcc.Input(id={'type': 'scatter_' + str(name), 'index': args_dict[name]['index']},
+                                                type='number',
+                                                min=0,
+                                                step=1, )],
+                                     id={'type': 'div_scatter_' + str(name), 'index': args_dict[name]['index']},
+                                     ))
+    print('children', children)
+    return children
+        # tuple([[dd_scatter_dims[dim] + ":",
+        #            dcc.Dropdown(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
+        #                         options=dd_options,
+        #                         value=args_dict[dim+'_val'])
+        #            ] for dim in dd_scatter_dims.keys()] +
+        #          [[input_scatter_dims[dim] + ":",
+        #            dcc.Input(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
+        #                      type='number',
+        #                      min=0,
+        #                      step=1,
+        #                      value=args_dict[dim+'_val'])
+        #            ] for dim in input_scatter_dims.keys()]
+        #          )
 
 
 def make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats):
@@ -88,12 +112,12 @@ max_marker_size = 10
 
 @app.callback(
     Output({'type': 'gen_scatter_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in all_scatter_dims)],
+    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in [component['name'] for component in all_scatter_components])],
 )
 def make_scatter_figure(*args):
     print('make_scatter_figure', *args)
     # Generate the list of argument names based on the input order
-    keys = [str(list(all_scatter_dims.keys())[i]) for i in range(0, int(len(args)))]
+    keys = [str([component['name'] for component in all_scatter_components][i]) for i in range(0, int(len(args)))]
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
