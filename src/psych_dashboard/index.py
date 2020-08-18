@@ -6,7 +6,7 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
 from psych_dashboard import preview_table, summary, single_scatter, exploratory_graph_groups
-from psych_dashboard.exploratory_graphs import scatter_graph, bar_graph
+from psych_dashboard.exploratory_graphs import scatter_graph, bar_graph, manhattan_graph
 from psych_dashboard.app import app, indices
 
 
