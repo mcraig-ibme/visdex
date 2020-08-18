@@ -5,7 +5,7 @@ app = dash.Dash(__name__, suppress_callback_exceptions=False, external_styleshee
 server = app.server
 
 indices = ['SUBJECTKEY', 'EVENTNAME']
-graph_types = ['Scatter', 'Bar']
+graph_types = ['Scatter', 'Bar', 'Manhattan']
 dd_scatter_dims = {"x": "x",
                    "y": "y",
                    "color": "color (will drop NAs)",
@@ -19,6 +19,12 @@ dd_bar_dims = {"x": "x",
                "split_by": "split by"}
 input_bar_dims = {}
 all_bar_dims = {**dd_bar_dims, **input_bar_dims}
+
+dd_manhattan_dims = {"base_variable": "base variable"}
+input_manhattan_dims = {"pvalue": "p-value"}
+check_manhattan_dims = {"logscale": "logscale"}
+all_manhattan_dims = {**dd_manhattan_dims, **input_manhattan_dims, **check_manhattan_dims}
+
 default_marker_color = "crimson"
 style_dict = {
         'width': '13%',
