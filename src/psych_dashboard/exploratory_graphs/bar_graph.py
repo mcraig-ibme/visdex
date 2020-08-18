@@ -37,20 +37,18 @@ def update_bar_select_columns(df_loaded, style_dict, *args):
         name = component['name']
         if component['component_type'] == 'Dropdown':
             print(component, 'Dropdown')
-            children.append(html.Div([component['label'] + ":",
+            children.append([component['label'] + ":",
                                       dcc.Dropdown(id={'type': 'bar_' + str(name), 'index': args_dict[name]['index']},
                                                    options=dd_options)],
-                                     id={'type': 'div_bar_' + str(name), 'index': args_dict[name]['index']},
-                                     ))
+                                     )
         elif component['component_type'] == 'Input':
             print(component, 'Input')
-            children.append(html.Div([component['label'] + ":",
+            children.append([component['label'] + ":",
                                       dcc.Input(id={'type': 'bar_' + str(name), 'index': args_dict[name]['index']},
                                                 type='number',
                                                 min=0,
                                                 step=1, )],
-                                     id={'type': 'div_bar_' + str(name), 'index': args_dict[name]['index']},
-                                     ))
+                                     )
 
     return children
 
@@ -61,7 +59,7 @@ def update_bar_select_columns(df_loaded, style_dict, *args):
 )
 def make_bar_figure(*args):
     print('make_bar_figure')
-    keys = [str([a['name'] for a in all_bar_components][i]) for i in range(0, int(len(args)))]
+    keys = [str([component['name'] for component in all_bar_components][i]) for i in range(0, int(len(args)))]
 
     args_dict = dict(zip(keys, args))
     dff = load_filtered_feather()
