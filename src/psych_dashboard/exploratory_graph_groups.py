@@ -2,7 +2,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
-from psych_dashboard.app import app, graph_types, all_scatter_components, all_bar_components, input_manhattan_dims, check_manhattan_dims, style_dict
+from psych_dashboard.app import app, graph_types, all_scatter_components, all_bar_components, all_manhattan_components, style_dict
 
 
 def generate_scatter_group(n_clicks):
@@ -72,41 +72,82 @@ def generate_bar_group(n_clicks):
 
 def generate_manhattan_group(n_clicks):
     print('generate_manhattan_group')
+    children = list()
+    for component in all_manhattan_components:
+        if component['component_type'] == 'Dropdown':
+            print(component, 'Dropdown')
+            children.append(html.Div([component['label'] + ":",
+                                      dcc.Dropdown(id={'type': 'manhattan_' + str(component['name']), 'index': n_clicks},
+                                                   options=[])],
+                                     id={'type': 'div_manhattan_' + str(component['name']), 'index': n_clicks},
+                                     style=style_dict
+                                     ))
+        elif component['component_type'] == 'Input':
+            print(component, 'Input')
+            children.append(html.Div([component['label'] + ":",
+                                      dcc.Input(id={'type': 'manhattan_' + str(component['name']), 'index': n_clicks},
+                                                type=component['other_args']['type'],
+                                                min=component['other_args']['min'],
+                                                step=component['other_args']['step'],
+                                                )],
+                                     id={'type': 'div_manhattan_' + str(component['name']), 'index': n_clicks},
+                                     style=style_dict
+                                     ))
+        elif component['component_type'] == 'Checklist':
+            print(component, 'Checklist')
+            children.append(html.Div([component['label'] + ":",
+                                      dcc.Checklist(id={'type': 'manhattan_' + str(component['name']), 'index': n_clicks},
+                                                    options=component['other_args']['options'],
+                                                    value=component['other_args']['value'],
+                                                    )],
+                                     id={'type': 'div_manhattan_' + str(component['name']), 'index': n_clicks},
+                                     style=style_dict
+                                     ))
+    children.append(dcc.Graph(id={'type': 'gen_manhattan_graph', 'index': n_clicks},
+                              figure=go.Figure(data=go.Scatter()))
+                    )
+    print(children)
+
     return html.Div(id={'type': 'filter-graph-group-manhattan',
                         'index': n_clicks
                         },
-                    children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'manhattan_'+key, 'index': n_clicks},
-                                                                  options=[])],
-                                       id={'type': 'div_manhattan_'+str(key), 'index': n_clicks},
-                                       style=style_dict
-                                       )
-                              for key, value in dd_manhattan_dims.items()
-                              ]
-                    + [html.Div([value + ":", dcc.Input(id={'type': 'manhattan_' + str(key), 'index': n_clicks},
-                                                        type='number',
-                                                        value=0.05,
-                                                        min=0,
-                                                        step=0.001
-                                                        )
-                                 ],
-                                id={'type': 'div_manhattan_' + str(key), 'index': n_clicks},
-                                style=style_dict)
-                        for key, value in input_manhattan_dims.items()
-                       ]
-                    + [html.Div([value + ":", dcc.Checklist(id={'type': 'manhattan_' + str(key), 'index': n_clicks},
-                                                            options=[{'label': '', 'value': 'LOG'}],
-                                                            value=['LOG'],
-                                                            style={'display': 'inline-block', 'width': '10%'}
-                                                            )
-                                 ],
-                                id={'type': 'div_manhattan_' + str(key), 'index': n_clicks},
-                                style=style_dict)
-                        for key, value in check_manhattan_dims.items()
-                       ]
-                    + [dcc.Graph(id={'type': 'gen_manhattan_graph', 'index': n_clicks},
-                                 figure=go.Figure(data=go.Scatter()))
-                       ]
+                    children=children
                     )
+    # return html.Div(id={'type': 'filter-graph-group-manhattan',
+    #                     'index': n_clicks
+    #                     },
+    #                 children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'manhattan_'+key, 'index': n_clicks},
+    #                                                               options=[])],
+    #                                    id={'type': 'div_manhattan_'+str(key), 'index': n_clicks},
+    #                                    style=style_dict
+    #                                    )
+    #                           for key, value in dd_manhattan_dims.items()
+    #                           ]
+    #                 + [html.Div([value + ":", dcc.Input(id={'type': 'manhattan_' + str(key), 'index': n_clicks},
+    #                                                     type='number',
+    #                                                     value=0.05,
+    #                                                     min=0,
+    #                                                     step=0.001
+    #                                                     )
+    #                              ],
+    #                             id={'type': 'div_manhattan_' + str(key), 'index': n_clicks},
+    #                             style=style_dict)
+    #                     for key, value in input_manhattan_dims.items()
+    #                    ]
+    #                 + [html.Div([value + ":", dcc.Checklist(id={'type': 'manhattan_' + str(key), 'index': n_clicks},
+    #                                                         options=[{'label': '', 'value': 'LOG'}],
+    #                                                         value=['LOG'],
+    #                                                         style={'display': 'inline-block', 'width': '10%'}
+    #                                                         )
+    #                              ],
+    #                             id={'type': 'div_manhattan_' + str(key), 'index': n_clicks},
+    #                             style=style_dict)
+    #                     for key, value in check_manhattan_dims.items()
+    #                    ]
+    #                 + [dcc.Graph(id={'type': 'gen_manhattan_graph', 'index': n_clicks},
+    #                              figure=go.Figure(data=go.Scatter()))
+    #                    ]
+    #                 )
 
 
 @app.callback(
@@ -123,8 +164,8 @@ def change_graph_group_type(graph_type, id, children):
         children[-1] = generate_bar_group(id['index'])
     elif graph_type == 'Scatter' and children[-1]['props']['id']['type'] != 'filter-graph-group-scatter':
         children[-1] = generate_scatter_group(id['index'])
-    # elif graph_type == 'Manhattan' and children[-1]['props']['id']['type'] != 'filter-graph-group-manhattan':
-    #     children[-1] = generate_manhattan_group(id['index'])
+    elif graph_type == 'Manhattan' and children[-1]['props']['id']['type'] != 'filter-graph-group-manhattan':
+        children[-1] = generate_manhattan_group(id['index'])
     print('children change', children)
     return children
 

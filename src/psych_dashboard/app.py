@@ -77,7 +77,28 @@ all_bar_components = [{'component_type': 'Dropdown',
 dd_manhattan_dims = {"base_variable": "base variable"}
 input_manhattan_dims = {"pvalue": "p-value"}
 check_manhattan_dims = {"logscale": "logscale"}
-all_manhattan_dims = {**dd_manhattan_dims, **input_manhattan_dims, **check_manhattan_dims}
+all_manhattan_components = [{'component_type': 'Dropdown',
+                       'name': 'base_variable',
+                       'label': 'base variable',
+                       'starting_value': None,
+                       'starting_options': [],
+                       'other_args': {'multi': False,
+                                      'starting_options': []}},
+                      {'component_type': 'Input',
+                       'name': 'pvalue',
+                       'label': 'p-value',
+                       'starting_value': 0.05,
+                       'other_args': {'type': 'number',
+                                      'min': 0,
+                                      'step': 0.001}
+                       },
+                      {'component_type': 'Checklist',
+                       'name': 'logscale',
+                       'label': 'logscale',
+                       'other_args': {'options': [{'label': '', 'value': 'LOG'}],
+                                      'value': ['LOG']}
+                       },
+                      ]
 
 default_marker_color = "crimson"
 style_dict = {
