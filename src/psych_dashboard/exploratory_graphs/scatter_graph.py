@@ -40,42 +40,24 @@ def update_scatter_select_columns(df_loaded, style_dict, *args):
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns]
 
-    print('args_dict', args_dict)
     children = list()
     for component in all_scatter_components:
         name = component['name']
         if component['component_type'] == 'Dropdown':
             print(component, 'Dropdown')
-            print('index', args_dict[name]['index'])
-            children.append(html.Div([component['label'] + ":",
+            children.append([component['label'] + ":",
                                       dcc.Dropdown(id={'type': 'scatter_' + str(name), 'index': args_dict[name]['index']},
                                                    options=dd_options)],
-                                     id={'type': 'div_scatter_' + str(name), 'index': args_dict[name]['index']},
-                                     ))
+                                     )
         elif component['component_type'] == 'Input':
             print(component, 'Input')
-            children.append(html.Div([component['label'] + ":",
+            children.append([component['label'] + ":",
                                       dcc.Input(id={'type': 'scatter_' + str(name), 'index': args_dict[name]['index']},
                                                 type='number',
                                                 min=0,
                                                 step=1, )],
-                                     id={'type': 'div_scatter_' + str(name), 'index': args_dict[name]['index']},
-                                     ))
-    print('children', children)
+                                     )
     return children
-        # tuple([[dd_scatter_dims[dim] + ":",
-        #            dcc.Dropdown(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
-        #                         options=dd_options,
-        #                         value=args_dict[dim+'_val'])
-        #            ] for dim in dd_scatter_dims.keys()] +
-        #          [[input_scatter_dims[dim] + ":",
-        #            dcc.Input(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
-        #                      type='number',
-        #                      min=0,
-        #                      step=1,
-        #                      value=args_dict[dim+'_val'])
-        #            ] for dim in input_scatter_dims.keys()]
-        #          )
 
 
 def make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats):

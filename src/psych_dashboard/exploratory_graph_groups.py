@@ -11,14 +11,12 @@ def generate_scatter_group(n_clicks):
     for component in all_scatter_components:
         name = component['name']
         if component['component_type'] == 'Dropdown':
-            print(component, 'Dropdown')
             children.append(html.Div([component['label'] + ":", dcc.Dropdown(id={'type': 'scatter_'+str(name), 'index': n_clicks},
                                                                   options=[])],
                                        id={'type': 'div_scatter_'+str(name), 'index': n_clicks},
                                        style=style_dict
                                        ))
         elif component['component_type'] == 'Input':
-            print(component, 'Input')
             children.append(html.Div([component['label'] + ":", dcc.Input(id={'type': 'scatter_'+str(name), 'index': n_clicks},
                                                                           type='number',
                                                                           min=0,
@@ -70,20 +68,6 @@ def generate_bar_group(n_clicks):
                         },
                     children=children
                     )
-    # return html.Div(id={'type': 'filter-graph-group-bar',
-    #                     'index': n_clicks
-    #                     },
-    #                 children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'bar_'+key, 'index': n_clicks},
-    #                                                               options=[])],
-    #                                    id={'type': 'div_bar_'+str(key), 'index': n_clicks},
-    #                                    style=style_dict
-    #                                    )
-    #                           for key, value in dd_bar_dims.items()
-    #                           ]
-    #                 + [dcc.Graph(id={'type': 'gen_bar_graph', 'index': n_clicks},
-    #                              figure=go.Figure(data=go.Bar()))
-    #                    ]
-    #                 )
 
 
 def generate_manhattan_group(n_clicks):
