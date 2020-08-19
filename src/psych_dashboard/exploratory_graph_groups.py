@@ -9,19 +9,19 @@ def generate_scatter_group(n_clicks):
     print('generate_scatter_group', n_clicks)
     children = list()
     for component in all_scatter_components:
-        name = component['name']
+        id = component['id']
         if component['component_type'] == 'Dropdown':
-            children.append(html.Div([component['label'] + ":", dcc.Dropdown(id={'type': 'scatter_'+str(name), 'index': n_clicks},
+            children.append(html.Div([component['label'] + ":", dcc.Dropdown(id={'type': 'scatter_'+str(id), 'index': n_clicks},
                                                                   options=[])],
-                                       id={'type': 'div_scatter_'+str(name), 'index': n_clicks},
+                                       id={'type': 'div_scatter_'+str(id), 'index': n_clicks},
                                        style=style_dict
                                        ))
         elif component['component_type'] == 'Input':
-            children.append(html.Div([component['label'] + ":", dcc.Input(id={'type': 'scatter_'+str(name), 'index': n_clicks},
+            children.append(html.Div([component['label'] + ":", dcc.Input(id={'type': 'scatter_'+str(id), 'index': n_clicks},
                                                                           type='number',
                                                                           min=0,
                                                                           step=1,)],
-                                       id={'type': 'div_scatter_'+str(name), 'index': n_clicks},
+                                       id={'type': 'div_scatter_'+str(id), 'index': n_clicks},
                                        style=style_dict
                                        ))
     children.append(dcc.Graph(id={'type': 'gen_scatter_graph', 'index': n_clicks},
@@ -40,22 +40,23 @@ def generate_bar_group(n_clicks):
     print('generate_bar_group')
     children = list()
     for component in all_bar_components:
+        id = component['id']
         if component['component_type'] == 'Dropdown':
             print(component, 'Dropdown')
             children.append(html.Div([component['label'] + ":",
-                                      dcc.Dropdown(id={'type': 'bar_' + str(component['name']), 'index': n_clicks},
+                                      dcc.Dropdown(id={'type': 'bar_' + str(id), 'index': n_clicks},
                                                    options=[])],
-                                     id={'type': 'div_bar_' + str(component['name']), 'index': n_clicks},
+                                     id={'type': 'div_bar_' + str(id), 'index': n_clicks},
                                      style=style_dict
                                      ))
         elif component['component_type'] == 'Input':
             print(component, 'Input')
             children.append(html.Div([component['label'] + ":",
-                                      dcc.Input(id={'type': 'bar_' + str(component['name']), 'index': n_clicks},
+                                      dcc.Input(id={'type': 'bar_' + str(id), 'index': n_clicks},
                                                 type='number',
                                                 min=0,
                                                 step=1, )],
-                                     id={'type': 'div_bar_' + str(component['name']), 'index': n_clicks},
+                                     id={'type': 'div_bar_' + str(id), 'index': n_clicks},
                                      style=style_dict
                                      ))
     children.append(dcc.Graph(id={'type': 'gen_bar_graph', 'index': n_clicks},
@@ -74,33 +75,34 @@ def generate_manhattan_group(n_clicks):
     print('generate_manhattan_group')
     children = list()
     for component in all_manhattan_components:
+        id = component['id']
         if component['component_type'] == 'Dropdown':
             print(component, 'Dropdown')
             children.append(html.Div([component['label'] + ":",
-                                      dcc.Dropdown(id={'type': 'manhattan_' + str(component['name']), 'index': n_clicks},
+                                      dcc.Dropdown(id={'type': 'manhattan_' + str(id), 'index': n_clicks},
                                                    options=[])],
-                                     id={'type': 'div_manhattan_' + str(component['name']), 'index': n_clicks},
+                                     id={'type': 'div_manhattan_' + str(id), 'index': n_clicks},
                                      style=style_dict
                                      ))
         elif component['component_type'] == 'Input':
             print(component, 'Input')
             children.append(html.Div([component['label'] + ":",
-                                      dcc.Input(id={'type': 'manhattan_' + str(component['name']), 'index': n_clicks},
+                                      dcc.Input(id={'type': 'manhattan_' + str(id), 'index': n_clicks},
                                                 type=component['other_args']['type'],
                                                 min=component['other_args']['min'],
                                                 step=component['other_args']['step'],
                                                 )],
-                                     id={'type': 'div_manhattan_' + str(component['name']), 'index': n_clicks},
+                                     id={'type': 'div_manhattan_' + str(id), 'index': n_clicks},
                                      style=style_dict
                                      ))
         elif component['component_type'] == 'Checklist':
             print(component, 'Checklist')
             children.append(html.Div([component['label'] + ":",
-                                      dcc.Checklist(id={'type': 'manhattan_' + str(component['name']), 'index': n_clicks},
+                                      dcc.Checklist(id={'type': 'manhattan_' + str(id), 'index': n_clicks},
                                                     options=component['other_args']['options'],
                                                     value=component['other_args']['value'],
                                                     )],
-                                     id={'type': 'div_manhattan_' + str(component['name']), 'index': n_clicks},
+                                     id={'type': 'div_manhattan_' + str(id), 'index': n_clicks},
                                      style=style_dict
                                      ))
     children.append(dcc.Graph(id={'type': 'gen_manhattan_graph', 'index': n_clicks},

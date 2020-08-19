@@ -11,19 +11,19 @@ from psych_dashboard.load_feather import load_filtered_feather
 
 @app.callback(
     [Output({'type': 'div_bar_'+str(t), 'index': MATCH}, 'children')
-     for t in [component['name'] for component in all_bar_components]],
+     for t in [component['id'] for component in all_bar_components]],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div_bar_x', 'index': MATCH}, 'style')] +
     list(itertools.chain.from_iterable([State({'type': 'bar_'+t, 'index': MATCH}, 'id'),
                                         State({'type': 'bar_'+t, 'index': MATCH}, 'value')
-                                        ] for t in [component['name'] for component in all_bar_components]))
+                                        ] for t in [component['id'] for component in all_bar_components]))
 )
 def update_bar_select_columns(df_loaded, style_dict, *args):
     """ This function is triggered by a change to
     """
     print('update_bar_select_columns')
-    keys = itertools.chain.from_iterable([str([component['name'] for component in all_bar_components][i]),
-                                          str([component['name'] for component in all_bar_components][i])+'_val']
+    keys = itertools.chain.from_iterable([str([component['id'] for component in all_bar_components][i]),
+                                          str([component['id'] for component in all_bar_components][i])+'_val']
                                          for i in range(0, int(len(args)/2))
                                          )
     args_dict = dict(zip(keys, args))
@@ -34,17 +34,17 @@ def update_bar_select_columns(df_loaded, style_dict, *args):
 
     children = list()
     for component in all_bar_components:
-        name = component['name']
+        id = component['id']
         if component['component_type'] == 'Dropdown':
             print(component, 'Dropdown')
             children.append([component['label'] + ":",
-                                      dcc.Dropdown(id={'type': 'bar_' + str(name), 'index': args_dict[name]['index']},
+                                      dcc.Dropdown(id={'type': 'bar_' + str(id), 'index': args_dict[id]['index']},
                                                    options=dd_options)],
                                      )
         elif component['component_type'] == 'Input':
             print(component, 'Input')
             children.append([component['label'] + ":",
-                                      dcc.Input(id={'type': 'bar_' + str(name), 'index': args_dict[name]['index']},
+                                      dcc.Input(id={'type': 'bar_' + str(id), 'index': args_dict[id]['index']},
                                                 type='number',
                                                 min=0,
                                                 step=1, )],
@@ -55,11 +55,11 @@ def update_bar_select_columns(df_loaded, style_dict, *args):
 
 @app.callback(
     Output({'type': 'gen_bar_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'bar_'+d, 'index': MATCH}, "value") for d in [component['name'] for component in all_bar_components])],
+    [*(Input({'type': 'bar_'+d, 'index': MATCH}, "value") for d in [component['id'] for component in all_bar_components])],
 )
 def make_bar_figure(*args):
     print('make_bar_figure')
-    keys = [str([component['name'] for component in all_bar_components][i]) for i in range(0, int(len(args)))]
+    keys = [str([component['id'] for component in all_bar_components][i]) for i in range(0, int(len(args)))]
 
     args_dict = dict(zip(keys, args))
     dff = load_filtered_feather()

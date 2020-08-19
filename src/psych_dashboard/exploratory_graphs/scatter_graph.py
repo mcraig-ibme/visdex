@@ -18,18 +18,18 @@ from psych_dashboard.load_feather import load_filtered_feather
 
 @app.callback(
     [Output({'type': 'div_scatter_'+str(t), 'index': MATCH}, 'children')
-     for t in [component['name'] for component in all_scatter_components]],
+     for t in [component['id'] for component in all_scatter_components]],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')] +
     list(itertools.chain.from_iterable([State({'type': 'scatter_'+t, 'index': MATCH}, 'id'),
                                         State({'type': 'scatter_'+t, 'index': MATCH}, 'value')
-                                        ] for t in [component['name'] for component in all_scatter_components]))
+                                        ] for t in [component['id'] for component in all_scatter_components]))
 )
 def update_scatter_select_columns(df_loaded, style_dict, *args):
     print('update_scatter_select_columns')
     # Generate the list of argument names based on the input order
-    keys = itertools.chain.from_iterable([str([component['name'] for component in all_scatter_components][i]),
-                                          str([component['name'] for component in all_scatter_components][i])+'_val']
+    keys = itertools.chain.from_iterable([str([component['id'] for component in all_scatter_components][i]),
+                                          str([component['id'] for component in all_scatter_components][i])+'_val']
                                          for i in range(0, int(len(args)/2))
                                          )
 
@@ -42,17 +42,17 @@ def update_scatter_select_columns(df_loaded, style_dict, *args):
 
     children = list()
     for component in all_scatter_components:
-        name = component['name']
+        id = component['id']
         if component['component_type'] == 'Dropdown':
             print(component, 'Dropdown')
             children.append([component['label'] + ":",
-                                      dcc.Dropdown(id={'type': 'scatter_' + str(name), 'index': args_dict[name]['index']},
+                                      dcc.Dropdown(id={'type': 'scatter_' + str(id), 'index': args_dict[id]['index']},
                                                    options=dd_options)],
                                      )
         elif component['component_type'] == 'Input':
             print(component, 'Input')
             children.append([component['label'] + ":",
-                                      dcc.Input(id={'type': 'scatter_' + str(name), 'index': args_dict[name]['index']},
+                                      dcc.Input(id={'type': 'scatter_' + str(id), 'index': args_dict[id]['index']},
                                                 type='number',
                                                 min=0,
                                                 step=1, )],
@@ -94,12 +94,12 @@ max_marker_size = 10
 
 @app.callback(
     Output({'type': 'gen_scatter_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in [component['name'] for component in all_scatter_components])],
+    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in [component['id'] for component in all_scatter_components])],
 )
 def make_scatter_figure(*args):
     print('make_scatter_figure', *args)
     # Generate the list of argument names based on the input order
-    keys = [str([component['name'] for component in all_scatter_components][i]) for i in range(0, int(len(args)))]
+    keys = [str([component['id'] for component in all_scatter_components][i]) for i in range(0, int(len(args)))]
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
