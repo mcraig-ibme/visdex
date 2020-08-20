@@ -62,16 +62,17 @@ all_scatter_components = [{'component_type': 'Dropdown',
 all_bar_components = [{'component_type': 'Dropdown',
                        'id': 'x',
                        'label': 'x',
-                       'starting_value': None,
-                       'starting_options': [],
-                       'other_args': {'multi': False,
-                                      'starting_options': []}},
+                       'value': None,
+                       'options': [],
+                       'multi': False,
+                       },
                       {'component_type': 'Dropdown',
                        'id': 'split_by',
                        'label': 'split by',
-                       'starting_value': None,
-                       'other_args': {'multi': False,
-                                      'starting_options': []}},
+                       'value': None,
+                       'options': [],
+                       'multi': False,
+                       },
                       ]
 
 dd_manhattan_dims = {"base_variable": "base variable"}
@@ -80,23 +81,23 @@ check_manhattan_dims = {"logscale": "logscale"}
 all_manhattan_components = [{'component_type': 'Dropdown',
                        'id': 'base_variable',
                        'label': 'base variable',
-                       'starting_value': None,
-                       'starting_options': [],
-                       'other_args': {'multi': False,
-                                      'starting_options': []}},
+                       'value': None,
+                       'options': [],
+                       'multi': False
+                             },
                       {'component_type': 'Input',
                        'id': 'pvalue',
                        'label': 'p-value',
-                       'starting_value': 0.05,
-                       'other_args': {'type': 'number',
-                                      'min': 0,
-                                      'step': 0.001}
+                       'value': 0.05,
+                       'type': 'number',
+                       'min': 0,
+                       'step': 0.001
                        },
                       {'component_type': 'Checklist',
                        'id': 'logscale',
                        'label': 'logscale',
-                       'other_args': {'options': [{'label': '', 'value': 'LOG'}],
-                                      'value': ['LOG']}
+                       'options': [{'label': '', 'value': 'LOG'}],
+                       'value': ['LOG']
                        },
                       ]
 

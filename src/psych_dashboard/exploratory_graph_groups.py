@@ -88,9 +88,9 @@ def generate_manhattan_group(n_clicks):
             print(component, 'Input')
             children.append(html.Div([component['label'] + ":",
                                       dcc.Input(id={'type': 'manhattan_' + str(id), 'index': n_clicks},
-                                                type=component['other_args']['type'],
-                                                min=component['other_args']['min'],
-                                                step=component['other_args']['step'],
+                                                type=component['type'],
+                                                min=component['min'],
+                                                step=component['step'],
                                                 )],
                                      id={'type': 'div_manhattan_' + str(id), 'index': n_clicks},
                                      style=style_dict
@@ -99,8 +99,8 @@ def generate_manhattan_group(n_clicks):
             print(component, 'Checklist')
             children.append(html.Div([component['label'] + ":",
                                       dcc.Checklist(id={'type': 'manhattan_' + str(id), 'index': n_clicks},
-                                                    options=component['other_args']['options'],
-                                                    value=component['other_args']['value'],
+                                                    options=component['options'],
+                                                    value=component['value'],
                                                     )],
                                      id={'type': 'div_manhattan_' + str(id), 'index': n_clicks},
                                      style=style_dict

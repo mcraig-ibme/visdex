@@ -6,6 +6,7 @@ import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
+from collections import defaultdict
 
 from psych_dashboard.app import app, all_manhattan_components, default_marker_color
 from psych_dashboard.load_feather import load_flattened_logs, load_logs, load_pval, load_filtered_feather
@@ -19,49 +20,70 @@ valid_manhattan_dtypes = [np.int64, np.float64]
     [Output({'type': 'div_manhattan_' + str(t), 'index': MATCH}, 'children')
      for t in [component['id'] for component in all_manhattan_components]],
     [Input('df-loaded-div', 'children')],
-    list(itertools.chain.from_iterable([State({'type': 'manhattan_' + t, 'index': MATCH}, 'id'),
-                                        State({'type': 'manhattan_' + t, 'index': MATCH}, 'value')
-                                        ] for t in [component['id'] for component in all_manhattan_components]))
+    [State({'type': 'manhattan_' + component['id'], 'index': MATCH}, prop)
+     for component in all_manhattan_components for prop in component]
 )
 def select_manhattan_variables(df_loaded, *args):
     print('select_manhattan_variables', *args)
     # Generate the list of argument names based on the input order
-    keys = itertools.chain.from_iterable([str([component['id'] for component in all_manhattan_components][i]),
-                                          str([component['id'] for component in all_manhattan_components][i]) + '_val']
-                                         for i in range(0, int(len(args) / 2))
-                                         )
+    keys = [(component['id'], str(prop))
+            for component in all_manhattan_components for prop in component]
+    print(keys)
+    args_dict = defaultdict(dict)
+    for key, value in zip(keys, args):
+        # if key[0] not in new_args_dict:
+        #     new_args_dict[key[0]] = dict()
+        args_dict[key[0]][key[1]] = value
 
+    print('args_dict', args_dict)
     # Convert inputs to a dict called 'args_dict'
-    args_dict = dict(zip(keys, args))
-
+    # args_dict = dict(zip(keys, args))
+    # print('man args_dict', args_dict)
     dff = load_pval()
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
 
     children = list()
     for component in all_manhattan_components:
-        id = component['id']
+        name = component['id'] # 'base_variable'
         if component['component_type'] == 'Dropdown':
             print(component, 'Dropdown')
+            print('args_dict1', args_dict)
+            other_args = dict(args_dict[name])
+            del other_args['id']
+            del other_args['component_type']
+            del other_args['label']
+            del other_args['options']
+            print('other_args', other_args)
+            print('args_dict2', args_dict)
+            print(args_dict[component['id']])
+            print(args_dict[name])
             children.append([component['label'] + ":",
-                             dcc.Dropdown(id={'type': 'manhattan_' + str(id), 'index': args_dict[id]['index']},
-                                          options=dd_options)],
+                             dcc.Dropdown(id={'type': 'manhattan_' + name, 'index': args_dict[name]['id']['index']},
+                                          options=dd_options,
+                                          **other_args
+                                          )],
                             )
         elif component['component_type'] == 'Input':
             print(component, 'Input')
+            other_args = dict(args_dict[name])
+            del other_args['id']
+            del other_args['component_type']
+            del other_args['label']
             children.append([component['label'] + ":",
-                             dcc.Input(id={'type': 'manhattan_' + str(id), 'index': args_dict[id]['index']},
-                                       type=component['other_args']['type'],
-                                       min=component['other_args']['min'],
-                                       step=component['other_args']['step'],
+                             dcc.Input(id={'type': 'manhattan_' + name, 'index': args_dict[name]['id']['index']},
+                                       **other_args,
                                        )],
                             )
         elif component['component_type'] == 'Checklist':
             print(component, 'Checklist')
+            other_args = dict(args_dict[name])
+            del other_args['id']
+            del other_args['component_type']
+            del other_args['label']
             children.append([component['label'] + ":",
-                             dcc.Checklist(id={'type': 'manhattan_' + str(id), 'index': args_dict[id]['index']},
-                                           options=component['other_args']['options'],
-                                           value=component['other_args']['value'],
+                             dcc.Checklist(id={'type': 'manhattan_' + name, 'index': args_dict[name]['id']['index']},
+                                           **other_args
                                            )],
                             )
     return children
@@ -137,7 +159,8 @@ def flattened(df):
 )
 def make_manhattan_figure(*args):
     print('make_manhattan_figure', *args)
-
+    # [State({'type': 'manhattan_' + component['name'], 'index': MATCH}, prop)
+    #  for component in all_manhattan_components for prop in component]
     keys = [str([component['id'] for component in all_manhattan_components][i]) for i in range(0, int(len(args)))]
     print(keys)
     args_dict = dict(zip(keys, args))
