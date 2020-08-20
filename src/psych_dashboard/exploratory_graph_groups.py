@@ -76,33 +76,35 @@ def generate_manhattan_group(n_clicks):
     children = list()
     for component in all_manhattan_components:
         id = component['id']
+        args_to_replicate = dict(component)
+        del args_to_replicate['component_type']
+        del args_to_replicate['id']
+        del args_to_replicate['label']
         if component['component_type'] == 'Dropdown':
-            print(component, 'Dropdown')
             children.append(html.Div([component['label'] + ":",
-                                      dcc.Dropdown(id={'type': 'manhattan_' + str(id), 'index': n_clicks},
-                                                   options=[])],
-                                     id={'type': 'div_manhattan_' + str(id), 'index': n_clicks},
+                                      dcc.Dropdown(id={'type': 'manhattan_' + id, 'index': n_clicks},
+                                                   **args_to_replicate,
+                                                   )
+                                      ],
+                                     id={'type': 'div_manhattan_' + id, 'index': n_clicks},
                                      style=style_dict
                                      ))
         elif component['component_type'] == 'Input':
-            print(component, 'Input')
             children.append(html.Div([component['label'] + ":",
-                                      dcc.Input(id={'type': 'manhattan_' + str(id), 'index': n_clicks},
-                                                type=component['type'],
-                                                min=component['min'],
-                                                step=component['step'],
-                                                )],
-                                     id={'type': 'div_manhattan_' + str(id), 'index': n_clicks},
+                                      dcc.Input(id={'type': 'manhattan_' + id, 'index': n_clicks},
+                                                **args_to_replicate,
+                                                )
+                                      ],
+                                     id={'type': 'div_manhattan_' + id, 'index': n_clicks},
                                      style=style_dict
                                      ))
         elif component['component_type'] == 'Checklist':
-            print(component, 'Checklist')
             children.append(html.Div([component['label'] + ":",
-                                      dcc.Checklist(id={'type': 'manhattan_' + str(id), 'index': n_clicks},
-                                                    options=component['options'],
-                                                    value=component['value'],
-                                                    )],
-                                     id={'type': 'div_manhattan_' + str(id), 'index': n_clicks},
+                                      dcc.Checklist(id={'type': 'manhattan_' + id, 'index': n_clicks},
+                                                    **args_to_replicate,
+                                                    )
+                                      ],
+                                     id={'type': 'div_manhattan_' + id, 'index': n_clicks},
                                      style=style_dict
                                      ))
     children.append(dcc.Graph(id={'type': 'gen_manhattan_graph', 'index': n_clicks},
@@ -115,41 +117,6 @@ def generate_manhattan_group(n_clicks):
                         },
                     children=children
                     )
-    # return html.Div(id={'type': 'filter-graph-group-manhattan',
-    #                     'index': n_clicks
-    #                     },
-    #                 children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'manhattan_'+key, 'index': n_clicks},
-    #                                                               options=[])],
-    #                                    id={'type': 'div_manhattan_'+str(key), 'index': n_clicks},
-    #                                    style=style_dict
-    #                                    )
-    #                           for key, value in dd_manhattan_dims.items()
-    #                           ]
-    #                 + [html.Div([value + ":", dcc.Input(id={'type': 'manhattan_' + str(key), 'index': n_clicks},
-    #                                                     type='number',
-    #                                                     value=0.05,
-    #                                                     min=0,
-    #                                                     step=0.001
-    #                                                     )
-    #                              ],
-    #                             id={'type': 'div_manhattan_' + str(key), 'index': n_clicks},
-    #                             style=style_dict)
-    #                     for key, value in input_manhattan_dims.items()
-    #                    ]
-    #                 + [html.Div([value + ":", dcc.Checklist(id={'type': 'manhattan_' + str(key), 'index': n_clicks},
-    #                                                         options=[{'label': '', 'value': 'LOG'}],
-    #                                                         value=['LOG'],
-    #                                                         style={'display': 'inline-block', 'width': '10%'}
-    #                                                         )
-    #                              ],
-    #                             id={'type': 'div_manhattan_' + str(key), 'index': n_clicks},
-    #                             style=style_dict)
-    #                     for key, value in check_manhattan_dims.items()
-    #                    ]
-    #                 + [dcc.Graph(id={'type': 'gen_manhattan_graph', 'index': n_clicks},
-    #                              figure=go.Figure(data=go.Scatter()))
-    #                    ]
-    #                 )
 
 
 @app.callback(

@@ -25,87 +25,54 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 )
 def select_manhattan_variables(df_loaded, *args):
     print('select_manhattan_variables', *args)
-    # Generate the list of argument names based on the input order
+    # Generate the list of argument names based on the input order, paired by component id and property name
     keys = [(component['id'], str(prop))
             for component in all_manhattan_components for prop in component]
-    print(keys)
+    # Convert inputs to a nested dict, with the outer key the component id, and the inner key the property name
     args_dict = defaultdict(dict)
     for key, value in zip(keys, args):
-        # if key[0] not in new_args_dict:
-        #     new_args_dict[key[0]] = dict()
         args_dict[key[0]][key[1]] = value
 
-    print('args_dict', args_dict)
-    # Convert inputs to a dict called 'args_dict'
-    # args_dict = dict(zip(keys, args))
-    # print('man args_dict', args_dict)
     dff = load_pval()
+
+    # Create a set of options from the data file, rather than just using the existing set.
+    # This handles the case of first call.
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
 
     children = list()
     for component in all_manhattan_components:
-        name = component['id'] # 'base_variable'
+        # Pass most of the input arguments for this component to the constructor via
+        # args_to_replicate. Remove component_type and label as they are used in other ways,
+        # not passed to the constructor.
+        args_to_replicate = dict(args_dict[component['id']])
+        del args_to_replicate['component_type']
+        del args_to_replicate['label']
+
+        # Create a new instance of each component, with different constructors
+        # for each of the different types.
         if component['component_type'] == 'Dropdown':
-            print(component, 'Dropdown')
-            print('args_dict1', args_dict)
-            other_args = dict(args_dict[name])
-            del other_args['id']
-            del other_args['component_type']
-            del other_args['label']
-            del other_args['options']
-            print('other_args', other_args)
-            print('args_dict2', args_dict)
-            print(args_dict[component['id']])
-            print(args_dict[name])
+            # Remove the options property to override it with the dd_options above
+            del args_to_replicate['options']
             children.append([component['label'] + ":",
-                             dcc.Dropdown(id={'type': 'manhattan_' + name, 'index': args_dict[name]['id']['index']},
+                             dcc.Dropdown(**args_to_replicate,
                                           options=dd_options,
-                                          **other_args
-                                          )],
+                                          )
+                             ],
                             )
         elif component['component_type'] == 'Input':
-            print(component, 'Input')
-            other_args = dict(args_dict[name])
-            del other_args['id']
-            del other_args['component_type']
-            del other_args['label']
             children.append([component['label'] + ":",
-                             dcc.Input(id={'type': 'manhattan_' + name, 'index': args_dict[name]['id']['index']},
-                                       **other_args,
-                                       )],
+                             dcc.Input(**args_to_replicate,
+                                       )
+                             ],
                             )
         elif component['component_type'] == 'Checklist':
-            print(component, 'Checklist')
-            other_args = dict(args_dict[name])
-            del other_args['id']
-            del other_args['component_type']
-            del other_args['label']
             children.append([component['label'] + ":",
-                             dcc.Checklist(id={'type': 'manhattan_' + name, 'index': args_dict[name]['id']['index']},
-                                           **other_args
-                                           )],
+                             dcc.Checklist(**args_to_replicate,
+                                           )
+                             ],
                             )
     return children
-
-    # return tuple([[dd_manhattan_dims[dim] + ":",
-    #                dcc.Dropdown(id={'type': 'manhattan_'+dim, 'index': args_dict[dim]['index']},
-    #                             options=dd_options,
-    #                             value=args_dict[dim+'_val'])
-    #                ] for dim in dd_manhattan_dims.keys()] +
-    #              [[input_manhattan_dims[dim] + ":",
-    #                dcc.Input(id={'type': 'manhattan_'+dim, 'index': args_dict[dim]['index']},
-    #                          type='number',
-    #                          min=0,
-    #                          step=0.001,
-    #                          value=args_dict[dim+'_val'])
-    #                ] for dim in input_manhattan_dims.keys()] +
-    #              [[check_manhattan_dims[dim] + ":",
-    #                dcc.Checklist(id={'type': 'manhattan_'+dim, 'index': args_dict[dim]['index']},
-    #                              options=[{'label': '', 'value': 'LOG'}],
-    #                              value=args_dict[dim+'_val'])
-    #                ] for dim in check_manhattan_dims.keys()]
-    #              )
 
 
 def calculate_transformed_corrected_pval(ref_pval, logs):
