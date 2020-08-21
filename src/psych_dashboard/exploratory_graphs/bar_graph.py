@@ -6,8 +6,8 @@ from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
 @app.callback(
-    [Output({'type': 'div-bar-'+str(t), 'index': MATCH}, 'children')
-     for t in [component['id'] for component in all_bar_components]],
+    [Output({'type': 'div-bar-' + component['id'], 'index': MATCH}, 'children')
+     for component in all_bar_components],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div-bar-x', 'index': MATCH}, 'style')] +
     [State({'type': 'bar-' + component['id'], 'index': MATCH}, prop)
@@ -23,7 +23,7 @@ def update_bar_components(df_loaded, style_dict, *args):
 
 @app.callback(
     Output({'type': 'gen-bar-graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'bar-'+d, 'index': MATCH}, "value") for d in [component['id'] for component in all_bar_components])],
+    [*(Input({'type': 'bar-' + component['id'], 'index': MATCH}, "value") for component in all_bar_components)],
 )
 def make_bar_figure(*args):
     print('make_bar_figure')

@@ -15,8 +15,8 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 
 
 @app.callback(
-    [Output({'type': 'div-manhattan-' + str(t), 'index': MATCH}, 'children')
-     for t in [component['id'] for component in all_manhattan_components]],
+    [Output({'type': 'div-manhattan-' + component['id'], 'index': MATCH}, 'children')
+     for component in all_manhattan_components],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div-manhattan-base_variable', 'index': MATCH}, 'style')] +
     [State({'type': 'manhattan-' + component['id'], 'index': MATCH}, prop)
@@ -77,7 +77,7 @@ def flattened(df):
 
 @app.callback(
     Output({'type': 'gen-manhattan-graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'manhattan-' + d, 'index': MATCH}, "value") for d in [component['id'] for component in all_manhattan_components])],
+    [*(Input({'type': 'manhattan-' + component['id'], 'index': MATCH}, "value") for component in all_manhattan_components)],
 )
 def make_manhattan_figure(*args):
     print('make_manhattan_figure', *args)

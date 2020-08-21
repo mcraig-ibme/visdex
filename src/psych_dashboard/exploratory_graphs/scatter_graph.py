@@ -14,8 +14,8 @@ from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
 @app.callback(
-    [Output({'type': 'div-scatter-'+str(t), 'index': MATCH}, 'children')
-     for t in [component['id'] for component in all_scatter_components]],
+    [Output({'type': 'div-scatter-' + component['id'], 'index': MATCH}, 'children')
+     for component in all_scatter_components],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div-scatter-x', 'index': MATCH}, 'style')] +
     [State({'type': 'scatter-' + component['id'], 'index': MATCH}, prop)
@@ -63,7 +63,7 @@ max_marker_size = 10
 
 @app.callback(
     Output({'type': 'gen-scatter-graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter-'+d, 'index': MATCH}, "value") for d in [component['id'] for component in all_scatter_components])],
+    [*(Input({'type': 'scatter-' + component['id'], 'index': MATCH}, "value") for component in all_scatter_components)],
 )
 def make_scatter_figure(*args):
     print('make_scatter_figure')

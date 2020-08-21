@@ -8,7 +8,7 @@ from psych_dashboard.app import app, graph_types, all_scatter_components, all_ba
 
 def create_arguments_nested_dict(components_list, args):
     # Generate the list of argument names based on the input order, paired by component id and property name
-    keys = [(component['id'], str(prop))
+    keys = [(component['id'], prop)
             for component in components_list for prop in component]
     # Convert inputs to a nested dict, with the outer key the component id, and the inner key the property name
     args_dict = defaultdict(dict)
