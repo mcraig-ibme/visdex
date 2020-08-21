@@ -5,8 +5,8 @@ import itertools
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-from psych_dashboard.app import app, all_manhattan_components, default_marker_color
-from psych_dashboard.load_feather import load_flattened_logs, load_logs, load_pval, load_filtered_feather
+from psych_dashboard.app import app, all_manhattan_components
+from psych_dashboard.load_feather import load_flattened_logs, load_logs, load_pval
 from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 

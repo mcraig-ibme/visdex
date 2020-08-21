@@ -11,13 +11,12 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import plotly.express as px
 from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
 from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval, load_corr, load_logs, load_flattened_logs
 from psych_dashboard.exploratory_graphs.manhattan_graph import calculate_transformed_corrected_pval, calculate_manhattan_data, flattened
-from itertools import combinations_with_replacement, product
+from itertools import product
 from functools import wraps
 
 timing_dict = dict()
