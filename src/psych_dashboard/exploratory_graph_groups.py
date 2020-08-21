@@ -131,7 +131,7 @@ def generate_generic_group(n_clicks, group_type, component_list):
      State({'type': 'divgraph-type-dd', 'index': MATCH}, 'children')]
 )
 def change_graph_group_type(graph_type, id, children):
-    print('change_graph_group_type', graph_type, id, children)
+    print('change_graph_group_type', graph_type, id)
     # Check whether the value of the dropdown matches the type of the existing group. If it doesn't match, then
     # generate a new group of the right type.
     if graph_type == 'Bar' and children[-1]['props']['id']['type'] != 'filter-graph-group-bar':
@@ -140,7 +140,6 @@ def change_graph_group_type(graph_type, id, children):
         children[-1] = generate_scatter_group(id['index'])
     elif graph_type == 'Manhattan' and children[-1]['props']['id']['type'] != 'filter-graph-group-manhattan':
         children[-1] = generate_manhattan_group(id['index'])
-    print('children change', children)
     return children
 
 
