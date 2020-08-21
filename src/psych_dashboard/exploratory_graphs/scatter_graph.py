@@ -66,7 +66,7 @@ max_marker_size = 10
     [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in [component['id'] for component in all_scatter_components])],
 )
 def make_scatter_figure(*args):
-    print('make_scatter_figure', *args)
+    print('make_scatter_figure')
     # Generate the list of argument names based on the input order
     keys = [str([component['id'] for component in all_scatter_components][i]) for i in range(0, int(len(args)))]
 
@@ -134,7 +134,6 @@ def make_scatter_figure(*args):
                           col=j + 1)
 
             # Add regression lines
-            print('regression', args_dict['regression'])
             if args_dict['regression'] is not None:
                 working_dff.dropna(inplace=True)
                 # Guard against fitting an empty graph
@@ -169,7 +168,6 @@ def map_color(dff):
 
 def map_size(series, min_out, max_out):
     """Maps the range of series to [min_size, max_size]"""
-    print('map_size', series)
     if series.empty:
         return []
 

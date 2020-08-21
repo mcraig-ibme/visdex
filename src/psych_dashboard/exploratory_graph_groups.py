@@ -18,6 +18,15 @@ def create_arguments_nested_dict(components_list, args):
 
 
 def update_graph_components(graph_type, component_list, dd_options, args):
+    """
+    This is the generic function called by update_*_components for each graph type.
+    It generates the list of input components for each graph.
+    :param graph_type:
+    :param component_list:
+    :param dd_options:
+    :param args:
+    :return:
+    """
     print('update_graph_components')
     # Generate the list of argument names based on the input order, paired by component id and property name
     args_dict = create_arguments_nested_dict(component_list, args)
@@ -57,6 +66,7 @@ def update_graph_components(graph_type, component_list, dd_options, args):
 
     print('children', children)
     return children
+
 
 def generate_scatter_group(n_clicks):
     print('generate_scatter_group')
