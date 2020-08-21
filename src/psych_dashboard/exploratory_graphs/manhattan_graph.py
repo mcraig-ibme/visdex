@@ -8,7 +8,7 @@ from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from psych_dashboard.app import app, all_manhattan_components, default_marker_color
 from psych_dashboard.load_feather import load_flattened_logs, load_logs, load_pval, load_filtered_feather
-from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict
+from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict, update_graph_components
 
 
 # TODO: currently only allows int64 and float64
@@ -19,55 +19,16 @@ valid_manhattan_dtypes = [np.int64, np.float64]
     [Output({'type': 'div_manhattan_' + str(t), 'index': MATCH}, 'children')
      for t in [component['id'] for component in all_manhattan_components]],
     [Input('df-loaded-div', 'children')],
+    [State({'type': 'div_manhattan_base_variable', 'index': MATCH}, 'style')] +
     [State({'type': 'manhattan_' + component['id'], 'index': MATCH}, prop)
      for component in all_manhattan_components for prop in component]
 )
-def select_manhattan_variables(df_loaded, *args):
-    print('select_manhattan_variables')
-    args_dict = create_arguments_nested_dict(all_manhattan_components, args)
-
+def update_manhattan_components(df_loaded, style_dict, *args):
+    print('update_manhattan_components')
     dff = load_pval()
-
-    # Create a set of options from the data file, rather than just using the existing set.
-    # This handles the case of first call.
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
-
-    children = list()
-    for component in all_manhattan_components:
-        name = component['id']
-        # Pass most of the input arguments for this component to the constructor via
-        # args_to_replicate. Remove component_type and label as they are used in other ways,
-        # not passed to the constructor.
-        args_to_replicate = dict(args_dict[name])
-        del args_to_replicate['component_type']
-        del args_to_replicate['label']
-        del args_to_replicate['id']
-
-        # Create a new instance of each component, with different constructors
-        # for when the different types need different inputs
-        if component['component_type'] == dcc.Dropdown:
-            # Remove the options property to override it with the dd_options above
-            del args_to_replicate['options']
-            children.append([component['label'] + ":",
-                             component['component_type'](
-                                 id={'type': 'manhattan_' + name, 'index': args_dict[name]['id']['index']},
-                                 **args_to_replicate,
-                                 options=dd_options,
-                                 )
-                             ],
-                            )
-        else:
-            children.append([component['label'] + ":",
-                             component['component_type'](
-                                 id={'type': 'manhattan_' + name, 'index': args_dict[name]['id']['index']},
-                                 **args_to_replicate,
-                                 )
-                             ],
-                            )
-
-    print('children manhattan', children)
-    return children
+    return update_graph_components('manhattan', all_manhattan_components, dd_options, args)
 
 
 def calculate_transformed_corrected_pval(ref_pval, logs):

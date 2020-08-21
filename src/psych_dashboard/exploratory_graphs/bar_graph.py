@@ -3,7 +3,7 @@ from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 from psych_dashboard.app import app, all_bar_components
 from psych_dashboard.load_feather import load_filtered_feather
-from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict
+from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict, update_graph_components
 
 
 @app.callback(
@@ -14,51 +14,12 @@ from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dic
     [State({'type': 'bar_' + component['id'], 'index': MATCH}, prop)
      for component in all_bar_components for prop in component]
 )
-def update_bar_select_columns(df_loaded, style_dict, *args):
-    """ This function is triggered by a change to
-    """
-    print('update_bar_select_columns')
-    args_dict = create_arguments_nested_dict(all_bar_components, args)
-
+def update_bar_components(df_loaded, style_dict, *args):
+    print('update_bar_components')
     dff = load_filtered_feather()
     dd_options = [{'label': col,
-                  'value': col} for col in dff.columns]
-
-    children = list()
-    for component in all_bar_components:
-        name = component['id']
-        # Pass most of the input arguments for this component to the constructor via
-        # args_to_replicate. Remove component_type and label as they are used in other ways,
-        # not passed to the constructor.
-        args_to_replicate = dict(args_dict[name])
-        del args_to_replicate['component_type']
-        del args_to_replicate['label']
-        del args_to_replicate['id']
-
-        # Create a new instance of each component, with different constructors
-        # for when the different types need different inputs
-        if component['component_type'] == dcc.Dropdown:
-            # Remove the options property to override it with the dd_options above
-            del args_to_replicate['options']
-            children.append([component['label'] + ":",
-                             component['component_type'](
-                                 id={'type': 'bar_' + name, 'index': args_dict[name]['id']['index']},
-                                 **args_to_replicate,
-                                 options=dd_options,
-                                 )
-                             ],
-                            )
-        else:
-            children.append([component['label'] + ":",
-                             component['component_type'](
-                                 id={'type': 'bar_' + name, 'index': args_dict[name]['id']['index']},
-                                 **args_to_replicate,
-                                 )
-                             ],
-                            )
-
-    print('children bar', children)
-    return children
+                   'value': col} for col in dff.columns]
+    return update_graph_components('bar', all_bar_components, dd_options, args)
 
 
 @app.callback(

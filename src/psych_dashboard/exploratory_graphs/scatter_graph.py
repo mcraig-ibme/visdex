@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from psych_dashboard.app import app, all_scatter_components, default_marker_color
 from psych_dashboard.load_feather import load_filtered_feather
-from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict
+from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict, update_graph_components
 
 
 @app.callback(
@@ -22,48 +22,12 @@ from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dic
     [State({'type': 'scatter_' + component['id'], 'index': MATCH}, prop)
      for component in all_scatter_components for prop in component]
 )
-def update_scatter_select_columns(df_loaded, style_dict, *args):
-    print('update_scatter_select_columns')
-    # Generate the list of argument names based on the input order, paired by component id and property name
-    args_dict = create_arguments_nested_dict(all_scatter_components, args)
-
+def update_scatter_components(df_loaded, style_dict, *args):
+    print('update_scatter_components')
     dff = load_filtered_feather()
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns]
-
-    children = list()
-    for component in all_scatter_components:
-        name = component['id']
-        # Pass most of the input arguments for this component to the constructor via
-        # args_to_replicate. Remove component_type and label as they are used in other ways,
-        # not passed to the constructor.
-        args_to_replicate = dict(args_dict[name])
-        del args_to_replicate['component_type']
-        del args_to_replicate['label']
-        del args_to_replicate['id']
-
-        # Create a new instance of each component, with different constructors
-        # for when the different types need different inputs
-        if component['component_type'] == dcc.Dropdown:
-            # Remove the options property to override it with the dd_options above
-            del args_to_replicate['options']
-            children.append([component['label'] + ":",
-                             component['component_type'](id={'type': 'scatter_' + name, 'index': args_dict[name]['id']['index']},
-                                                         **args_to_replicate,
-                                                         options=dd_options,
-                                                         )
-                             ],
-                            )
-        else:
-            children.append([component['label'] + ":",
-                             component['component_type'](id={'type': 'scatter_' + name, 'index': args_dict[name]['id']['index']},
-                                                         **args_to_replicate,
-                                                         )
-                             ],
-                            )
-
-    print('children scatter', children)
-    return children
+    return update_graph_components('scatter', all_scatter_components, dd_options, args)
 
 
 def make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats):
