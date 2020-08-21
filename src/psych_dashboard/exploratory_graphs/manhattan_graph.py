@@ -15,11 +15,11 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 
 
 @app.callback(
-    [Output({'type': 'div_manhattan_' + str(t), 'index': MATCH}, 'children')
+    [Output({'type': 'div-manhattan-' + str(t), 'index': MATCH}, 'children')
      for t in [component['id'] for component in all_manhattan_components]],
     [Input('df-loaded-div', 'children')],
-    [State({'type': 'div_manhattan_base_variable', 'index': MATCH}, 'style')] +
-    [State({'type': 'manhattan_' + component['id'], 'index': MATCH}, prop)
+    [State({'type': 'div-manhattan-base_variable', 'index': MATCH}, 'style')] +
+    [State({'type': 'manhattan-' + component['id'], 'index': MATCH}, prop)
      for component in all_manhattan_components for prop in component]
 )
 def update_manhattan_components(df_loaded, style_dict, *args):
@@ -76,13 +76,12 @@ def flattened(df):
 
 
 @app.callback(
-    Output({'type': 'gen_manhattan_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'manhattan_' + d, 'index': MATCH}, "value") for d in [component['id'] for component in all_manhattan_components])],
+    Output({'type': 'gen-manhattan-graph', 'index': MATCH}, "figure"),
+    [*(Input({'type': 'manhattan-' + d, 'index': MATCH}, "value") for d in [component['id'] for component in all_manhattan_components])],
 )
 def make_manhattan_figure(*args):
     print('make_manhattan_figure', *args)
-    # [State({'type': 'manhattan_' + component['name'], 'index': MATCH}, prop)
-    #  for component in all_manhattan_components for prop in component]
+    # Generate the list of argument names based on the input order
     keys = [str([component['id'] for component in all_manhattan_components][i]) for i in range(0, int(len(args)))]
     print(keys)
     args_dict = dict(zip(keys, args))

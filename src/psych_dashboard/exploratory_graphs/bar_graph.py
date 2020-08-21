@@ -6,11 +6,11 @@ from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
 @app.callback(
-    [Output({'type': 'div_bar_'+str(t), 'index': MATCH}, 'children')
+    [Output({'type': 'div-bar-'+str(t), 'index': MATCH}, 'children')
      for t in [component['id'] for component in all_bar_components]],
     [Input('df-loaded-div', 'children')],
-    [State({'type': 'div_bar_x', 'index': MATCH}, 'style')] +
-    [State({'type': 'bar_' + component['id'], 'index': MATCH}, prop)
+    [State({'type': 'div-bar-x', 'index': MATCH}, 'style')] +
+    [State({'type': 'bar-' + component['id'], 'index': MATCH}, prop)
      for component in all_bar_components for prop in component]
 )
 def update_bar_components(df_loaded, style_dict, *args):
@@ -22,8 +22,8 @@ def update_bar_components(df_loaded, style_dict, *args):
 
 
 @app.callback(
-    Output({'type': 'gen_bar_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'bar_'+d, 'index': MATCH}, "value") for d in [component['id'] for component in all_bar_components])],
+    Output({'type': 'gen-bar-graph', 'index': MATCH}, "figure"),
+    [*(Input({'type': 'bar-'+d, 'index': MATCH}, "value") for d in [component['id'] for component in all_bar_components])],
 )
 def make_bar_figure(*args):
     print('make_bar_figure')

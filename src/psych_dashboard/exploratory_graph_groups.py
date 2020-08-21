@@ -49,7 +49,7 @@ def update_graph_components(graph_type, component_list, dd_options, args):
             del args_to_replicate['options']
             children.append([component['label'] + ":",
                              component['component_type'](
-                                 id={'type': graph_type + '_' + name, 'index': args_dict[name]['id']['index']},
+                                 id={'type': graph_type + '-' + name, 'index': args_dict[name]['id']['index']},
                                  **args_to_replicate,
                                  options=dd_options,
                                  )
@@ -58,7 +58,7 @@ def update_graph_components(graph_type, component_list, dd_options, args):
         else:
             children.append([component['label'] + ":",
                              component['component_type'](
-                                 id={'type': graph_type + '_' + name, 'index': args_dict[name]['id']['index']},
+                                 id={'type': graph_type + '-' + name, 'index': args_dict[name]['id']['index']},
                                  **args_to_replicate,
                                  )
                              ],
@@ -102,16 +102,16 @@ def generate_generic_group(n_clicks, group_type, component_list):
 
         # Generate each component with the correct id, index, and arguments, inside its own Div.
         children.append(html.Div([component['label'] + ":",
-                                  component['component_type'](id={'type': group_type + '_' + name, 'index': n_clicks},
+                                  component['component_type'](id={'type': group_type + '-' + name, 'index': n_clicks},
                                                               **args_to_replicate,
                                                               )
                                   ],
-                                 id={'type': 'div_' + group_type + '_' + name, 'index': n_clicks},
+                                 id={'type': 'div-' + group_type + '-' + name, 'index': n_clicks},
                                  style=style_dict
                                  )
                         )
 
-    children.append(dcc.Graph(id={'type': 'gen_' + group_type + '_graph', 'index': n_clicks},
+    children.append(dcc.Graph(id={'type': 'gen-' + group_type + '-graph', 'index': n_clicks},
                               figure=go.Figure(data=go.Scatter()))
                     )
     print(children)
