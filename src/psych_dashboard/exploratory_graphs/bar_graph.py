@@ -1,9 +1,8 @@
-import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 from psych_dashboard.app import app, all_bar_components
 from psych_dashboard.load_feather import load_filtered_feather
-from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict, update_graph_components
+from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
 @app.callback(

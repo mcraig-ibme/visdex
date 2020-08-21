@@ -2,13 +2,12 @@ import dash
 import pandas as pd
 import numpy as np
 import itertools
-import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from psych_dashboard.app import app, all_manhattan_components, default_marker_color
 from psych_dashboard.load_feather import load_flattened_logs, load_logs, load_pval, load_filtered_feather
-from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict, update_graph_components
+from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
 # TODO: currently only allows int64 and float64

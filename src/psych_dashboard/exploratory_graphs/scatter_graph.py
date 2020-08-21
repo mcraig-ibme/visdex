@@ -1,7 +1,6 @@
 import itertools
 import pandas as pd
 import numpy as np
-import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
@@ -11,7 +10,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from psych_dashboard.app import app, all_scatter_components, default_marker_color
 from psych_dashboard.load_feather import load_filtered_feather
-from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict, update_graph_components
+from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
 @app.callback(
