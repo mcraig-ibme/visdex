@@ -64,7 +64,6 @@ def update_graph_components(graph_type, component_list, dd_options, args):
                              ],
                             )
 
-    print('children', children)
     return children
 
 
