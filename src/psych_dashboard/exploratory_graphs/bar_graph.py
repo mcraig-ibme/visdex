@@ -1,8 +1,4 @@
-import itertools
-import json
-import dash
 import dash_core_components as dcc
-import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 from collections import defaultdict
@@ -36,40 +32,37 @@ def update_bar_select_columns(df_loaded, style_dict, *args):
 
     children = list()
     for component in all_bar_components:
-        id = component['id']
+        name = component['id']
         # Pass most of the input arguments for this component to the constructor via
         # args_to_replicate. Remove component_type and label as they are used in other ways,
         # not passed to the constructor.
-        args_to_replicate = dict(args_dict[id])
+        args_to_replicate = dict(args_dict[name])
         del args_to_replicate['component_type']
         del args_to_replicate['label']
         del args_to_replicate['id']
 
         # Create a new instance of each component, with different constructors
-        # for each of the different types.
-        if component['component_type'] == 'Dropdown':
+        # for when the different types need different inputs
+        if component['component_type'] == dcc.Dropdown:
+            # Remove the options property to override it with the dd_options above
             del args_to_replicate['options']
             children.append([component['label'] + ":",
-                             dcc.Dropdown(id={'type': 'bar_' + str(id), 'index': args_dict[id]['id']['index']},
-                                          options=dd_options,
-                                          **args_to_replicate,
-                                          )
+                             component['component_type'](
+                                 id={'type': 'bar_' + name, 'index': args_dict[name]['id']['index']},
+                                 **args_to_replicate,
+                                 options=dd_options,
+                                 )
                              ],
                             )
-        elif component['component_type'] == 'Input':
+        else:
             children.append([component['label'] + ":",
-                             dcc.Input(id={'type': 'bar_' + str(id), 'index': args_dict[id]['id']['index']},
-                                       **args_to_replicate,
-                                       )
+                             component['component_type'](
+                                 id={'type': 'bar_' + name, 'index': args_dict[name]['id']['index']},
+                                 **args_to_replicate,
+                                 )
                              ],
                             )
-        elif component['component_type'] == 'Checklist':
-            children.append([component['label'] + ":",
-                             dcc.Checklist(id={'type': 'bar_' + str(id), 'index': args_dict[id]['id']['index']},
-                                           **args_to_replicate,
-                                           )
-                             ],
-                            )
+
     print('children bar', children)
     return children
 

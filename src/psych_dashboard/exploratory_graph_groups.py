@@ -21,42 +21,34 @@ def generate_manhattan_group(n_clicks):
 
 
 def generate_generic_group(n_clicks, group_type, component_list):
+    """
+    The generic builder for each of the component types.
+    :param n_clicks:
+    :param group_type:
+    :param component_list:
+    :return:
+    """
     print('generate_generic_group', group_type)
     children = list()
 
     for component in component_list:
-        id = component['id']
+        name = component['id']
         args_to_replicate = dict(component)
         del args_to_replicate['component_type']
         del args_to_replicate['id']
         del args_to_replicate['label']
-        if component['component_type'] == 'Dropdown':
-            children.append(html.Div([component['label'] + ":",
-                                      dcc.Dropdown(id={'type': group_type + '_' + id, 'index': n_clicks},
-                                                   **args_to_replicate,
-                                                   )
-                                      ],
-                                     id={'type': 'div_' + group_type + '_' + id, 'index': n_clicks},
-                                     style=style_dict
-                                     ))
-        elif component['component_type'] == 'Input':
-            children.append(html.Div([component['label'] + ":",
-                                      dcc.Input(id={'type': group_type + '_' + id, 'index': n_clicks},
-                                                **args_to_replicate,
-                                                )
-                                      ],
-                                     id={'type': 'div_' + group_type + '_' + id, 'index': n_clicks},
-                                     style=style_dict
-                                     ))
-        elif component['component_type'] == 'Checklist':
-            children.append(html.Div([component['label'] + ":",
-                                      dcc.Checklist(id={'type': group_type + '_' + id, 'index': n_clicks},
-                                                    **args_to_replicate,
-                                                    )
-                                      ],
-                                     id={'type': 'div_' + group_type + '_' + id, 'index': n_clicks},
-                                     style=style_dict
-                                     ))
+
+        # Generate each component with the correct id, index, and arguments, inside its own Div.
+        children.append(html.Div([component['label'] + ":",
+                                  component['component_type'](id={'type': group_type + '_' + name, 'index': n_clicks},
+                                                              **args_to_replicate,
+                                                              )
+                                  ],
+                                 id={'type': 'div_' + group_type + '_' + name, 'index': n_clicks},
+                                 style=style_dict
+                                 )
+                        )
+
     children.append(dcc.Graph(id={'type': 'gen_' + group_type + '_graph', 'index': n_clicks},
                               figure=go.Figure(data=go.Scatter()))
                     )
