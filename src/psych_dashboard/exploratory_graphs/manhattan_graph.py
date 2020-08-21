@@ -42,12 +42,14 @@ def select_manhattan_variables(df_loaded, *args):
 
     children = list()
     for component in all_manhattan_components:
+        id = component['id']
         # Pass most of the input arguments for this component to the constructor via
         # args_to_replicate. Remove component_type and label as they are used in other ways,
         # not passed to the constructor.
-        args_to_replicate = dict(args_dict[component['id']])
+        args_to_replicate = dict(args_dict[id])
         del args_to_replicate['component_type']
         del args_to_replicate['label']
+        del args_to_replicate['id']
 
         # Create a new instance of each component, with different constructors
         # for each of the different types.
@@ -55,23 +57,27 @@ def select_manhattan_variables(df_loaded, *args):
             # Remove the options property to override it with the dd_options above
             del args_to_replicate['options']
             children.append([component['label'] + ":",
-                             dcc.Dropdown(**args_to_replicate,
+                             dcc.Dropdown(id={'type': 'manhattan_' + str(id), 'index': args_dict[id]['id']['index']},
+                                          **args_to_replicate,
                                           options=dd_options,
                                           )
                              ],
                             )
         elif component['component_type'] == 'Input':
             children.append([component['label'] + ":",
-                             dcc.Input(**args_to_replicate,
+                             dcc.Input(id={'type': 'manhattan_' + str(id), 'index': args_dict[id]['id']['index']},
+                                       **args_to_replicate,
                                        )
                              ],
                             )
         elif component['component_type'] == 'Checklist':
             children.append([component['label'] + ":",
-                             dcc.Checklist(**args_to_replicate,
+                             dcc.Checklist(id={'type': 'manhattan_' + str(id), 'index': args_dict[id]['id']['index']},
+                                           **args_to_replicate,
                                            )
                              ],
                             )
+    print('children manhattan', children)
     return children
 
 

@@ -6,69 +6,13 @@ from psych_dashboard.app import app, graph_types, all_scatter_components, all_ba
 
 
 def generate_scatter_group(n_clicks):
-    print('generate_scatter_group', n_clicks)
-    children = list()
-    for component in all_scatter_components:
-        id = component['id']
-        if component['component_type'] == 'Dropdown':
-            children.append(html.Div([component['label'] + ":", dcc.Dropdown(id={'type': 'scatter_'+str(id), 'index': n_clicks},
-                                                                  options=[])],
-                                       id={'type': 'div_scatter_'+str(id), 'index': n_clicks},
-                                       style=style_dict
-                                       ))
-        elif component['component_type'] == 'Input':
-            children.append(html.Div([component['label'] + ":", dcc.Input(id={'type': 'scatter_'+str(id), 'index': n_clicks},
-                                                                          type='number',
-                                                                          min=0,
-                                                                          step=1,)],
-                                       id={'type': 'div_scatter_'+str(id), 'index': n_clicks},
-                                       style=style_dict
-                                       ))
-    children.append(dcc.Graph(id={'type': 'gen_scatter_graph', 'index': n_clicks},
-                    figure=go.Figure(data=go.Scatter()))
-                    )
-    print('children exploratory', children)
-
-    return html.Div(id={'type': 'filter-graph-group-scatter',
-                        'index': n_clicks
-                        },
-                    children=children
-                    )
+    print('generate_scatter_group')
+    return generate_generic_group(n_clicks, 'scatter', all_scatter_components)
 
 
 def generate_bar_group(n_clicks):
     print('generate_bar_group')
-    children = list()
-    for component in all_bar_components:
-        id = component['id']
-        if component['component_type'] == 'Dropdown':
-            print(component, 'Dropdown')
-            children.append(html.Div([component['label'] + ":",
-                                      dcc.Dropdown(id={'type': 'bar_' + str(id), 'index': n_clicks},
-                                                   options=[])],
-                                     id={'type': 'div_bar_' + str(id), 'index': n_clicks},
-                                     style=style_dict
-                                     ))
-        elif component['component_type'] == 'Input':
-            print(component, 'Input')
-            children.append(html.Div([component['label'] + ":",
-                                      dcc.Input(id={'type': 'bar_' + str(id), 'index': n_clicks},
-                                                type='number',
-                                                min=0,
-                                                step=1, )],
-                                     id={'type': 'div_bar_' + str(id), 'index': n_clicks},
-                                     style=style_dict
-                                     ))
-    children.append(dcc.Graph(id={'type': 'gen_bar_graph', 'index': n_clicks},
-                              figure=go.Figure(data=go.Bar()))
-                    )
-    print(children)
-
-    return html.Div(id={'type': 'filter-graph-group-bar',
-                        'index': n_clicks
-                        },
-                    children=children
-                    )
+    return generate_generic_group(n_clicks, 'bar', all_bar_components)
 
 
 def generate_manhattan_group(n_clicks):
@@ -88,7 +32,7 @@ def generate_generic_group(n_clicks, group_type, component_list):
         del args_to_replicate['label']
         if component['component_type'] == 'Dropdown':
             children.append(html.Div([component['label'] + ":",
-                                      dcc.Dropdown(id={'type': group_type + '' + id, 'index': n_clicks},
+                                      dcc.Dropdown(id={'type': group_type + '_' + id, 'index': n_clicks},
                                                    **args_to_replicate,
                                                    )
                                       ],

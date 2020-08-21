@@ -9,6 +9,7 @@ from dash.dependencies import Input, Output, State, MATCH
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
+from collections import defaultdict
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
@@ -21,20 +22,18 @@ from psych_dashboard.load_feather import load_filtered_feather
      for t in [component['id'] for component in all_scatter_components]],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')] +
-    list(itertools.chain.from_iterable([State({'type': 'scatter_'+t, 'index': MATCH}, 'id'),
-                                        State({'type': 'scatter_'+t, 'index': MATCH}, 'value')
-                                        ] for t in [component['id'] for component in all_scatter_components]))
+    [State({'type': 'scatter_' + component['id'], 'index': MATCH}, prop)
+     for component in all_scatter_components for prop in component]
 )
 def update_scatter_select_columns(df_loaded, style_dict, *args):
     print('update_scatter_select_columns')
-    # Generate the list of argument names based on the input order
-    keys = itertools.chain.from_iterable([str([component['id'] for component in all_scatter_components][i]),
-                                          str([component['id'] for component in all_scatter_components][i])+'_val']
-                                         for i in range(0, int(len(args)/2))
-                                         )
-
-    # Convert inputs to a dict called 'args_dict'
-    args_dict = dict(zip(keys, args))
+    # Generate the list of argument names based on the input order, paired by component id and property name
+    keys = [(component['id'], str(prop))
+            for component in all_scatter_components for prop in component]
+    # Convert inputs to a nested dict, with the outer key the component id, and the inner key the property name
+    args_dict = defaultdict(dict)
+    for key, value in zip(keys, args):
+        args_dict[key[0]][key[1]] = value
 
     dff = load_filtered_feather()
     dd_options = [{'label': col,
@@ -43,20 +42,41 @@ def update_scatter_select_columns(df_loaded, style_dict, *args):
     children = list()
     for component in all_scatter_components:
         id = component['id']
+        # Pass most of the input arguments for this component to the constructor via
+        # args_to_replicate. Remove component_type and label as they are used in other ways,
+        # not passed to the constructor.
+        args_to_replicate = dict(args_dict[id])
+        del args_to_replicate['component_type']
+        del args_to_replicate['label']
+        del args_to_replicate['id']
+
+        # Create a new instance of each component, with different constructors
+        # for each of the different types.
         if component['component_type'] == 'Dropdown':
-            print(component, 'Dropdown')
+            # Remove the options property to override it with the dd_options above
+            del args_to_replicate['options']
             children.append([component['label'] + ":",
-                                      dcc.Dropdown(id={'type': 'scatter_' + str(id), 'index': args_dict[id]['index']},
-                                                   options=dd_options)],
-                                     )
+                             dcc.Dropdown(id={'type': 'scatter_' + str(id), 'index': args_dict[id]['id']['index']},
+                                          **args_to_replicate,
+                                          options=dd_options,
+                                          )
+                             ],
+                            )
         elif component['component_type'] == 'Input':
-            print(component, 'Input')
             children.append([component['label'] + ":",
-                                      dcc.Input(id={'type': 'scatter_' + str(id), 'index': args_dict[id]['index']},
-                                                type='number',
-                                                min=0,
-                                                step=1, )],
-                                     )
+                             dcc.Input(id={'type': 'scatter_' + str(id), 'index': args_dict[id]['id']['index']},
+                                       **args_to_replicate,
+                                       )
+                             ],
+                            )
+        elif component['component_type'] == 'Checklist':
+            children.append([component['label'] + ":",
+                             dcc.Checklist(id={'type': 'scatter_' + str(id), 'index': args_dict[id]['id']['index']},
+                                           **args_to_replicate,
+                                           )
+                             ],
+                            )
+    print('children scatter', children)
     return children
 
 
