@@ -2,13 +2,12 @@ import dash
 import pandas as pd
 import numpy as np
 import itertools
-import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-
-from psych_dashboard.app import app, all_manhattan_dims, dd_manhattan_dims, input_manhattan_dims, check_manhattan_dims, default_marker_color
+from psych_dashboard.app import app, all_manhattan_components, default_marker_color
 from psych_dashboard.load_feather import load_flattened_logs, load_logs, load_pval, load_filtered_feather
+from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
 # TODO: currently only allows int64 and float64
@@ -17,45 +16,18 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 
 @app.callback(
     [Output({'type': 'div_manhattan_' + str(t), 'index': MATCH}, 'children')
-     for t in list(all_manhattan_dims)],
+     for t in [component['id'] for component in all_manhattan_components]],
     [Input('df-loaded-div', 'children')],
-    list(itertools.chain.from_iterable([State({'type': 'manhattan_' + t, 'index': MATCH}, 'id'),
-                                        State({'type': 'manhattan_' + t, 'index': MATCH}, 'value')
-                                        ] for t in all_manhattan_dims))
+    [State({'type': 'div_manhattan_base_variable', 'index': MATCH}, 'style')] +
+    [State({'type': 'manhattan_' + component['id'], 'index': MATCH}, prop)
+     for component in all_manhattan_components for prop in component]
 )
-def select_manhattan_variables(df_loaded, *args):
-    print('select_manhattan_variables', *args)
-    # Generate the list of argument names based on the input order
-    keys = itertools.chain.from_iterable([str(list(all_manhattan_dims.keys())[i]),
-                                          str(list(all_manhattan_dims.keys())[i]) + '_val']
-                                         for i in range(0, int(len(args) / 2))
-                                         )
-
-    # Convert inputs to a dict called 'args_dict'
-    args_dict = dict(zip(keys, args))
-
+def update_manhattan_components(df_loaded, style_dict, *args):
+    print('update_manhattan_components')
     dff = load_pval()
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
-
-    return tuple([[dd_manhattan_dims[dim] + ":",
-                   dcc.Dropdown(id={'type': 'manhattan_'+dim, 'index': args_dict[dim]['index']},
-                                options=dd_options,
-                                value=args_dict[dim+'_val'])
-                   ] for dim in dd_manhattan_dims.keys()] +
-                 [[input_manhattan_dims[dim] + ":",
-                   dcc.Input(id={'type': 'manhattan_'+dim, 'index': args_dict[dim]['index']},
-                             type='number',
-                             min=0,
-                             step=0.001,
-                             value=args_dict[dim+'_val'])
-                   ] for dim in input_manhattan_dims.keys()] +
-                 [[check_manhattan_dims[dim] + ":",
-                   dcc.Checklist(id={'type': 'manhattan_'+dim, 'index': args_dict[dim]['index']},
-                                 options=[{'label': '', 'value': 'LOG'}],
-                                 value=args_dict[dim+'_val'])
-                   ] for dim in check_manhattan_dims.keys()]
-                 )
+    return update_graph_components('manhattan', all_manhattan_components, dd_options, args)
 
 
 def calculate_transformed_corrected_pval(ref_pval, logs):
@@ -105,12 +77,13 @@ def flattened(df):
 
 @app.callback(
     Output({'type': 'gen_manhattan_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'manhattan_' + d, 'index': MATCH}, "value") for d in all_manhattan_dims)],
+    [*(Input({'type': 'manhattan_' + d, 'index': MATCH}, "value") for d in [component['id'] for component in all_manhattan_components])],
 )
 def make_manhattan_figure(*args):
     print('make_manhattan_figure', *args)
-
-    keys = [str(list(all_manhattan_dims.keys())[i]) for i in range(0, int(len(args)))]
+    # [State({'type': 'manhattan_' + component['name'], 'index': MATCH}, prop)
+    #  for component in all_manhattan_components for prop in component]
+    keys = [str([component['id'] for component in all_manhattan_components][i]) for i in range(0, int(len(args)))]
     print(keys)
     args_dict = dict(zip(keys, args))
     print(args_dict)

@@ -2,91 +2,125 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
-from psych_dashboard.app import app, graph_types, dd_scatter_dims, input_scatter_dims, dd_bar_dims, input_bar_dims, dd_manhattan_dims, input_manhattan_dims, check_manhattan_dims, style_dict
+from collections import defaultdict
+from psych_dashboard.app import app, graph_types, all_scatter_components, all_bar_components, all_manhattan_components, style_dict
+
+
+def create_arguments_nested_dict(components_list, args):
+    # Generate the list of argument names based on the input order, paired by component id and property name
+    keys = [(component['id'], str(prop))
+            for component in components_list for prop in component]
+    # Convert inputs to a nested dict, with the outer key the component id, and the inner key the property name
+    args_dict = defaultdict(dict)
+    for key, value in zip(keys, args):
+        args_dict[key[0]][key[1]] = value
+    return args_dict
+
+
+def update_graph_components(graph_type, component_list, dd_options, args):
+    """
+    This is the generic function called by update_*_components for each graph type.
+    It generates the list of input components for each graph.
+    :param graph_type:
+    :param component_list:
+    :param dd_options:
+    :param args:
+    :return:
+    """
+    print('update_graph_components')
+    # Generate the list of argument names based on the input order, paired by component id and property name
+    args_dict = create_arguments_nested_dict(component_list, args)
+
+    children = list()
+    for component in component_list:
+        name = component['id']
+        # Pass most of the input arguments for this component to the constructor via
+        # args_to_replicate. Remove component_type and label as they are used in other ways,
+        # not passed to the constructor.
+        args_to_replicate = dict(args_dict[name])
+        del args_to_replicate['component_type']
+        del args_to_replicate['label']
+        del args_to_replicate['id']
+
+        # Create a new instance of each component, with different constructors
+        # for when the different types need different inputs
+        if component['component_type'] == dcc.Dropdown:
+            # Remove the options property to override it with the dd_options above
+            del args_to_replicate['options']
+            children.append([component['label'] + ":",
+                             component['component_type'](
+                                 id={'type': graph_type + '_' + name, 'index': args_dict[name]['id']['index']},
+                                 **args_to_replicate,
+                                 options=dd_options,
+                                 )
+                             ],
+                            )
+        else:
+            children.append([component['label'] + ":",
+                             component['component_type'](
+                                 id={'type': graph_type + '_' + name, 'index': args_dict[name]['id']['index']},
+                                 **args_to_replicate,
+                                 )
+                             ],
+                            )
+
+    print('children', children)
+    return children
 
 
 def generate_scatter_group(n_clicks):
     print('generate_scatter_group')
-    return html.Div(id={'type': 'filter-graph-group-scatter',
-                        'index': n_clicks
-                        },
-                    children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'scatter_'+str(key), 'index': n_clicks},
-                                                                  options=[])],
-                                       id={'type': 'div_scatter_'+str(key), 'index': n_clicks},
-                                       style=style_dict
-                                       )
-                              for key, value in dd_scatter_dims.items()
-                              ]
-                    + [html.Div([value + ":", dcc.Input(id={'type': 'scatter_'+str(key), 'index': n_clicks},
-                                                        type='number',
-                                                        min=0,
-                                                        step=1,
-                                                        )
-                                 ],
-                                id={'type': 'div_scatter_'+str(key), 'index': n_clicks},
-                                style=style_dict)
-                       for key, value in input_scatter_dims.items()
-                       ]
-                    + [dcc.Graph(id={'type': 'gen_scatter_graph', 'index': n_clicks},
-                                 figure=go.Figure(data=go.Scatter()))
-                       ]
-                    )
+    return generate_generic_group(n_clicks, 'scatter', all_scatter_components)
 
 
 def generate_bar_group(n_clicks):
     print('generate_bar_group')
-    return html.Div(id={'type': 'filter-graph-group-bar',
-                        'index': n_clicks
-                        },
-                    children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'bar_'+key, 'index': n_clicks},
-                                                                  options=[])],
-                                       id={'type': 'div_bar_'+str(key), 'index': n_clicks},
-                                       style=style_dict
-                                       )
-                              for key, value in dd_bar_dims.items()
-                              ]
-                    + [dcc.Graph(id={'type': 'gen_bar_graph', 'index': n_clicks},
-                                 figure=go.Figure(data=go.Bar()))
-                       ]
-                    )
+    return generate_generic_group(n_clicks, 'bar', all_bar_components)
 
 
 def generate_manhattan_group(n_clicks):
     print('generate_manhattan_group')
-    return html.Div(id={'type': 'filter-graph-group-manhattan',
+    return generate_generic_group(n_clicks, 'manhattan', all_manhattan_components)
+
+
+def generate_generic_group(n_clicks, group_type, component_list):
+    """
+    The generic builder for each of the component types.
+    :param n_clicks:
+    :param group_type:
+    :param component_list:
+    :return:
+    """
+    print('generate_generic_group', group_type)
+    children = list()
+
+    for component in component_list:
+        name = component['id']
+        args_to_replicate = dict(component)
+        del args_to_replicate['component_type']
+        del args_to_replicate['id']
+        del args_to_replicate['label']
+
+        # Generate each component with the correct id, index, and arguments, inside its own Div.
+        children.append(html.Div([component['label'] + ":",
+                                  component['component_type'](id={'type': group_type + '_' + name, 'index': n_clicks},
+                                                              **args_to_replicate,
+                                                              )
+                                  ],
+                                 id={'type': 'div_' + group_type + '_' + name, 'index': n_clicks},
+                                 style=style_dict
+                                 )
+                        )
+
+    children.append(dcc.Graph(id={'type': 'gen_' + group_type + '_graph', 'index': n_clicks},
+                              figure=go.Figure(data=go.Scatter()))
+                    )
+    print(children)
+
+    return html.Div(id={'type': 'filter-graph-group-' + group_type,
                         'index': n_clicks
                         },
-                    children=[html.Div([value + ":", dcc.Dropdown(id={'type': 'manhattan_'+key, 'index': n_clicks},
-                                                                  options=[])],
-                                       id={'type': 'div_manhattan_'+str(key), 'index': n_clicks},
-                                       style=style_dict
-                                       )
-                              for key, value in dd_manhattan_dims.items()
-                              ]
-                    + [html.Div([value + ":", dcc.Input(id={'type': 'manhattan_' + str(key), 'index': n_clicks},
-                                                        type='number',
-                                                        value=0.05,
-                                                        min=0,
-                                                        step=0.001
-                                                        )
-                                 ],
-                                id={'type': 'div_manhattan_' + str(key), 'index': n_clicks},
-                                style=style_dict)
-                        for key, value in input_manhattan_dims.items()
-                       ]
-                    + [html.Div([value + ":", dcc.Checklist(id={'type': 'manhattan_' + str(key), 'index': n_clicks},
-                                                            options=[{'label': '', 'value': 'LOG'}],
-                                                            value=['LOG'],
-                                                            style={'display': 'inline-block', 'width': '10%'}
-                                                            )
-                                 ],
-                                id={'type': 'div_manhattan_' + str(key), 'index': n_clicks},
-                                style=style_dict)
-                        for key, value in check_manhattan_dims.items()
-                       ]
-                    + [dcc.Graph(id={'type': 'gen_manhattan_graph', 'index': n_clicks},
-                                 figure=go.Figure(data=go.Scatter()))
-                       ]
+                    children=children
                     )
 
 
@@ -106,6 +140,7 @@ def change_graph_group_type(graph_type, id, children):
         children[-1] = generate_scatter_group(id['index'])
     elif graph_type == 'Manhattan' and children[-1]['props']['id']['type'] != 'filter-graph-group-manhattan':
         children[-1] = generate_manhattan_group(id['index'])
+    print('children change', children)
     return children
 
 

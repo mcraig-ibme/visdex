@@ -1,58 +1,33 @@
-import itertools
-import json
-import dash
-import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
-from psych_dashboard.app import app, all_bar_dims, dd_bar_dims, input_bar_dims
+from psych_dashboard.app import app, all_bar_components
 from psych_dashboard.load_feather import load_filtered_feather
+from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
 @app.callback(
     [Output({'type': 'div_bar_'+str(t), 'index': MATCH}, 'children')
-     for t in all_bar_dims],
+     for t in [component['id'] for component in all_bar_components]],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div_bar_x', 'index': MATCH}, 'style')] +
-    list(itertools.chain.from_iterable([State({'type': 'bar_'+t, 'index': MATCH}, 'id'),
-                                        State({'type': 'bar_'+t, 'index': MATCH}, 'value')
-                                        ] for t in all_bar_dims))
+    [State({'type': 'bar_' + component['id'], 'index': MATCH}, prop)
+     for component in all_bar_components for prop in component]
 )
-def update_bar_select_columns(df_loaded, style_dict, *args):
-    """ This function is triggered by a change to
-    """
-    print('update_bar_select_columns')
-    keys = itertools.chain.from_iterable([str(list(all_bar_dims.keys())[i]),
-                                          str(list(all_bar_dims.keys())[i]) + '_val']
-                                         for i in range(0, int(len(args) / 2))
-                                         )
-    args_dict = dict(zip(keys, args))
-
+def update_bar_components(df_loaded, style_dict, *args):
+    print('update_bar_components')
     dff = load_filtered_feather()
     dd_options = [{'label': col,
-                  'value': col} for col in dff.columns]
-
-    return tuple([[dd_bar_dims[dim] + ":",
-                   dcc.Dropdown(id={'type': 'bar_'+dim, 'index': args_dict[dim]['index']},
-                                options=dd_options,
-                                value=args_dict[dim+'_val'])
-                   ] for dim in dd_bar_dims.keys()] +
-                 [[input_bar_dims[dim] + ":",
-                   dcc.Input(id={'type': 'bar_'+dim, 'index': args_dict[dim]['index']},
-                             type='number',
-                             min=0,
-                             step=1,
-                             value=args_dict[dim+'_val'])
-                   ] for dim in input_bar_dims.keys()]
-                 )
+                   'value': col} for col in dff.columns]
+    return update_graph_components('bar', all_bar_components, dd_options, args)
 
 
 @app.callback(
     Output({'type': 'gen_bar_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'bar_'+d, 'index': MATCH}, "value") for d in all_bar_dims)],
+    [*(Input({'type': 'bar_'+d, 'index': MATCH}, "value") for d in [component['id'] for component in all_bar_components])],
 )
 def make_bar_figure(*args):
     print('make_bar_figure')
-    keys = [str(list(all_bar_dims.keys())[i]) for i in range(0, int(len(args)))]
+    keys = [str([component['id'] for component in all_bar_components][i]) for i in range(0, int(len(args)))]
 
     args_dict = dict(zip(keys, args))
     dff = load_filtered_feather()

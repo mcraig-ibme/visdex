@@ -1,9 +1,6 @@
 import itertools
-import json
-import dash
 import pandas as pd
 import numpy as np
-import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
@@ -11,47 +8,25 @@ import plotly.express as px
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
-from psych_dashboard.app import app, dd_scatter_dims, input_scatter_dims, all_scatter_dims, default_marker_color
+from psych_dashboard.app import app, all_scatter_components, default_marker_color
 from psych_dashboard.load_feather import load_filtered_feather
+from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
 @app.callback(
     [Output({'type': 'div_scatter_'+str(t), 'index': MATCH}, 'children')
-     for t in list(all_scatter_dims)],
+     for t in [component['id'] for component in all_scatter_components]],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')] +
-    list(itertools.chain.from_iterable([State({'type': 'scatter_'+t, 'index': MATCH}, 'id'),
-                                        State({'type': 'scatter_'+t, 'index': MATCH}, 'value')
-                                        ] for t in list(all_scatter_dims)))
+    [State({'type': 'scatter_' + component['id'], 'index': MATCH}, prop)
+     for component in all_scatter_components for prop in component]
 )
-def update_scatter_select_columns(df_loaded, style_dict, *args):
-    print('update_scatter_select_columns')
-    # Generate the list of argument names based on the input order
-    keys = itertools.chain.from_iterable([str(list(all_scatter_dims.keys())[i]),
-                                          str(list(all_scatter_dims.keys())[i])+'_val']
-                                         for i in range(0, int(len(args)/2))
-                                         )
-
-    # Convert inputs to a dict called 'args_dict'
-    args_dict = dict(zip(keys, args))
-
+def update_scatter_components(df_loaded, style_dict, *args):
+    print('update_scatter_components')
     dff = load_filtered_feather()
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns]
-
-    return tuple([[dd_scatter_dims[dim] + ":",
-                   dcc.Dropdown(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
-                                options=dd_options,
-                                value=args_dict[dim+'_val'])
-                   ] for dim in dd_scatter_dims.keys()] +
-                 [[input_scatter_dims[dim] + ":",
-                   dcc.Input(id={'type': 'scatter_'+dim, 'index': args_dict[dim]['index']},
-                             type='number',
-                             min=0,
-                             step=1,
-                             value=args_dict[dim+'_val'])
-                   ] for dim in input_scatter_dims.keys()]
-                 )
+    return update_graph_components('scatter', all_scatter_components, dd_options, args)
 
 
 def make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats):
@@ -88,12 +63,12 @@ max_marker_size = 10
 
 @app.callback(
     Output({'type': 'gen_scatter_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in all_scatter_dims)],
+    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in [component['id'] for component in all_scatter_components])],
 )
 def make_scatter_figure(*args):
-    print('make_scatter_figure', *args)
+    print('make_scatter_figure')
     # Generate the list of argument names based on the input order
-    keys = [str(list(all_scatter_dims.keys())[i]) for i in range(0, int(len(args)))]
+    keys = [str([component['id'] for component in all_scatter_components][i]) for i in range(0, int(len(args)))]
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
@@ -159,7 +134,6 @@ def make_scatter_figure(*args):
                           col=j + 1)
 
             # Add regression lines
-            print('regression', args_dict['regression'])
             if args_dict['regression'] is not None:
                 working_dff.dropna(inplace=True)
                 # Guard against fitting an empty graph
@@ -194,7 +168,6 @@ def map_color(dff):
 
 def map_size(series, min_out, max_out):
     """Maps the range of series to [min_size, max_size]"""
-    print('map_size', series)
     if series.empty:
         return []
 
