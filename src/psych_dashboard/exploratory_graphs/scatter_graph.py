@@ -6,12 +6,12 @@ from dash.dependencies import Input, Output, State, MATCH
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
-from collections import defaultdict
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from psych_dashboard.app import app, all_scatter_components, default_marker_color
 from psych_dashboard.load_feather import load_filtered_feather
+from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict
 
 
 @app.callback(
@@ -25,12 +25,7 @@ from psych_dashboard.load_feather import load_filtered_feather
 def update_scatter_select_columns(df_loaded, style_dict, *args):
     print('update_scatter_select_columns')
     # Generate the list of argument names based on the input order, paired by component id and property name
-    keys = [(component['id'], str(prop))
-            for component in all_scatter_components for prop in component]
-    # Convert inputs to a nested dict, with the outer key the component id, and the inner key the property name
-    args_dict = defaultdict(dict)
-    for key, value in zip(keys, args):
-        args_dict[key[0]][key[1]] = value
+    args_dict = create_arguments_nested_dict(all_scatter_components, args)
 
     dff = load_filtered_feather()
     dd_options = [{'label': col,

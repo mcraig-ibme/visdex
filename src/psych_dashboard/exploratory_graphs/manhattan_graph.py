@@ -6,10 +6,9 @@ import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-from collections import defaultdict
-
 from psych_dashboard.app import app, all_manhattan_components, default_marker_color
 from psych_dashboard.load_feather import load_flattened_logs, load_logs, load_pval, load_filtered_feather
+from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict
 
 
 # TODO: currently only allows int64 and float64
@@ -24,14 +23,8 @@ valid_manhattan_dtypes = [np.int64, np.float64]
      for component in all_manhattan_components for prop in component]
 )
 def select_manhattan_variables(df_loaded, *args):
-    print('select_manhattan_variables', *args)
-    # Generate the list of argument names based on the input order, paired by component id and property name
-    keys = [(component['id'], str(prop))
-            for component in all_manhattan_components for prop in component]
-    # Convert inputs to a nested dict, with the outer key the component id, and the inner key the property name
-    args_dict = defaultdict(dict)
-    for key, value in zip(keys, args):
-        args_dict[key[0]][key[1]] = value
+    print('select_manhattan_variables')
+    args_dict = create_arguments_nested_dict(all_manhattan_components, args)
 
     dff = load_pval()
 

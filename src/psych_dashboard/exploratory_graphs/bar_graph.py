@@ -1,9 +1,9 @@
 import dash_core_components as dcc
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
-from collections import defaultdict
 from psych_dashboard.app import app, all_bar_components
 from psych_dashboard.load_feather import load_filtered_feather
+from psych_dashboard.exploratory_graph_groups import create_arguments_nested_dict
 
 
 @app.callback(
@@ -18,13 +18,7 @@ def update_bar_select_columns(df_loaded, style_dict, *args):
     """ This function is triggered by a change to
     """
     print('update_bar_select_columns')
-    # Generate the list of argument names based on the input order, paired by component id and property name
-    keys = [(component['id'], str(prop))
-            for component in all_bar_components for prop in component]
-    # Convert inputs to a nested dict, with the outer key the component id, and the inner key the property name
-    args_dict = defaultdict(dict)
-    for key, value in zip(keys, args):
-        args_dict[key[0]][key[1]] = value
+    args_dict = create_arguments_nested_dict(all_bar_components, args)
 
     dff = load_filtered_feather()
     dd_options = [{'label': col,

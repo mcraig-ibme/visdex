@@ -2,7 +2,19 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
+from collections import defaultdict
 from psych_dashboard.app import app, graph_types, all_scatter_components, all_bar_components, all_manhattan_components, style_dict
+
+
+def create_arguments_nested_dict(components_list, args):
+    # Generate the list of argument names based on the input order, paired by component id and property name
+    keys = [(component['id'], str(prop))
+            for component in components_list for prop in component]
+    # Convert inputs to a nested dict, with the outer key the component id, and the inner key the property name
+    args_dict = defaultdict(dict)
+    for key, value in zip(keys, args):
+        args_dict[key[0]][key[1]] = value
+    return args_dict
 
 
 def generate_scatter_group(n_clicks):
