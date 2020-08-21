@@ -82,10 +82,10 @@ def flattened(df):
 def make_manhattan_figure(*args):
     print('make_manhattan_figure', *args)
     # Generate the list of argument names based on the input order
-    keys = [str([component['id'] for component in all_manhattan_components][i]) for i in range(0, int(len(args)))]
-    print(keys)
+    keys = [component['id'] for component in all_manhattan_components]
+
+    # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
-    print(args_dict)
     if args_dict['base_variable'] is None or args_dict['base_variable'] == []:
         print('return go.Figure()')
         raise PreventUpdate

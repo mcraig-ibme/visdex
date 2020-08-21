@@ -27,7 +27,7 @@ def update_bar_components(df_loaded, style_dict, *args):
 )
 def make_bar_figure(*args):
     print('make_bar_figure')
-    keys = [str([component['id'] for component in all_bar_components][i]) for i in range(0, int(len(args)))]
+    keys = [component['id'] for component in all_bar_components]
 
     args_dict = dict(zip(keys, args))
     dff = load_filtered_feather()

@@ -68,7 +68,7 @@ max_marker_size = 10
 def make_scatter_figure(*args):
     print('make_scatter_figure')
     # Generate the list of argument names based on the input order
-    keys = [str([component['id'] for component in all_scatter_components][i]) for i in range(0, int(len(args)))]
+    keys = [component['id'] for component in all_scatter_components]
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
