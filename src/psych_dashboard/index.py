@@ -129,6 +129,7 @@ app.layout = html.Div(children=[
                                                   min=1,
                                                   debounce=True,
                                                   value=2),
+                                        # TODO label the cluster input selection
                                         html.Div(["Select (numerical) variables to display:",
                                                   dcc.Dropdown(id='heatmap-dropdown',
                                                                options=([]),
