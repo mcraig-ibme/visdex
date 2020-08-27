@@ -261,6 +261,8 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # Remove the upper triangle and diagonal
             triangular = sorted_corr.to_numpy()
             triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
+            triangular_pval = sorted_pval.to_numpy()
+            triangular_pval[np.tril_indices(triangular_pval.shape[0], 0)] = np.nan
             te = time.time()
             timing_dict['update_summary_heatmap-triangular'] = te - ts
 
@@ -270,7 +272,9 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                                        zmin=-1,
                                        zmax=1,
                                        colorscale='RdBu',
-                                       # TODO add pvalue to hovertext
+                                       customdata=np.fliplr(triangular_pval),
+                                       hovertemplate="%{x}<br>vs.<br>%{y}<br>      r: %{z:.2g}<br> pval: %{customdata:.2g}<extra></extra>",
+                                       colorbar_title_text='r',
                                        ),
                             )
 

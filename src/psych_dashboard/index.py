@@ -122,7 +122,7 @@ app.layout = html.Div(children=[
                                       style={'width': global_width})
                              ]
                      ),
-                     html.H2(children='Correlation Heatmap'),
+                     html.H2(children='Correlation Heatmap (Pearson\'s)'),
                      html.Div(id='heatmap-div',
                               children=[dcc.Input(id='heatmap-clustering-input',
                                                   type="number",
