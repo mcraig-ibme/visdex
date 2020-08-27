@@ -369,72 +369,19 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 
 
 @app.callback(
-    Output('loading-manhattan-dd', 'children'),
-    [Input('manhattan-all-values-check', 'value'),
-     Input('pval-loaded-div', 'children'),
-     Input('manhattan-dd', 'value')]
-)
-@timing
-def select_manhattan_variables(checkbox_val, df_loaded, dd_values):
-    print('select_manhattan_variables', checkbox_val, df_loaded, dd_values)
-    ctx = dash.callback_context
-
-    # Process based upon the trigger
-    if df_loaded:
-        dff = load_pval()
-        dd_options = [{'label': col,
-                       'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
-
-        # If the underlying data has changed, then select all and set the dropdown to all values
-        if ctx.triggered[0]['prop_id'] == 'pval-loaded-div.children':
-            print('pval triggered')
-            checkbox_val = ['all']
-            dd_values = [col for col in dff.columns if
-                         dff[col].dtype in valid_manhattan_dtypes]
-        # If the checkbox has changed, then select either all or none
-        elif ctx.triggered[0]['prop_id'] == 'manhattan-all-values-check.value':
-            print('check triggered')
-            if checkbox_val == ['all']:
-                dd_values = [col for col in dff.columns if
-                             dff[col].dtype in valid_manhattan_dtypes]
-            else:
-                dd_values = []
-        # If the dropdown value has changed, then compare current value to all possible values,
-        # and set checkbox to 'all' if all values have been selected.
-        elif ctx.triggered[0]['prop_id'] == 'manhattan-dd.value':
-            if sorted(dd_values) == sorted([col for col in dff.columns if
-                                            dff[col].dtype in valid_manhattan_dtypes]):
-                checkbox_val = ['all']
-            else:
-                checkbox_val = []
-        else:
-            raise PreventUpdate
-    else:
-        dd_options = []
-
-    return [dcc.Dropdown(id='manhattan-dd',
-                         multi=True,
-                         value=dd_values,
-                         options=dd_options),
-                         # style={'display': 'inline-block', 'width': '80%'}),
-            dcc.Checklist(id='manhattan-all-values-check',
-                          options=[{'label': 'select all', 'value': 'all'}],
-                          value=checkbox_val,
-                          style={'display': 'inline-block', 'width': '10%'})
-            ]
-
-
-@app.callback(
     Output('manhattan-figure', 'figure'),
-    [Input('manhattan-dd', 'value'),
-     Input('manhattan-pval-input', 'value'),
-     Input('manhattan-logscale-check', 'value')],
-    [State('df-filtered-loaded-div', 'children')]
+    [Input('manhattan-pval-input', 'value'),
+     Input('manhattan-logscale-check', 'value'),
+     Input('df-filtered-loaded-div', 'children'),
+     Input('pval-loaded-div', 'children')]
 )
 @timing
-def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
-    print('plot_manhattan', manhattan_variable)
-    if not df_loaded or manhattan_variable is None or manhattan_variable == []:
+def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
+    print('plot_manhattan')
+    dff = load_pval()
+    manhattan_variable = [col for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
+
+    if not pval_loaded or manhattan_variable is None or manhattan_variable == []:
         return go.Figure()
 
     if pvalue <= 0. or pvalue is None:
@@ -445,8 +392,8 @@ def plot_manhattan(manhattan_variable, pvalue, logscale, df_loaded):
     # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold.
     # Save logs and flattened logs to feather files
     # Skip this and reuse the previous values if we're just changing the log scale.
-    if ctx.triggered[0]['prop_id'] not in ['manhattan-logscale-check.value', 'manhattan-pval-input.value']:
-        logs = calculate_manhattan_data(load_pval(), manhattan_variable)
+    if ctx.triggered[0]['prop_id'] not in ['manhattan-pval-input.value', 'manhattan-logscale-check.value']:
+        logs = calculate_manhattan_data(dff, manhattan_variable)
         logs.reset_index().to_feather('logs.feather')
         flattened_logs = flattened(logs).dropna()
         flattened_logs.reset_index().to_feather('flattened_logs.feather')

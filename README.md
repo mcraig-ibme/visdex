@@ -66,8 +66,7 @@ into. The clustering method used is Agglomerative Hierarchical Clustering:
 https://scikit-learn.org/stable/modules/clustering.html#hierarchical-clustering.
  
 ### Manhattan Plot
-Displays a manhattan plot of all (TODO: fix this to only
-allow all) variables.
+Displays a Manhattan plot of all variables.
 
 Use the `pvalue` input (TODO: label this) to select the
 appropriate p-value threshold. The black horizontal line illustrates the
@@ -76,6 +75,8 @@ being compared. Anything above the line is considered 'significant' based
 upon the specified p-value threshold.
 
 Toggle the `logscale y-axis` checkbox to toggle the y-axis scale.
+
+A more customisable Manhattan plot is available within the exploratory graphs. 
 
 ### Per-variable Histograms and KDEs
 Show a histogram per variable. Overlaid onto each is a Gaussian Kernel 

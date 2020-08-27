@@ -150,19 +150,6 @@ app.layout = html.Div(children=[
                      ),
                      html.H2('Manhattan Plot'),
                      dcc.Loading(
-                         id='loading-manhattan-dd',
-                         children=[dcc.Dropdown(id='manhattan-dd',
-                                                multi=True),
-                                                # style={'display': 'inline-block', 'width': '80%'}),
-                                   dcc.Checklist(id='manhattan-all-values-check',
-                                                 options=[
-                                                     {'label': 'select all', 'value': 'all'}
-                                                 ],
-                                                 value=['all'],
-                                                 style={'display': 'inline-block', 'width': '10%'})
-                                   ]
-                     ),
-                     dcc.Loading(
                          id='loading-manhattan-figure',
                          children=[
                              dcc.Input(id='manhattan-pval-input',
