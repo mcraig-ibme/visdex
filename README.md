@@ -59,7 +59,7 @@ analysis.
 ### Correlation heatmap
 Displays the correlation matrix between all filtered
 columns as a heatmap. Hover over items to view the Pearson correlation 
-coefficient for that pair. TODO: add pvalue to heatmap hover?
+coefficient and p-value for that pair.
 Use the dropdown to select/deselect columns to display, and use the
 clusters input to select the number of clusters to separate the columns 
 into. The clustering method used is Agglomerative Hierarchical Clustering:
