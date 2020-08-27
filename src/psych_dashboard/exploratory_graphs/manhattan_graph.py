@@ -94,22 +94,10 @@ def make_manhattan_figure(*args):
         print('raise PreventUpdate')
         raise PreventUpdate
 
-    ctx = dash.callback_context
-    print('ctx triggered', ctx.triggered[0]['prop_id'])
-    # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold.
-    # Save logs and flattened logs to feather files
-    # Skip this and reuse the previous values if we're just changing the log scale.
-    if ctx.triggered[0]['prop_id'] not in ['manhattan-logscale-check.value', 'manhattan-pval-input.value']:
-        logs = calculate_manhattan_data(load_pval(), args_dict['base_variable'])
-        logs.reset_index().to_feather('logs.feather')
-        flattened_logs = flattened(logs).dropna()
-        flattened_logs.reset_index().to_feather('flattened_logs.feather')
-        transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(args_dict['pvalue']), logs)
-    else:
-        print('using logscale shortcut')
-        logs = load_logs()
-        flattened_logs = load_flattened_logs()
-        transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(args_dict['pvalue']), logs)
+    # Load logs of all p-values
+    logs = load_logs()
+    flattened_logs = load_flattened_logs()
+    transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(args_dict['pvalue']), logs)
 
     fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
                                y=np.flip(flattened_logs.values),
