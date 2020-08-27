@@ -270,6 +270,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                                        zmin=-1,
                                        zmax=1,
                                        colorscale='RdBu',
+                                       # TODO add pvalue to hovertext
                                        ),
                             )
 
@@ -342,7 +343,7 @@ def update_summary_kde(dropdown_values, df_loaded):
                             kernel = stats.gaussian_kde(this_col.dropna())
                             pad = 0.1
                             # Generate linspace
-                            x = np.linspace(col_min - pad*data_range, col_max + pad*data_range, num=101)
+                            x = np.linspace(col_min - pad*data_range, col_max + pad*data_range, num=21)
                             # Sample kernel
                             y = kernel(x)
                             # Plot KDE line graph using sampled data
