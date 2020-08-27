@@ -152,20 +152,23 @@ app.layout = html.Div(children=[
                      dcc.Loading(
                          id='loading-manhattan-figure',
                          children=[
-                             dcc.Input(id='manhattan-pval-input',
-                                       type='number',
-                                       value=0.05,
-                                       step=0.0001,
-                                       debounce=True,
-                                       style={'display': 'inline-block'}),
-                             dcc.Checklist(
-                                 id='manhattan-logscale-check',
-                                 options=[
-                                     {'label': 'logscale y-axis', 'value': 'LOG'}
-                                 ],
-                                 value=[],
-                                 style={'display': 'inline-block'}
-                             ),
+                             html.Div(["p-value:  ",
+                                       dcc.Input(id='manhattan-pval-input',
+                                                 type='number',
+                                                 value=0.05,
+                                                 step=0.0001,
+                                                 debounce=True,
+                                                 style={'display': 'inline-block'}),
+                                       ]),
+                             html.Div([
+                                       dcc.Checklist(id='manhattan-logscale-check',
+                                                     options=[
+                                                         {'label': '  logscale y-axis', 'value': 'LOG'}
+                                                     ],
+                                                     value=[],
+                                                     style={'display': 'inline-block'}
+                                                     ),
+                                       ]),
                              dcc.Graph(id='manhattan-figure',
                                        figure=go.Figure()
                                        )
