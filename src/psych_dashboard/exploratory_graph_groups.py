@@ -67,21 +67,6 @@ def update_graph_components(graph_type, component_list, dd_options, args):
     return children
 
 
-def generate_scatter_group(n_clicks):
-    print('generate_scatter_group')
-    return generate_generic_group(n_clicks, 'scatter', all_scatter_components)
-
-
-def generate_bar_group(n_clicks):
-    print('generate_bar_group')
-    return generate_generic_group(n_clicks, 'bar', all_bar_components)
-
-
-def generate_manhattan_group(n_clicks):
-    print('generate_manhattan_group')
-    return generate_generic_group(n_clicks, 'manhattan', all_manhattan_components)
-
-
 def generate_generic_group(n_clicks, group_type, component_list):
     """
     The generic builder for each of the component types.
@@ -134,11 +119,11 @@ def change_graph_group_type(graph_type, id, children):
     # Check whether the value of the dropdown matches the type of the existing group. If it doesn't match, then
     # generate a new group of the right type.
     if graph_type == 'Bar' and children[-1]['props']['id']['type'] != 'filter-graph-group-bar':
-        children[-1] = generate_bar_group(id['index'])
+        children[-1] = generate_generic_group(id['index'], 'bar', all_bar_components)
     elif graph_type == 'Scatter' and children[-1]['props']['id']['type'] != 'filter-graph-group-scatter':
-        children[-1] = generate_scatter_group(id['index'])
+        children[-1] = generate_generic_group(id['index'], 'scatter', all_scatter_components)
     elif graph_type == 'Manhattan' and children[-1]['props']['id']['type'] != 'filter-graph-group-manhattan':
-        children[-1] = generate_manhattan_group(id['index'])
+        children[-1] = generate_generic_group(id['index'], 'manhattan', all_manhattan_components)
     return children
 
 
