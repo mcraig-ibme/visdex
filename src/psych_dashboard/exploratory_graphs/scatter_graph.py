@@ -14,11 +14,11 @@ from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
 @app.callback(
-    [Output({'type': 'div_scatter_'+str(t), 'index': MATCH}, 'children')
-     for t in [component['id'] for component in all_scatter_components]],
+    [Output({'type': 'div-scatter-' + component['id'], 'index': MATCH}, 'children')
+     for component in all_scatter_components],
     [Input('df-loaded-div', 'children')],
-    [State({'type': 'div_scatter_x', 'index': MATCH}, 'style')] +
-    [State({'type': 'scatter_' + component['id'], 'index': MATCH}, prop)
+    [State({'type': 'div-scatter-x', 'index': MATCH}, 'style')] +
+    [State({'type': 'scatter-' + component['id'], 'index': MATCH}, prop)
      for component in all_scatter_components for prop in component]
 )
 def update_scatter_components(df_loaded, style_dict, *args):
@@ -62,13 +62,13 @@ max_marker_size = 10
 
 
 @app.callback(
-    Output({'type': 'gen_scatter_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter_'+d, 'index': MATCH}, "value") for d in [component['id'] for component in all_scatter_components])],
+    Output({'type': 'gen-scatter-graph', 'index': MATCH}, "figure"),
+    [*(Input({'type': 'scatter-' + component['id'], 'index': MATCH}, "value") for component in all_scatter_components)],
 )
 def make_scatter_figure(*args):
     print('make_scatter_figure')
     # Generate the list of argument names based on the input order
-    keys = [str([component['id'] for component in all_scatter_components][i]) for i in range(0, int(len(args)))]
+    keys = [component['id'] for component in all_scatter_components]
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))

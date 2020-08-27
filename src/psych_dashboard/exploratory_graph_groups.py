@@ -8,7 +8,7 @@ from psych_dashboard.app import app, graph_types, all_scatter_components, all_ba
 
 def create_arguments_nested_dict(components_list, args):
     # Generate the list of argument names based on the input order, paired by component id and property name
-    keys = [(component['id'], str(prop))
+    keys = [(component['id'], prop)
             for component in components_list for prop in component]
     # Convert inputs to a nested dict, with the outer key the component id, and the inner key the property name
     args_dict = defaultdict(dict)
@@ -49,7 +49,7 @@ def update_graph_components(graph_type, component_list, dd_options, args):
             del args_to_replicate['options']
             children.append([component['label'] + ":",
                              component['component_type'](
-                                 id={'type': graph_type + '_' + name, 'index': args_dict[name]['id']['index']},
+                                 id={'type': graph_type + '-' + name, 'index': args_dict[name]['id']['index']},
                                  **args_to_replicate,
                                  options=dd_options,
                                  )
@@ -58,29 +58,13 @@ def update_graph_components(graph_type, component_list, dd_options, args):
         else:
             children.append([component['label'] + ":",
                              component['component_type'](
-                                 id={'type': graph_type + '_' + name, 'index': args_dict[name]['id']['index']},
+                                 id={'type': graph_type + '-' + name, 'index': args_dict[name]['id']['index']},
                                  **args_to_replicate,
                                  )
                              ],
                             )
 
-    print('children', children)
     return children
-
-
-def generate_scatter_group(n_clicks):
-    print('generate_scatter_group')
-    return generate_generic_group(n_clicks, 'scatter', all_scatter_components)
-
-
-def generate_bar_group(n_clicks):
-    print('generate_bar_group')
-    return generate_generic_group(n_clicks, 'bar', all_bar_components)
-
-
-def generate_manhattan_group(n_clicks):
-    print('generate_manhattan_group')
-    return generate_generic_group(n_clicks, 'manhattan', all_manhattan_components)
 
 
 def generate_generic_group(n_clicks, group_type, component_list):
@@ -103,16 +87,16 @@ def generate_generic_group(n_clicks, group_type, component_list):
 
         # Generate each component with the correct id, index, and arguments, inside its own Div.
         children.append(html.Div([component['label'] + ":",
-                                  component['component_type'](id={'type': group_type + '_' + name, 'index': n_clicks},
+                                  component['component_type'](id={'type': group_type + '-' + name, 'index': n_clicks},
                                                               **args_to_replicate,
                                                               )
                                   ],
-                                 id={'type': 'div_' + group_type + '_' + name, 'index': n_clicks},
+                                 id={'type': 'div-' + group_type + '-' + name, 'index': n_clicks},
                                  style=style_dict
                                  )
                         )
 
-    children.append(dcc.Graph(id={'type': 'gen_' + group_type + '_graph', 'index': n_clicks},
+    children.append(dcc.Graph(id={'type': 'gen-' + group_type + '-graph', 'index': n_clicks},
                               figure=go.Figure(data=go.Scatter()))
                     )
     print(children)
@@ -131,16 +115,15 @@ def generate_generic_group(n_clicks, group_type, component_list):
      State({'type': 'divgraph-type-dd', 'index': MATCH}, 'children')]
 )
 def change_graph_group_type(graph_type, id, children):
-    print('change_graph_group_type', graph_type, id, children)
+    print('change_graph_group_type', graph_type, id)
     # Check whether the value of the dropdown matches the type of the existing group. If it doesn't match, then
     # generate a new group of the right type.
     if graph_type == 'Bar' and children[-1]['props']['id']['type'] != 'filter-graph-group-bar':
-        children[-1] = generate_bar_group(id['index'])
+        children[-1] = generate_generic_group(id['index'], 'bar', all_bar_components)
     elif graph_type == 'Scatter' and children[-1]['props']['id']['type'] != 'filter-graph-group-scatter':
-        children[-1] = generate_scatter_group(id['index'])
+        children[-1] = generate_generic_group(id['index'], 'scatter', all_scatter_components)
     elif graph_type == 'Manhattan' and children[-1]['props']['id']['type'] != 'filter-graph-group-manhattan':
-        children[-1] = generate_manhattan_group(id['index'])
-    print('children change', children)
+        children[-1] = generate_generic_group(id['index'], 'manhattan', all_manhattan_components)
     return children
 
 

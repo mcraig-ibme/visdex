@@ -5,8 +5,8 @@ import itertools
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-from psych_dashboard.app import app, all_manhattan_components, default_marker_color
-from psych_dashboard.load_feather import load_flattened_logs, load_logs, load_pval, load_filtered_feather
+from psych_dashboard.app import app, all_manhattan_components
+from psych_dashboard.load_feather import load_flattened_logs, load_logs, load_pval
 from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
@@ -15,11 +15,11 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 
 
 @app.callback(
-    [Output({'type': 'div_manhattan_' + str(t), 'index': MATCH}, 'children')
-     for t in [component['id'] for component in all_manhattan_components]],
+    [Output({'type': 'div-manhattan-' + component['id'], 'index': MATCH}, 'children')
+     for component in all_manhattan_components],
     [Input('df-loaded-div', 'children')],
-    [State({'type': 'div_manhattan_base_variable', 'index': MATCH}, 'style')] +
-    [State({'type': 'manhattan_' + component['id'], 'index': MATCH}, prop)
+    [State({'type': 'div-manhattan-base_variable', 'index': MATCH}, 'style')] +
+    [State({'type': 'manhattan-' + component['id'], 'index': MATCH}, prop)
      for component in all_manhattan_components for prop in component]
 )
 def update_manhattan_components(df_loaded, style_dict, *args):
@@ -76,17 +76,16 @@ def flattened(df):
 
 
 @app.callback(
-    Output({'type': 'gen_manhattan_graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'manhattan_' + d, 'index': MATCH}, "value") for d in [component['id'] for component in all_manhattan_components])],
+    Output({'type': 'gen-manhattan-graph', 'index': MATCH}, "figure"),
+    [*(Input({'type': 'manhattan-' + component['id'], 'index': MATCH}, "value") for component in all_manhattan_components)],
 )
 def make_manhattan_figure(*args):
     print('make_manhattan_figure', *args)
-    # [State({'type': 'manhattan_' + component['name'], 'index': MATCH}, prop)
-    #  for component in all_manhattan_components for prop in component]
-    keys = [str([component['id'] for component in all_manhattan_components][i]) for i in range(0, int(len(args)))]
-    print(keys)
+    # Generate the list of argument names based on the input order
+    keys = [component['id'] for component in all_manhattan_components]
+
+    # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
-    print(args_dict)
     if args_dict['base_variable'] is None or args_dict['base_variable'] == []:
         print('return go.Figure()')
         raise PreventUpdate
