@@ -329,7 +329,7 @@ def update_summary_kde(dropdown_values, df_loaded):
             # Use a maximum of 5 columns
             n_cols = min(5, math.ceil(math.sqrt(n_columns)))
             n_rows = math.ceil(n_columns / n_cols)
-            fig = make_subplots(n_rows, n_cols)
+            fig = make_subplots(n_rows, n_cols, subplot_titles = dropdown_values)
 
             # For each column, calculate its KDE and then plot that over the histogram.
             for j in range(n_cols):
@@ -358,7 +358,8 @@ def update_summary_kde(dropdown_values, df_loaded):
                         fig.add_trace(go.Histogram(x=this_col, name=col_name, histnorm='probability density'),
                                       i+1,
                                       j+1)
-            fig.update_layout(height=200*n_rows)
+            fig.update_layout(height=200*n_rows,
+                              showlegend=False)
             return fig
 
     return go.Figure(go.Scatter())
