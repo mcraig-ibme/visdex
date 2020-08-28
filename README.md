@@ -68,11 +68,10 @@ https://scikit-learn.org/stable/modules/clustering.html#hierarchical-clustering.
 ### Manhattan Plot
 Displays a Manhattan plot of all variables.
 
-Use the `pvalue` input (TODO: label this) to select the
-appropriate p-value threshold. The black horizontal line illustrates the
-associated `-log10` p-value to be used, corrected for the number of variables
-being compared. Anything above the line is considered 'significant' based
-upon the specified p-value threshold.
+Use the `pvalue` input to select the appropriate p-value threshold. The black 
+horizontal line illustrates the associated `-log10` p-value to be used, 
+corrected for the number of variables being compared. Anything above the line 
+is considered 'significant' based upon the specified p-value threshold.
 
 Toggle the `logscale y-axis` checkbox to toggle the y-axis scale.
 
@@ -82,7 +81,6 @@ A more customisable Manhattan plot is available within the exploratory graphs.
 Show a histogram per variable. Overlaid onto each is a Gaussian Kernel 
 Density Estimate of the variable. 
 (https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html).
-TODO: tidy up the legend (and coloration?) or use titles rather than legend.
 
 ## Exploratory graphs
 "Exploratory graphs" is an area in which new, user-defined graphs can be 
@@ -96,8 +94,6 @@ In this way, a collection of graphs can be built up.
 Changing the `Graph type` on a graph will change it to another type, e.g.
 Bar graph or Manhattan graph. Each graph type has a different collection
 of input controls to curate the graph.
-
-## TODO: do I want to document each graph type?
 
 ### Adding/modifying exploratory graph types
 Graph types can be modified by adding/removing/modifying input controls,
