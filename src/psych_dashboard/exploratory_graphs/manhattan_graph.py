@@ -96,11 +96,16 @@ def make_manhattan_figure(*args):
 
     # Load logs of all p-values
     logs = load_logs()
-    flattened_logs = load_flattened_logs()
-    transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(args_dict['pvalue']), logs)
 
-    fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
-                               y=np.flip(flattened_logs.values),
+    # Select the column and row associated to this variable, and combine the two. Half of the values will be nans,
+    # so we keep all the non-nans.
+    take_non_nan = lambda s1, s2: s1 if not np.isnan(s1) else s2
+    selected_logs = logs.loc[:, args_dict['base_variable']].combine(logs.loc[args_dict['base_variable'], :], take_non_nan).dropna()
+
+    transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(args_dict['pvalue']), selected_logs)
+
+    fig = go.Figure(go.Scatter(x=selected_logs.index,
+                               y=selected_logs.values,
                                mode='markers'
                                ),
                     )
@@ -109,7 +114,7 @@ def make_manhattan_figure(*args):
         dict(
             type='line',
             yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
-            xref='x', x0=0, x1=len(flattened_logs)-1
+            xref='x', x0=0, x1=len(selected_logs)-1
         )
     ],
         annotations=[
@@ -127,6 +132,7 @@ def make_manhattan_figure(*args):
             ],
         xaxis_title='variable',
         yaxis_title='-log10(p)',
-        yaxis_type='log' if args_dict['logscale'] == ['LOG'] else None
+        yaxis_type='log' if args_dict['logscale'] == ['LOG'] else None,
+        title=args_dict['base_variable']
     )
     return fig
