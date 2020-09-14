@@ -11,7 +11,7 @@ from psych_dashboard.app import app, indices
 
 
 global_width = '100%'
-data_file_extensions = ['*.txt', '*.xlsx']
+data_file_extensions = ['*.txt', '*.xlsx', '*.csv']
 filter_file_extensions = ['*.filter']
 header_image = '/assets/UoN_Primary_Logo_RGB.png'
 
@@ -267,6 +267,8 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
         df = pd.read_excel(data_file_value)
     elif data_file_value.endswith('.txt'):
         df = pd.read_csv(data_file_value, delim_whitespace=True)
+    elif data_file_value.endswith('.csv'):
+        df = pd.read_csv(data_file_value, delimiter=',')
     else:
         raise FileNotFoundError(data_file_value)
 
