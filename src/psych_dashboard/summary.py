@@ -211,7 +211,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                 v1_counter = math.floor(counter / len(selected_columns))
                 # Calculate corr and p-val
                 if v1 < v2:
-                    corr[v1][v2], pvalues[v1][v2] = stats.pearsonr(np_dff_req[:, v1_counter], np_dff_sel[:, v2_counter])
+                    corr.at[v1, v2], pvalues.at[v1, v2] = stats.pearsonr(np_dff_req[:, v1_counter], np_dff_sel[:, v2_counter])
                     # Populate the other half of the matrix
                     corr.at[v2, v1] = corr.at[v1, v2]
                     pvalues.at[v2, v1] = pvalues.at[v1, v2]
