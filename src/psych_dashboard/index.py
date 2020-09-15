@@ -288,11 +288,13 @@ def parse_input_data_file(contents, filename, date):
             elif filename.endswith('xlsx'):
                 # Assume that the user uploaded an excel file
                 df = pd.read_excel(io.BytesIO(decoded))
+            else:
+                raise NotImplementedError
         except Exception as e:
             print(e)
-            return html.Div([
+            return [html.Div([
                 'There was an error processing this file.'
-            ])
+            ])]
 
         df.reset_index().to_feather('df_parsed.feather')
 
