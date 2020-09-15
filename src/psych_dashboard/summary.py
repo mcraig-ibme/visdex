@@ -283,6 +283,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                                        customdata=np.fliplr(triangular_pval),
                                        hovertemplate="%{x}<br>vs.<br>%{y}<br>      r: %{z:.2g}<br> pval: %{customdata:.2g}<extra></extra>",
                                        colorbar_title_text='r',
+                                       hoverongaps=False
                                        ),
                             )
 
