@@ -2,6 +2,27 @@ import pandas as pd
 from psych_dashboard.app import indices
 
 
+def load_parsed_feather():
+    """
+    Utility function for reading raw DF from feather file - the MultiIndex has not been set, and this contains all the
+    columns, not just the filtered subset. This is called just once, and converted to the main DF.
+    """
+    dff = pd.read_feather('df_parsed.feather')
+
+    return dff
+
+
+def load_columns_feather():
+    """
+    Utility function for reading the column-names DF from feather file, and setting the index.
+    """
+    dff = pd.read_feather('df_columns.feather')
+
+    if len(dff) > 0:
+        dff.set_index('index', inplace=True)
+    return dff
+
+
 def load_feather():
     """
     Utility function for the common task of reading DF from feather file, and setting the MultiIndex. This is called
