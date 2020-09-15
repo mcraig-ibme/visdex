@@ -207,11 +207,11 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             counter = 0
             for v1, v2 in product(selected_columns, required_new):
                 # Use counter to work out the indexing into the pre-numpyed arrays.
-                v2_counter = counter % len(selected_columns)
-                v1_counter = math.floor(counter / len(selected_columns))
+                v2_counter = counter % len(required_new)
+                v1_counter = math.floor(counter / len(required_new))
                 # Calculate corr and p-val
                 if v1 < v2:
-                    corr.at[v1, v2], pvalues.at[v1, v2] = stats.pearsonr(np_dff_req[:, v1_counter], np_dff_sel[:, v2_counter])
+                    corr.at[v1, v2], pvalues.at[v1, v2] = stats.pearsonr(np_dff_sel[:, v1_counter], np_dff_req[:, v2_counter])
                     # Populate the other half of the matrix
                     corr.at[v2, v1] = corr.at[v1, v2]
                     pvalues.at[v2, v1] = pvalues.at[v1, v2]
