@@ -1,4 +1,6 @@
-import glob
+import io
+import base64
+import datetime
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
@@ -6,6 +8,7 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
 from psych_dashboard import preview_table, summary, exploratory_graph_groups
+from psych_dashboard.load_feather import load_parsed_feather, load_columns_feather
 from psych_dashboard.exploratory_graphs import scatter_graph, bar_graph, manhattan_graph
 from psych_dashboard.app import app, indices
 
@@ -59,35 +62,45 @@ app.layout = html.Div(children=[
 
     html.H1(children="File selection"),
 
-    html.Label(children='Data File Selection'),
-    dcc.Dropdown(
-        id='data-file-dropdown',
-        options=[{'label': filename,
-                  'value': filename} for filename in
-                 [f for f_ in [glob.glob('../data/'+e) for e in data_file_extensions] for f in f_]
-                 ],
-        value=None,
-        placeholder='Select data file'
+    html.Label(children='Data File Selection (initial data read will happen immediately)'),
+    dcc.Upload(
+        id='data-file-upload',
+        children=html.Div([
+            'Drag and Drop or ',
+            html.A('Select Files')
+        ]),
+        style={
+            'width': '100%',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '10px'
+        },
     ),
-    dcc.Loading(
-        id='loading-filenames-div',
-        children=[html.Div(id='filenames-div')],
+    html.Div(id='output-data-file-upload'),
+    html.Label(children='Column Filter File Selection (initial data read will happen immediately)'),
+    dcc.Upload(
+        id='filter-file-upload',
+        children=html.Div([
+            'Drag and Drop or ',
+            html.A('Select Files')
+        ]),
+        style={
+            'width': '100%',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '10px'
+        },
     ),
-    html.Label(children='Column-Filter File Selection'),
-    dcc.Dropdown(
-        id='column-filter-file-dropdown',
-        options=[{'label': filename,
-                  'value': filename} for filename in
-                 [f for f_ in [glob.glob('../data/'+e) for e in filter_file_extensions] for f in f_]
-                 ],
-        value=None,
-        placeholder='Leave blank to analyse all columns'
-    ),
-    dcc.Loading(
-        id='loading-column-filter-filenames-div',
-        children=[html.Div(id='column-filter-filenames-div')],
-    ),
-    html.Button('Load selected files', id='load-files-button'),
+    html.Div(id='output-filter-file-upload'),
+    html.Button('Analyse', id='load-files-button'),
     html.Div([
         html.H1('Summary', style={'display': 'inline-block'}),
         dbc.Button(
@@ -249,39 +262,106 @@ def standardise_subjectkey(subjectkey):
 
 
 @app.callback(
-    [Output('df-loaded-div', 'children')],
-    [Input('load-files-button', 'n_clicks')],
-    [State('data-file-dropdown', 'value'),
-     State('column-filter-file-dropdown', 'value')]
+    [Output('output-data-file-upload', 'children')],
+    [Input('data-file-upload', 'contents')],
+    [State('data-file-upload', 'filename'),
+     State('data-file-upload', 'last_modified')]
 )
-def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
+# This function is triggered by the data file upload, and parses the contents of the triggering file,
+# then saves them to the appropriate children
+def parse_input_data_file(contents, filename, date):
+    print('parse data')
 
-    print('update_df_loaded_div', data_file_value, filter_file_value)
-    # Return early if no data file selected, and fill df.feather with an empty DF, and set df-loaded-div to [False]
-    if data_file_value is None:
-        pd.DataFrame().reset_index().to_feather('df.feather')
-        return [False]
+    if contents is not None:
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
 
-    # Read in data file based upon the extension - assume .txt is a whitespace-delimited csv.
-    if data_file_value.endswith('.xlsx'):
-        df = pd.read_excel(data_file_value)
-    elif data_file_value.endswith('.txt'):
-        df = pd.read_csv(data_file_value, delim_whitespace=True)
-    elif data_file_value.endswith('.csv'):
-        df = pd.read_csv(data_file_value, delimiter=',')
-    else:
-        raise FileNotFoundError(data_file_value)
+        try:
+            if filename.endswith('csv'):
+                # Assume that the user uploaded a CSV file
+                df = pd.read_csv(
+                    io.StringIO(decoded.decode('utf-8')))
+            elif filename.endswith('txt'):
+                # Assume that the user uploaded a whitespace-delimited CSV file
+                df = pd.read_csv(
+                    io.StringIO(decoded.decode('utf-8')), delim_whitespace=True)
+            elif filename.endswith('xlsx'):
+                # Assume that the user uploaded an excel file
+                df = pd.read_excel(io.BytesIO(decoded))
+        except Exception as e:
+            print(e)
+            return html.Div([
+                'There was an error processing this file.'
+            ])
 
-    # If filter file is selected, read in filter file, and add the index names if they are not present. Otherwise,
-    # do no filtering
-    if filter_file_value:
-        with open(filter_file_value) as f:
-            variables_of_interest = f.read().splitlines()
-            print(variables_of_interest)
+        df.reset_index().to_feather('df_parsed.feather')
+
+        return [html.Div([
+            html.Div([filename, ' loaded, last modified ',
+                      datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')]),
+            html.Hr(),  # horizontal line
+        ])
+        ]
+
+    return [False]
+
+
+@app.callback(
+    [Output('output-filter-file-upload', 'children')],
+    [Input('filter-file-upload', 'contents')],
+    [State('filter-file-upload', 'filename'),
+     State('filter-file-upload', 'last_modified')]
+)
+# This function is triggered by either upload, and parses the contents of the triggering file,
+# then saves them to the appropriate children
+def parse_input_filter_file(contents, filename, date):
+    print('parse filter')
+
+    if contents is not None:
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string).decode()
+
+        try:
+            variables_of_interest = [str(item) for item in decoded.splitlines()]
             # Add index names if they are not present
             variables_of_interest.extend(index for index in indices if index not in variables_of_interest)
 
-        # Verify that the variables of interest exist.
+        except Exception as e:
+            print(e)
+            return html.Div([
+                'There was an error processing this file.'
+            ])
+        df = pd.DataFrame(variables_of_interest, columns=['names'])
+        df.reset_index().to_feather('df_columns.feather')
+
+        return [html.Div([
+            html.Div([filename, ' loaded, last modified ',
+                      datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')]),
+            html.Hr(),  # horizontal line
+        ])]
+
+    return [False]
+
+
+@app.callback(
+    [Output('df-loaded-div', 'children')],
+    [Input('load-files-button', 'n_clicks')],
+    [State('data-file-upload', 'filename'),
+     State('filter-file-upload', 'filename')]
+)
+# This function is triggered by the button, and takes the parsed values of the 1 or 2 upload
+# components, and outputs the resulting df to the div.
+def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
+    # Read in main DataFrame
+    if data_file_value is None:
+        return [False]
+    df = load_parsed_feather()
+
+    # Read in column DataFrame, or just use all the columns in the DataFrame (need to make
+    if filter_file_value is not None:
+        variables_of_interest = list(load_columns_feather()['names'])
+
+        # Verify that the variables of interest exist in the dataframe
         missing_vars = [var for var in variables_of_interest if var not in df.columns]
 
         if missing_vars:
@@ -289,6 +369,8 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
 
         # Keep only the columns listed in the filter file
         df = df[variables_of_interest]
+
+    df = df.drop(columns='index', errors='ignore')
 
     # Reformat SUBJECTKEY if it doesn't have the underscore
     # TODO: remove this when unnecessary
@@ -313,6 +395,8 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
 
 if __name__ == '__main__':
     pd.DataFrame().reset_index().to_feather('df.feather')
+    pd.DataFrame().reset_index().to_feather('df_parsed.feather')
+    pd.DataFrame().reset_index().to_feather('df_columns.feather')
     pd.DataFrame().reset_index().to_feather('df_filtered.feather')
     pd.DataFrame().reset_index().to_feather('corr.feather')
     pd.DataFrame().reset_index().to_feather('pval.feather')
