@@ -201,13 +201,21 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             timing_dict['update_summary_heatmap-init-corr'] = te - ts
             ts = time.time()
             # Populate missing elements in correlation matrix and p-values matrix using stats.pearsonr
+            # Firstly, convert the dff columns needed to numpy (far faster than doing it each iteration)
+            np_dff_sel = dff[selected_columns].to_numpy()
+            np_dff_req = dff[required_new].to_numpy()
+            counter = 0
             for v1, v2 in product(selected_columns, required_new):
-                if v1 <= v2:
-                    corr[v1][v2], pvalues[v1][v2] = stats.pearsonr(dff[v1].to_numpy(), dff[v2].to_numpy())
+                # Use counter to work out the indexing into the pre-numpyed arrays.
+                v2_counter = counter % len(required_new)
+                v1_counter = math.floor(counter / len(required_new))
+                # Calculate corr and p-val
+                if v1 < v2:
+                    corr.at[v1, v2], pvalues.at[v1, v2] = stats.pearsonr(np_dff_sel[:, v1_counter], np_dff_req[:, v2_counter])
                     # Populate the other half of the matrix
-                    if v1 != v2:
-                        corr[v2][v1] = corr[v1][v2]
-                        pvalues[v2][v1] = pvalues[v1][v2]
+                    corr.at[v2, v1] = corr.at[v1, v2]
+                    pvalues.at[v2, v1] = pvalues.at[v1, v2]
+                counter += 1
 
             te = time.time()
             timing_dict['update_summary_heatmap-corr'] = te - ts
