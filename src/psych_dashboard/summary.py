@@ -151,6 +151,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
         dff = load_filtered_feather()
         corr_dff = load_corr()
         pval_dff = load_pval()
+        logs_dff = load_logs()
 
         ts = time.time()
 
@@ -177,25 +178,31 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                 # Copy across existing corr and pval data rather than recalculating
                 corr = corr_dff[overlap][overlap]
                 pvalues = pval_dff[overlap][overlap]
+                logs = logs_dff[overlap][overlap]
 
                 # Create nan elements in correlation matrix and p-values matrix for those values which
                 # will be calculated
                 if len(required_new) != 0:
                     corr = corr.append([pd.Series(np.nan, index=corr.columns, name=col) for col in required_new])
                     pvalues = pvalues.append([pd.Series(np.nan, index=pvalues.columns, name=col) for col in required_new])
+                    logs = logs.append([pd.Series(np.nan, index=logs.columns, name=col) for col in required_new])
                     for col in required_new:
                         corr[col] = np.nan
                         pvalues[col] = np.nan
+                        logs[col] = np.nan
 
             # Reorder the corr and pvalues matrices to match the input order from the dropdown
                 corr = corr.reindex(selected_columns)
                 corr = corr[selected_columns]
                 pvalues = pvalues.reindex(selected_columns)
                 pvalues = pvalues[selected_columns]
+                logs = logs.reindex(selected_columns)
+                logs = logs[selected_columns]
 
             else:
                 corr = pd.DataFrame(index=selected_columns, columns=selected_columns)
                 pvalues = pd.DataFrame(index=selected_columns, columns=selected_columns)
+                logs = pd.DataFrame(index=selected_columns, columns=selected_columns)
 
             te = time.time()
             timing_dict['update_summary_heatmap-init-corr'] = te - ts
@@ -212,10 +219,19 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                 # Calculate corr and p-val
                 if pd.isna(corr.at[v1, v2]):
                     corr.at[v1, v2], pvalues.at[v1, v2] = stats.pearsonr(np_dff_sel[:, v1_counter], np_dff_req[:, v2_counter])
+                    logs.at[v1, v2] = -np.log10(pvalues.at[v1, v2])
                     # Populate the other half of the matrix
                     corr.at[v2, v1] = corr.at[v1, v2]
                     pvalues.at[v2, v1] = pvalues.at[v1, v2]
+                    logs.at[v2, v1] = logs.at[v1, v2]
                 counter += 1
+
+            # Now blank out any duplicates in logs including the diagonal. While this may seem
+            # wasteful, to calculate them all and then delete some, it's the cleanest way to get the triangular matrix
+            for ind in logs.index:
+                for col in logs.columns:
+                    if ind in logs.columns and col in logs.index and logs[col][ind] == logs[ind][col]:
+                        logs[ind][col] = np.nan
 
             te = time.time()
             timing_dict['update_summary_heatmap-corr'] = te - ts
@@ -241,9 +257,6 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             timing_dict['update_summary_heatmap-cluster'] = te - ts
             ts = time.time()
 
-            print(clx)
-            print([x for _,x in sorted(zip(clx, selected_columns))])
-
             # TODO: what would be good here would be to rename the clusters based on the average variance (diags) within
             # TODO: each cluster - that would reduce the undesirable behaviour whereby currently the clusters can jump about
             # TODO: when re-calculating the clustering.
@@ -263,6 +276,9 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
 
             sorted_corr.reset_index().to_feather('corr.feather')
             sorted_pval.reset_index().to_feather('pval.feather')
+            sorted_pval.reset_index().to_feather('logs.feather')
+            flattened_logs = flattened(logs).dropna()
+            flattened_logs.reset_index().to_feather('flattened_logs.feather')
             te = time.time()
             timing_dict['update_summary_heatmap-save'] = te - ts
             ts = time.time()
@@ -397,22 +413,17 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
     if pvalue <= 0. or pvalue is None:
         raise PreventUpdate
 
-    ctx = dash.callback_context
+    # Load logs and flattened logs from feather file.
+    logs = load_logs()
+    flattened_logs = load_flattened_logs()
+    transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
 
-    # Calculate p-value of corr coeff per variable against the manhattan variable, and the significance threshold.
-    # Save logs and flattened logs to feather files
-    # Skip this and reuse the previous values if we're just changing the log scale.
-    if ctx.triggered[0]['prop_id'] not in ['manhattan-pval-input.value', 'manhattan-logscale-check.value']:
-        logs = calculate_manhattan_data(dff, manhattan_variable)
-        logs.reset_index().to_feather('logs.feather')
-        flattened_logs = flattened(logs).dropna()
-        flattened_logs.reset_index().to_feather('flattened_logs.feather')
-        transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
-    else:
-        print('using logscale shortcut')
-        logs = load_logs()
-        flattened_logs = load_flattened_logs()
-        transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
+    inf_replacement = 0
+    if np.inf in flattened_logs.values:
+        print('Replacing np.inf in flattened logs')
+        temp_vals = flattened_logs.replace([np.inf, -np.inf], np.nan).dropna()
+        inf_replacement = 1.5 * np.max(np.flip(temp_vals.values))
+        flattened_logs = flattened_logs.replace([np.inf, -np.inf], inf_replacement)
 
     fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
                                y=np.flip(flattened_logs.values),
@@ -428,6 +439,7 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
         )
     ],
         annotations=[
+            # This annotation prints the transformed pvalue
             dict(
                 x=0,
                 y=transformed_corrected_ref_pval if logscale != ['LOG'] else np.log10(transformed_corrected_ref_pval),
@@ -438,6 +450,16 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
                 arrowhead=7,
                 ax=-50,
                 ay=0
+            ),
+            # This annotation above the top of the graph is only shown if any inf values have been replaced.
+            # It highlights what value has been used to replace them (1.5*max)
+            dict(
+                x=0,
+                y=1.1,
+                xref='paper',
+                yref='paper',
+                text='Infinite values (corresponding to a 0 p-value after numerical errors) have been replaced with {:f}'.format(inf_replacement) if inf_replacement != 0 else '',
+                showarrow=False
             ),
             ],
         xaxis_title='variable',
