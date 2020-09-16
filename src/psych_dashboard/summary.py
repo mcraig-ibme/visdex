@@ -225,12 +225,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                     pvalues.at[v2, v1] = pvalues.at[v1, v2]
                     logs.at[v2, v1] = logs.at[v1, v2]
                 counter += 1
-            print('corr before feather')
-            print(corr)
-            print('pvalues before feather')
-            print(pvalues)
-            print('logs before feather')
-            print(logs)
+
             # Now blank out any duplicates in logs including the diagonal. While this may seem
             # wasteful, to calculate them all and then delete some, it's the cleanest way to get the triangular matrix
             for ind in logs.index:
@@ -261,9 +256,6 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             te = time.time()
             timing_dict['update_summary_heatmap-cluster'] = te - ts
             ts = time.time()
-
-            print(clx)
-            print([x for _,x in sorted(zip(clx, selected_columns))])
 
             # TODO: what would be good here would be to rename the clusters based on the average variance (diags) within
             # TODO: each cluster - that would reduce the undesirable behaviour whereby currently the clusters can jump about
@@ -426,10 +418,13 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
     flattened_logs = load_flattened_logs()
     transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
 
-    pd.set_option('display.max_columns', 10)
-    print(load_corr())
-    print(logs)
-    print(flattened_logs)
+    inf_replacement = 0
+    if np.inf in flattened_logs.values:
+        print('Replacing np.inf in flattened logs')
+        temp_vals = flattened_logs.replace([np.inf, -np.inf], np.nan).dropna()
+        inf_replacement = 1.5 * np.max(np.flip(temp_vals.values))
+        flattened_logs = flattened_logs.replace([np.inf, -np.inf], inf_replacement)
+
     fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
                                y=np.flip(flattened_logs.values),
                                mode='markers'
@@ -444,6 +439,7 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
         )
     ],
         annotations=[
+            # This annotation prints the transformed pvalue
             dict(
                 x=0,
                 y=transformed_corrected_ref_pval if logscale != ['LOG'] else np.log10(transformed_corrected_ref_pval),
@@ -454,6 +450,16 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
                 arrowhead=7,
                 ax=-50,
                 ay=0
+            ),
+            # This annotation above the top of the graph is only shown if any inf values have been replaced.
+            # It highlights what value has been used to replace them (1.5*max)
+            dict(
+                x=0,
+                y=1.1,
+                xref='paper',
+                yref='paper',
+                text='Infinite values (corresponding to a 0 p-value after numerical errors) have been replaced with {:f}'.format(inf_replacement) if inf_replacement != 0 else '',
+                showarrow=False
             ),
             ],
         xaxis_title='variable',
