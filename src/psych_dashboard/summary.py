@@ -14,7 +14,7 @@ from plotly.subplots import make_subplots
 from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
-from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval, load_corr, load_logs, load_flattened_logs
+from psych_dashboard.load_feather import load_feather, load_filtered_feather, load_pval, load_corr, load_logs, load_flattened_logs, load_cluster_feather
 from psych_dashboard.exploratory_graphs.manhattan_graph import calculate_transformed_corrected_pval, calculate_manhattan_data, flattened
 from itertools import product
 from functools import wraps
@@ -257,6 +257,11 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             timing_dict['update_summary_heatmap-cluster'] = te - ts
             ts = time.time()
 
+            # Save cluster number of each column to a DF and then to feather.
+            cluster_df = pd.DataFrame(data=clx, index=selected_columns, columns=['column_names'])
+            print(cluster_df)
+            cluster_df.reset_index().to_feather('cluster.feather')
+
             # TODO: what would be good here would be to rename the clusters based on the average variance (diags) within
             # TODO: each cluster - that would reduce the undesirable behaviour whereby currently the clusters can jump about
             # TODO: when re-calculating the clustering.
@@ -425,9 +430,22 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
         inf_replacement = 1.5 * np.max(np.flip(temp_vals.values))
         flattened_logs = flattened_logs.replace([np.inf, -np.inf], inf_replacement)
 
+    # Load cluster numbers to use for colouring
+    cluster_df = load_cluster_feather()
+
+    # Convert to colour array - set to the cluster number if the two variables are in the same cluster,
+    # and set any other pairings to -1
+    colors = [cluster_df['column_names'][item[0]]
+              if cluster_df['column_names'][item[0]] == cluster_df['column_names'][item[1]] else -1
+              for item in flattened_logs.index[::-1]]
+
     fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
                                y=np.flip(flattened_logs.values),
-                               mode='markers'
+                               mode='markers',
+                               marker=dict(
+                                   color=colors,
+                                   colorscale='Viridis'
+                                           )
                                ),
                     )
 

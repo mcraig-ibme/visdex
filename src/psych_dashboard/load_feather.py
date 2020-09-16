@@ -2,6 +2,17 @@ import pandas as pd
 from psych_dashboard.app import indices
 
 
+def load_cluster_feather():
+    """
+    Utility function for reading the cluster DF from feather file, and setting the index.
+    """
+    dff = pd.read_feather('cluster.feather')
+
+    if len(dff) > 0:
+        dff.set_index('index', inplace=True)
+    return dff
+
+
 def load_parsed_feather():
     """
     Utility function for reading raw DF from feather file - the MultiIndex has not been set, and this contains all the
