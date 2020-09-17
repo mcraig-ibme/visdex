@@ -393,7 +393,7 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
     return [True]
 
 
-if __name__ == '__main__':
+def main():
     pd.DataFrame().reset_index().to_feather('df.feather')
     pd.DataFrame().reset_index().to_feather('df_parsed.feather')
     pd.DataFrame().reset_index().to_feather('df_columns.feather')
@@ -401,3 +401,7 @@ if __name__ == '__main__':
     pd.DataFrame().reset_index().to_feather('corr.feather')
     pd.DataFrame().reset_index().to_feather('pval.feather')
     app.run_server(debug=True)
+
+
+if __name__ == '__main__':
+    main()

@@ -13,6 +13,9 @@ setup(name="psych_dashboard",
                         'feather-format>=0.4.0',
                         'dash-bootstrap-components>=0.10.0',
                         ],
+      entry_points = {
+         'console_scripts': ['run-dashboard=psych_dashboard.index:main'],
+        },
       packages=find_packages(where='src'),
       package_dir={"": "src"},
       )
