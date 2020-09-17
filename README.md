@@ -9,14 +9,12 @@ It is _strongly recommended_ to use a virtual environment.
 ```
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
 pip install -e .
 ```
 On Windows: First make sure python 3 is installed and in your path
 ```
 python -m venv venv
 venv\Scripts\activate.bat
-pip install -r requirements.txt
 pip install -e .
 ```
 Run with
