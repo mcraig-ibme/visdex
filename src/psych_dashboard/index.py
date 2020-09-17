@@ -14,8 +14,6 @@ from psych_dashboard.app import app, indices
 
 
 global_width = '100%'
-data_file_extensions = ['*.txt', '*.xlsx', '*.csv']
-filter_file_extensions = ['*.filter']
 header_image = '/assets/UoN_Primary_Logo_RGB.png'
 
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
