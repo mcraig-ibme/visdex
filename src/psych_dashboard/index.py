@@ -394,12 +394,11 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
 
 
 def main():
-    pd.DataFrame().reset_index().to_feather('df.feather')
-    pd.DataFrame().reset_index().to_feather('df_parsed.feather')
-    pd.DataFrame().reset_index().to_feather('df_columns.feather')
-    pd.DataFrame().reset_index().to_feather('df_filtered.feather')
-    pd.DataFrame().reset_index().to_feather('corr.feather')
-    pd.DataFrame().reset_index().to_feather('pval.feather')
+    # Create empty feather files to simplify the handling of them if they don't exist or contain
+    # old data.
+    for feather_file in ['df.feather', 'df_parsed.feather', 'df_columns.feather', 'df_filtered.feather',
+                         'corr.feather', 'pval.feather', 'logs.feather', 'flattened_logs.feather']:
+        pd.DataFrame().reset_index().to_feather(feather_file)
     app.run_server(debug=True)
 
 
