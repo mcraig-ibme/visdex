@@ -4,18 +4,18 @@ This is a Dash dashboard to explore data in a user-friendly manner.
 
 It is recommended to use Python 3.7 or higher.
 
-Clone the repository to `$DASHBOARD_HOME`, and install the dependencies from `requirements.txt`. 
-It is _strongly recommended_ to use a virtual environment.
+Clone the repository to `$DASHBOARD_HOME`. 
+It is _strongly recommended_ to use a virtual environment before installing.
 ```
 python3 -m venv venv
 source venv/bin/activate
-pip install -e .
+pip install -e $DASHBOARD_HOME
 ```
 On Windows: First make sure python 3 is installed and in your path
 ```
 python -m venv venv
 venv\Scripts\activate.bat
-pip install -e .
+pip install -e $DASHBOARD_HOME
 ```
 Run with
 ```
@@ -31,19 +31,22 @@ The dashboard is split into 3 sections:
 3. Exploratory graphs
 
 ## Data input
-Dropdown 1 allows selection of a single data file, with XXXXX expectations
-on format.
-Dropdown 2 allows selection of filter files, which list the columns to be
-used - TODO.
+Upload Box1 should be used to select the main data file. This can be in a variety of 
+formats (TODO add format specs).
 
-Click "Load selected files" to load the data.
+Upload Box 2 can be used to select a (optional) filter file, which lists the columns to 
+be used - TODO.
+
+Selecting a file in either Upload Box will immediately parse the data in that file.
+
+Click "Analyse" to run the analysis on the data.
 
 ## Summary tables and graphs
 Select the `-` button to collapse the summary section.
 
 ### Table Preview
-Shows the first 5 rows of the data file (? filtered) for 
-information and to easily flag up some data read and formatting issues.
+Shows the first 5 rows of the data file (only the columns selected in the filter file
+are shown) for information and to easily flag up some data read and formatting issues.
 
 ### Table summary and filter
 (?rename filter) Displays a summary of each 
@@ -51,13 +54,12 @@ column (min. max, quartiles, standard deviation etc), and uses colours to
 highlight certain properties (TODO: expand that, document the colours in
 the dashboard, and document them here). The filter box allows the user
 to input the maximum percentage of rows in a column that are allowed to 
-be missing (?or NA) before the column is removed from the later (?summary) 
+be missing (?or NA) before the column is removed from all the later 
 analysis.
 
 ### Correlation heatmap
-Displays the correlation matrix between all filtered
-columns as a heatmap. Hover over items to view the Pearson correlation 
-coefficient and p-value for that pair.
+Displays the correlation matrix between all columns as a heatmap. Hover over 
+items to view the Pearson correlation coefficient and p-value for that pair.
 Use the dropdown to select/deselect columns to display, and use the
 clusters input to select the number of clusters to separate the columns 
 into. The clustering method used is Agglomerative Hierarchical Clustering:
@@ -73,7 +75,8 @@ is considered 'significant' based upon the specified p-value threshold.
 
 Toggle the `logscale y-axis` checkbox to toggle the y-axis scale.
 
-A more customisable Manhattan plot is available within the exploratory graphs. 
+A more customisable Manhattan plot against a single variable is available 
+within the exploratory graphs. 
 
 ### Per-variable Histograms and KDEs
 Show a histogram per variable. Overlaid onto each is a Gaussian Kernel 
