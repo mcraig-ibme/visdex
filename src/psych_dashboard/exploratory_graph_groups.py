@@ -3,7 +3,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 from collections import defaultdict
-from psych_dashboard.app import app, graph_types, all_scatter_components, all_bar_components, all_manhattan_components, style_dict
+from psych_dashboard.app import app, graph_types, all_scatter_components, all_bar_components, all_manhattan_components, style_dict, div_style
 
 
 def create_arguments_nested_dict(components_list, args):
@@ -157,6 +157,7 @@ def add_graph_group(n_clicks, children):
                                       html.Div(id={'type': 'placeholder', 'index': n_clicks})
                                       ],
                                      id={'type': 'divgraph-type-dd', 'index': n_clicks},
+                                     style=div_style
                                      )
 
         children.append(new_graph_type_dd)

@@ -10,12 +10,11 @@ import pandas as pd
 from psych_dashboard import preview_table, summary, exploratory_graph_groups
 from psych_dashboard.load_feather import load_parsed_feather, load_columns_feather
 from psych_dashboard.exploratory_graphs import scatter_graph, bar_graph, manhattan_graph
-from psych_dashboard.app import app, indices
+from psych_dashboard.app import app, indices, standard_margin_left, div_style
 
 
 global_width = '100%'
 header_image = '/assets/UoN_Primary_Logo_RGB.png'
-
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 
@@ -58,9 +57,11 @@ app.layout = html.Div(children=[
     html.Img(src=header_image, height=100),
     create_header('ABCD data exploration dashboard'),
 
-    html.H1(children="File selection"),
+    html.H1(children="File selection",
+            style=div_style),
 
-    html.Label(children='Data File Selection (initial data read will happen immediately)'),
+    html.Label(children='Data File Selection (initial data read will happen immediately)',
+               style=div_style),
     dcc.Upload(
         id='data-file-upload',
         children=html.Div([
@@ -79,7 +80,8 @@ app.layout = html.Div(children=[
         },
     ),
     html.Div(id='output-data-file-upload'),
-    html.Label(children='Column Filter File Selection (initial data read will happen immediately)'),
+    html.Label(children='Column Filter File Selection (initial data read will happen immediately)',
+               style=div_style),
     dcc.Upload(
         id='filter-file-upload',
         children=html.Div([
@@ -98,9 +100,10 @@ app.layout = html.Div(children=[
         },
     ),
     html.Div(id='output-filter-file-upload'),
-    html.Button('Analyse', id='load-files-button'),
+    html.Button('Analyse', id='load-files-button',
+                style=div_style),
     html.Div([
-        html.H1('Summary', style={'display': 'inline-block'}),
+        html.H1('Summary', style={'display': 'inline-block', 'margin-left': standard_margin_left}),
         dbc.Button(
             "-",
             id="collapse-summary-button",
@@ -110,7 +113,8 @@ app.layout = html.Div(children=[
     ),
     dbc.Collapse(id='summary-collapse',
                  children=[
-                     html.H2(children="Table Preview"),
+                     html.H2(children="Table Preview",
+                             style=div_style),
                      dcc.Loading(
                          id='loading-table-preview',
                          children=[
@@ -118,14 +122,17 @@ app.layout = html.Div(children=[
                                       style={'width': global_width})
                          ]
                      ),
-                     html.H3(children="Table Summary and Filter"),
-                     html.Div('\nFilter out all columns missing at least X percentage of rows:'),
+                     html.H3(children="Table Summary and Filter",
+                             style=div_style),
+                     html.Div('\nFilter out all columns missing at least X percentage of rows:',
+                              style=div_style),
                      dcc.Input(id='missing-values-input',
                                type="number",
                                min=0,
                                max=100,
                                debounce=True,
-                               value=None),
+                               value=None,
+                               style=div_style),
                      dcc.Loading(
                          id='loading-table-summary',
                          children=[
@@ -133,8 +140,10 @@ app.layout = html.Div(children=[
                                       style={'width': global_width})
                              ]
                      ),
-                     html.H2(children='Correlation Heatmap (Pearson\'s)'),
+                     html.H2(children='Correlation Heatmap (Pearson\'s)',
+                             style=div_style),
                      html.Div(id='heatmap-div',
+                              style=div_style,
                               children=[dcc.Input(id='heatmap-clustering-input',
                                                   type="number",
                                                   min=1,
@@ -159,7 +168,8 @@ app.layout = html.Div(children=[
                                        )
                              ]
                      ),
-                     html.H2('Manhattan Plot'),
+                     html.H2('Manhattan Plot',
+                             style=div_style),
                      dcc.Loading(
                          id='loading-manhattan-figure',
                          children=[
@@ -170,7 +180,8 @@ app.layout = html.Div(children=[
                                                  step=0.0001,
                                                  debounce=True,
                                                  style={'display': 'inline-block'}),
-                                       ]),
+                                       ],
+                                      style=div_style),
                              html.Div([
                                        dcc.Checklist(id='manhattan-logscale-check',
                                                      options=[
@@ -179,13 +190,15 @@ app.layout = html.Div(children=[
                                                      value=[],
                                                      style={'display': 'inline-block'}
                                                      ),
-                                       ]),
+                                       ],
+                                      style=div_style),
                              dcc.Graph(id='manhattan-figure',
                                        figure=go.Figure()
                                        )
                          ]
                      ),
-                     html.H2(children='Per-variable Histograms and KDEs'),
+                     html.H2(children='Per-variable Histograms and KDEs',
+                             style=div_style),
                      dcc.Loading(
                          id='loading-kde-figure',
                          children=[
@@ -207,7 +220,7 @@ app.layout = html.Div(children=[
 
     # html.H1('Exploratory graphs', style={'margin-top': '10px', 'margin-bottom': '10px'}),
     html.Div([
-        html.H1('Exploratory graphs', style={'display': 'inline-block', 'margin-top': '10px', 'margin-bottom': '10px'}),
+        html.H1('Exploratory graphs', style={'display': 'inline-block', 'margin-top': '10px', 'margin-bottom': '10px', 'margin-left': standard_margin_left}),
         dbc.Button(
             "-",
             id="collapse-explore-button",
@@ -220,7 +233,11 @@ app.layout = html.Div(children=[
                      # Container to hold all the exploratory graphs
                      html.Div(id='graph-group-container', children=[]),
                      # Button at the page bottom to add a new graph
-                     html.Button('New Graph', id='add-graph-button', style={'margin-top': '10px'})
+                     html.Button('New Graph',
+                                 id='add-graph-button',
+                                 style={'margin-top': '10px',
+                                        'margin-left': standard_margin_left,
+                                        'margin-bottom': '40px'})
                      ],
                  is_open=True)
 ])
