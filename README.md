@@ -19,7 +19,7 @@ pip install -e .
 ```
 Run with
 ```
-python $DASHBOARD_HOME/src/psych_dashboard/index.py
+run-dashboard
 ```
 This will begin a new app. In a browser, go to http://127.0.0.1:8050/ 
 to view the app.
