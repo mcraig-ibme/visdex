@@ -80,7 +80,9 @@ within the exploratory graphs.
 
 ### Per-variable Histograms and KDEs
 Show a histogram per variable. Overlaid onto each is a Gaussian Kernel 
-Density Estimate of the variable. 
+Density Estimate of the variable. This only runs and updates when the 
+'Run KDE analysis' checkbox is ticked - otherwise changes to the rest 
+of the app make no change to the KDEs display.
 (https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html).
 
 ## Exploratory graphs
