@@ -78,7 +78,8 @@ app.layout = html.Div(children=[
             'margin': '10px'
         },
     ),
-    html.Div(id='output-data-file-upload'),
+    html.Div(id='output-data-file-upload',
+             children=['No file loaded']),
     html.Label(children='Column Filter File Selection (initial data read will happen immediately)',
                style=div_style),
     dcc.Upload(
@@ -97,7 +98,8 @@ app.layout = html.Div(children=[
             'margin': '10px'
         },
     ),
-    html.Div(id='output-filter-file-upload'),
+    html.Div(id='output-filter-file-upload',
+             children=['No file loaded']),
     html.Button('Analyse', id='load-files-button',
                 style=div_style),
     html.Div([
@@ -311,14 +313,13 @@ def parse_input_data_file(contents, filename, date):
 
         df.reset_index().to_feather('df_parsed.feather')
 
-        return [html.Div([
-            html.Div([filename, ' loaded, last modified ',
-                      datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')]),
-            html.Hr(),  # horizontal line
-        ])
-        ]
+        return [html.Div([filename, ' loaded, last modified ',
+                          datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')],
+                         style=div_style),
+                ]
 
-    return [False]
+    return [html.Div('No file loaded',
+                     style=div_style)]
 
 
 @app.callback(
@@ -349,13 +350,13 @@ def parse_input_filter_file(contents, filename, date):
         df = pd.DataFrame(variables_of_interest, columns=['names'])
         df.reset_index().to_feather('df_columns.feather')
 
-        return [html.Div([
-            html.Div([filename, ' loaded, last modified ',
-                      datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')]),
-            html.Hr(),  # horizontal line
-        ])]
+        return [html.Div([filename, ' loaded, last modified ',
+                          datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')],
+                         style=div_style),
+                ]
 
-    return [False]
+    return [html.Div('No file loaded',
+                     style=div_style)]
 
 
 @app.callback(
