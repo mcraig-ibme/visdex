@@ -3,9 +3,7 @@ import numpy as np
 import pandas as pd
 import time
 import dash_table
-import dash
 import dash_html_components as html
-import dash_core_components as dcc
 import scipy.stats as stats
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -401,6 +399,26 @@ def update_summary_kde(dropdown_values, df_loaded):
 valid_manhattan_dtypes = [np.int64, np.float64]
 
 
+def calculate_colorscale(n_values):
+    """
+    Split the colorscale into n_values + 1 values. The first is black for
+    points representing pairs of variables not in the same cluster.
+    :param n_values:
+    :return:
+    """
+    # First 2 entries define a black colour for the "none" category
+    colorscale = [[0, 'rgb(0,0,0)'], [1 / (n_values + 1), 'rgb(0,0,0)']]
+
+    plotly_colorscale = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52']
+
+    # Add colours from plotly_colorscale as required.
+    for i in range(1, n_values+1):
+        colorscale.append([i/(n_values+1), plotly_colorscale[(i-1) % len(plotly_colorscale)]])
+        colorscale.append([(i+1)/(n_values+1), plotly_colorscale[(i-1) % len(plotly_colorscale)]])
+
+    return colorscale
+
+
 @app.callback(
     Output('manhattan-figure', 'figure'),
     [Input('manhattan-pval-input', 'value'),
@@ -436,18 +454,30 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
     cluster_df = load_cluster_feather()
 
     # Convert to colour array - set to the cluster number if the two variables are in the same cluster,
-    # and set any other pairings to -1
+    # and set any other pairings to -1 (which will be coloured black)
     colors = [cluster_df['column_names'][item[0]]
               if cluster_df['column_names'][item[0]] == cluster_df['column_names'][item[1]] else -1
               for item in flattened_logs.index[::-1]]
-
+    max_cluster = max(cluster_df['column_names'])
     fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
                                y=np.flip(flattened_logs.values),
                                mode='markers',
                                marker=dict(
                                    color=colors,
-                                   colorscale='Viridis'
-                                           )
+                                   colorscale=calculate_colorscale(max_cluster + 1),
+                                   colorbar=dict(
+                                       tickmode='array',
+                                       # Offset by 0.5 to centre the text within the boxes
+                                       tickvals=[i - 0.5 for i in range(max_cluster + 2)],
+                                       # The bottom of the colorbar is black for "cross-cluster pair"s
+                                       ticktext=["cross-cluster pair"] + [str(i) for i in range(max_cluster + 2)],
+                                       title='Cluster'
+                                   ),
+                                   cmax=max_cluster + 1,
+                                   # Minimum is -1 to represent the points of variables not in the same cluster
+                                   cmin=-1,
+                                   showscale=True
+                                           ),
                                ),
                     )
 
