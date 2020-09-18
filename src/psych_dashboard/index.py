@@ -69,7 +69,6 @@ app.layout = html.Div(children=[
             html.A('Select Files')
         ]),
         style={
-            'width': '100%',
             'height': '60px',
             'lineHeight': '60px',
             'borderWidth': '1px',
@@ -89,7 +88,6 @@ app.layout = html.Div(children=[
             html.A('Select Files')
         ]),
         style={
-            'width': '100%',
             'height': '60px',
             'lineHeight': '60px',
             'borderWidth': '1px',
