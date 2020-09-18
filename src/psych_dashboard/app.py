@@ -8,6 +8,9 @@ server = app.server
 indices = ['SUBJECTKEY', 'EVENTNAME']
 graph_types = ['Scatter', 'Bar', 'Manhattan']
 
+standard_margin_left = '10px'
+div_style = {'margin-left': standard_margin_left}
+
 
 # All components should contain 'component_type', 'id', and 'label' as a minimum
 all_scatter_components = [{'component_type': dcc.Dropdown,
