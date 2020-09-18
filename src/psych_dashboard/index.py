@@ -199,6 +199,11 @@ app.layout = html.Div(children=[
                      ),
                      html.H2(children='Per-variable Histograms and KDEs',
                              style=div_style),
+                     dcc.Checklist('kde-checkbox',
+                                   options=[{'label': ' Run KDE analysis', 'value': 'kde-active'}],
+                                   value=[],
+                                   style=div_style,
+                                   ),
                      dcc.Loading(
                          id='loading-kde-figure',
                          children=[

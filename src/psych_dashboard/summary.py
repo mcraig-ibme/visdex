@@ -344,11 +344,14 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
 
 @app.callback(
     Output('kde-figure', 'figure'),
-    [Input('heatmap-dropdown', 'value')],
+    [Input('heatmap-dropdown', 'value'),
+     Input('kde-checkbox', 'value')],
     [State('df-loaded-div', 'children')])
 @timing
-def update_summary_kde(dropdown_values, df_loaded):
+def update_summary_kde(dropdown_values, kde_active, df_loaded):
     print('update_summary_kde')
+    if kde_active != ['kde-active']:
+        raise PreventUpdate
 
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
