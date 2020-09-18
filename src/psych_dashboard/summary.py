@@ -270,10 +270,12 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
 
             half_sorted_corr = corr[sorted_column_order]
             half_sorted_pval = pvalues[sorted_column_order]
+            half_sorted_logs = logs[sorted_column_order]
 
             # Sort corr rows
             sorted_corr = half_sorted_corr.reindex(sorted_column_order)
             sorted_pval = half_sorted_pval.reindex(sorted_column_order)
+            sorted_logs = half_sorted_logs.reindex(sorted_column_order)
 
             te = time.time()
             timing_dict['update_summary_heatmap-reorder'] = te - ts
@@ -281,7 +283,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
 
             sorted_corr.reset_index().to_feather('corr.feather')
             sorted_pval.reset_index().to_feather('pval.feather')
-            sorted_pval.reset_index().to_feather('logs.feather')
+            sorted_logs.reset_index().to_feather('logs.feather')
             flattened_logs = flattened(logs).dropna()
             flattened_logs.reset_index().to_feather('flattened_logs.feather')
             te = time.time()
