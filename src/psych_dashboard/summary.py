@@ -447,7 +447,7 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
     if np.inf in flattened_logs.values:
         print('Replacing np.inf in flattened logs')
         temp_vals = flattened_logs.replace([np.inf, -np.inf], np.nan).dropna()
-        inf_replacement = 1.5 * np.max(np.flip(temp_vals.values))
+        inf_replacement = 1.2 * np.max(np.flip(temp_vals.values))
         flattened_logs = flattened_logs.replace([np.inf, -np.inf], inf_replacement)
 
     # Load cluster numbers to use for colouring
@@ -502,7 +502,7 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
                 ay=0
             ),
             # This annotation above the top of the graph is only shown if any inf values have been replaced.
-            # It highlights what value has been used to replace them (1.5*max)
+            # It highlights what value has been used to replace them (1.2*max)
             dict(
                 x=0,
                 y=1.1,
