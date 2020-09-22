@@ -174,7 +174,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         # Copy across existing data rather than recalculating (so in this operation we drop the unneeded elements)
         # Then create nan elements in corr, p-values and logs matrices for those values which
         # will be calculated.
-        # Then reorder each matrixs to match the input order from the dropdown
+        # Then reorder each matrix to match the input order from the dropdown
         corr = corr_dff[overlap][overlap]
         corr = add_row_col_to_df(corr, required_new)
         corr = reorder_df(corr, selected_columns)
