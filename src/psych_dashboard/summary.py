@@ -174,18 +174,14 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         # Copy across existing data rather than recalculating (so in this operation we drop the unneeded elements)
         # Then create nan elements in corr, p-values and logs matrices for those values which
         # will be calculated.
-        # Then reorder each matrix to match the input order from the dropdown
         corr = corr_dff[overlap][overlap]
         corr = add_row_col_to_df(corr, required_new)
-        corr = reorder_df(corr, selected_columns)
 
         pvalues = pval_dff[overlap][overlap]
         pvalues = add_row_col_to_df(pvalues, required_new)
-        pvalues = reorder_df(pvalues, selected_columns)
 
         logs = logs_dff[overlap][overlap]
         logs = add_row_col_to_df(logs, required_new)
-        logs = reorder_df(logs, selected_columns)
 
     te = time.time()
     timing_dict['update_summary_heatmap-init-corr'] = te - ts
