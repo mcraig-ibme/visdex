@@ -439,19 +439,24 @@ def calculate_colorscale(n_values):
     [Input('manhattan-pval-input', 'value'),
      Input('manhattan-logscale-check', 'value'),
      Input('df-filtered-loaded-div', 'children'),
-     Input('pval-loaded-div', 'children')]
+     Input('pval-loaded-div', 'children'),
+     Input('manhattan-active-check', 'value')]
 )
 @timing
-def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded):
+def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     print('plot_manhattan')
+
+    if manhattan_active != ['manhattan-active']:
+        raise PreventUpdate
+    if pvalue <= 0. or pvalue is None:
+        raise PreventUpdate
+
     dff = load_pval()
     manhattan_variable = [col for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
 
     if not pval_loaded or manhattan_variable is None or manhattan_variable == []:
         return go.Figure()
 
-    if pvalue <= 0. or pvalue is None:
-        raise PreventUpdate
 
     # Load logs and flattened logs from feather file.
     logs = load_logs()

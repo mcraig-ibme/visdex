@@ -173,6 +173,14 @@ app.layout = html.Div(children=[
                      dcc.Loading(
                          id='loading-manhattan-figure',
                          children=[
+                             html.Div([
+                                       dcc.Checklist(id='manhattan-active-check',
+                                                     options=[{'label': ' Plot Manhattan',
+                                                               'value': 'manhattan-active'}],
+                                                     value=[],
+                                                     style={'display': 'inline-block'}
+                                                     ),
+                             ]),
                              html.Div(["p-value:  ",
                                        dcc.Input(id='manhattan-pval-input',
                                                  type='number',
