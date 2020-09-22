@@ -133,6 +133,95 @@ def update_heatmap_dropdown(df_loaded):
         [col for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
 
 
+def add_row_col_to_df(df, rowcol_name):
+    """
+    Add columns and rows to df, both named with the elements of rowcol_name and filled with np.nan
+    """
+    # Add rows
+    df = df.append([pd.Series(np.nan, index=df.columns, name=col) for col in rowcol_name])
+    # Add columns
+    for col in rowcol_name:
+        df[col] = np.nan
+
+    return df
+
+
+def reorder_df(df, order):
+    """
+    Change the row and column order of df to that given in order
+    """
+    return df.reindex(order)[order]
+
+
+def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
+    ts = time.time()
+    # Work out which columns/rows are needed anew, and which are already populated
+    # TODO: note that if we load in a new file with some of the same column names, then this old correlation
+    # TODO: data may be used erroneously.
+    existing_cols = corr_dff.columns
+    overlap = set(selected_columns).intersection(set(existing_cols))
+    print('these are needed and already available:', overlap)
+    required_new = set(selected_columns).difference(set(existing_cols))
+    print('these are needed and not already available:', required_new)
+
+    # If there is overlap, then create brand new empty dataframes. Otherwise, update the existing dataframes.
+    if len(overlap) == 0:
+        corr = pd.DataFrame(index=selected_columns, columns=selected_columns)
+        pvalues = pd.DataFrame(index=selected_columns, columns=selected_columns)
+        logs = pd.DataFrame(index=selected_columns, columns=selected_columns)
+
+    else:
+        # Copy across existing data rather than recalculating (so in this operation we drop the unneeded elements)
+        # Then create nan elements in corr, p-values and logs matrices for those values which
+        # will be calculated.
+        # Then reorder each matrixs to match the input order from the dropdown
+        corr = corr_dff[overlap][overlap]
+        corr = add_row_col_to_df(corr, required_new)
+        corr = reorder_df(corr, selected_columns)
+
+        pvalues = pval_dff[overlap][overlap]
+        pvalues = add_row_col_to_df(pvalues, required_new)
+        pvalues = reorder_df(pvalues, selected_columns)
+
+        logs = logs_dff[overlap][overlap]
+        logs = add_row_col_to_df(logs, required_new)
+        logs = reorder_df(logs, selected_columns)
+
+    te = time.time()
+    timing_dict['update_summary_heatmap-init-corr'] = te - ts
+    ts = time.time()
+    # Populate missing elements in correlation matrix and p-values matrix using stats.pearsonr
+    # Firstly, convert the dff columns needed to numpy (far faster than doing it each iteration)
+    np_dff_sel = dff[selected_columns].to_numpy()
+    np_dff_req = dff[required_new].to_numpy()
+    counter = 0
+    for v1, v2 in product(selected_columns, required_new):
+        # Use counter to work out the indexing into the pre-numpyed arrays.
+        v2_counter = counter % len(required_new)
+        v1_counter = math.floor(counter / len(required_new))
+        # Calculate corr and p-val
+        if pd.isna(corr.at[v1, v2]):
+            corr.at[v1, v2], pvalues.at[v1, v2] = stats.pearsonr(np_dff_sel[:, v1_counter], np_dff_req[:, v2_counter])
+            logs.at[v1, v2] = -np.log10(pvalues.at[v1, v2])
+            # Populate the other half of the matrix
+            corr.at[v2, v1] = corr.at[v1, v2]
+            pvalues.at[v2, v1] = pvalues.at[v1, v2]
+            logs.at[v2, v1] = logs.at[v1, v2]
+        counter += 1
+
+    # Now blank out any duplicates in logs including the diagonal. While this may seem
+    # wasteful, to calculate them all and then delete some, it's the cleanest way to get the triangular matrix
+    for ind in logs.index:
+        for col in logs.columns:
+            if ind in logs.columns and col in logs.index and logs[col][ind] == logs[ind][col]:
+                logs[ind][col] = np.nan
+
+    te = time.time()
+    timing_dict['update_summary_heatmap-corr'] = te - ts
+
+    return corr, pvalues, logs
+
+
 @app.callback(
     [Output('heatmap', 'figure'),
      Output('corr-loaded-div', 'children'),
@@ -151,8 +240,6 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
         pval_dff = load_pval()
         logs_dff = load_logs()
 
-        ts = time.time()
-
         # Add the index back in as a column so we can see it in the table preview
         if dff.size > 0 and dropdown_values != []:
             dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
@@ -162,77 +249,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             selected_columns = list(dropdown_values)
             print('selected_columns', selected_columns)
 
-            # Work out which columns/rows are needed anew, and which are already populated
-            # TODO: note that if we load in a new file with some of the same column names, then this old correlation
-            # TODO: data may be used erroneously.
-            previous_cols = corr_dff.columns
-            overlap = set(selected_columns).intersection(set(previous_cols))
-            print('these are needed and already available:', overlap)
-            required_new = set(selected_columns).difference(set(previous_cols))
-            print('these are needed and not already available:', required_new)
-
-            # If there is no overlap, then skip this step and create a brand new empty dataframe instead.
-            if len(overlap) != 0:
-                # Copy across existing corr and pval data rather than recalculating
-                corr = corr_dff[overlap][overlap]
-                pvalues = pval_dff[overlap][overlap]
-                logs = logs_dff[overlap][overlap]
-
-                # Create nan elements in correlation matrix and p-values matrix for those values which
-                # will be calculated
-                if len(required_new) != 0:
-                    corr = corr.append([pd.Series(np.nan, index=corr.columns, name=col) for col in required_new])
-                    pvalues = pvalues.append([pd.Series(np.nan, index=pvalues.columns, name=col) for col in required_new])
-                    logs = logs.append([pd.Series(np.nan, index=logs.columns, name=col) for col in required_new])
-                    for col in required_new:
-                        corr[col] = np.nan
-                        pvalues[col] = np.nan
-                        logs[col] = np.nan
-
-            # Reorder the corr and pvalues matrices to match the input order from the dropdown
-                corr = corr.reindex(selected_columns)
-                corr = corr[selected_columns]
-                pvalues = pvalues.reindex(selected_columns)
-                pvalues = pvalues[selected_columns]
-                logs = logs.reindex(selected_columns)
-                logs = logs[selected_columns]
-
-            else:
-                corr = pd.DataFrame(index=selected_columns, columns=selected_columns)
-                pvalues = pd.DataFrame(index=selected_columns, columns=selected_columns)
-                logs = pd.DataFrame(index=selected_columns, columns=selected_columns)
-
-            te = time.time()
-            timing_dict['update_summary_heatmap-init-corr'] = te - ts
-            ts = time.time()
-            # Populate missing elements in correlation matrix and p-values matrix using stats.pearsonr
-            # Firstly, convert the dff columns needed to numpy (far faster than doing it each iteration)
-            np_dff_sel = dff[selected_columns].to_numpy()
-            np_dff_req = dff[required_new].to_numpy()
-            counter = 0
-            for v1, v2 in product(selected_columns, required_new):
-                # Use counter to work out the indexing into the pre-numpyed arrays.
-                v2_counter = counter % len(required_new)
-                v1_counter = math.floor(counter / len(required_new))
-                # Calculate corr and p-val
-                if pd.isna(corr.at[v1, v2]):
-                    corr.at[v1, v2], pvalues.at[v1, v2] = stats.pearsonr(np_dff_sel[:, v1_counter], np_dff_req[:, v2_counter])
-                    logs.at[v1, v2] = -np.log10(pvalues.at[v1, v2])
-                    # Populate the other half of the matrix
-                    corr.at[v2, v1] = corr.at[v1, v2]
-                    pvalues.at[v2, v1] = pvalues.at[v1, v2]
-                    logs.at[v2, v1] = logs.at[v1, v2]
-                counter += 1
-
-            # Now blank out any duplicates in logs including the diagonal. While this may seem
-            # wasteful, to calculate them all and then delete some, it's the cleanest way to get the triangular matrix
-            for ind in logs.index:
-                for col in logs.columns:
-                    if ind in logs.columns and col in logs.index and logs[col][ind] == logs[ind][col]:
-                        logs[ind][col] = np.nan
-
-            te = time.time()
-            timing_dict['update_summary_heatmap-corr'] = te - ts
+            corr, pvalues, logs = recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff)
             ts = time.time()
 
             corr.fillna(0, inplace=True)
