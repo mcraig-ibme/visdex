@@ -280,35 +280,34 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # TODO: what would be good here would be to rename the clusters based on the average variance (diags) within
             # TODO: each cluster - that would reduce the undesirable behaviour whereby currently the clusters can jump about
             # TODO: when re-calculating the clustering.
-            # Sort corr columns
+            # Sort DFs' columns/rows into order based on clustering
             sorted_column_order = [x for _, x in sorted(zip(clx, selected_columns))]
 
-            half_sorted_corr = corr[sorted_column_order]
-            half_sorted_pval = pvalues[sorted_column_order]
-            half_sorted_logs = logs[sorted_column_order]
-
-            # Sort corr rows
-            sorted_corr = half_sorted_corr.reindex(sorted_column_order)
-            sorted_pval = half_sorted_pval.reindex(sorted_column_order)
-            sorted_logs = half_sorted_logs.reindex(sorted_column_order)
+            sorted_corr = reorder_df(corr, sorted_column_order)
+            sorted_pval = reorder_df(pvalues, sorted_column_order)
+            sorted_logs = reorder_df(logs, sorted_column_order)
 
             te = time.time()
             timing_dict['update_summary_heatmap-reorder'] = te - ts
             ts = time.time()
 
+            # Send to feather files
             sorted_corr.reset_index().to_feather('corr.feather')
             sorted_pval.reset_index().to_feather('pval.feather')
             sorted_logs.reset_index().to_feather('logs.feather')
             flattened_logs = flattened(logs).dropna()
             flattened_logs.reset_index().to_feather('flattened_logs.feather')
+
             te = time.time()
             timing_dict['update_summary_heatmap-save'] = te - ts
             ts = time.time()
+
             # Remove the upper triangle and diagonal
             triangular = sorted_corr.to_numpy()
             triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
             triangular_pval = sorted_pval.to_numpy()
             triangular_pval[np.tril_indices(triangular_pval.shape[0], 0)] = np.nan
+
             te = time.time()
             timing_dict['update_summary_heatmap-triangular'] = te - ts
 
