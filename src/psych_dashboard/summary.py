@@ -188,8 +188,15 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     ts = time.time()
     # Populate missing elements in correlation matrix and p-values matrix using stats.pearsonr
     # Firstly, convert the dff columns needed to numpy (far faster than doing it each iteration)
+    ts1 = time.time()
+
     np_dff_sel = dff[selected_columns].to_numpy()
     np_dff_req = dff[required_new].to_numpy()
+
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-numpy'] = te1 - ts1  # This is negligible
+
+    ts1 = time.time()
     counter = 0
     for v1, v2 in product(selected_columns, required_new):
         # Use counter to work out the indexing into the pre-numpyed arrays.
@@ -205,12 +212,20 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
             logs.at[v2, v1] = logs.at[v1, v2]
         counter += 1
 
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-calc'] = te1 - ts1   # 29 of 43s total.
+
+    # ts1 = time.time()
+
     # Now blank out any duplicates in logs including the diagonal. While this may seem
     # wasteful, to calculate them all and then delete some, it's the cleanest way to get the triangular matrix
     for ind in logs.index:
         for col in logs.columns:
             if ind in logs.columns and col in logs.index and logs[col][ind] == logs[ind][col]:
                 logs[ind][col] = np.nan
+
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-nan'] = te1 - ts1  # 14 of 43s total
 
     te = time.time()
     timing_dict['update_summary_heatmap-corr'] = te - ts
@@ -340,6 +355,9 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                               for i in np.where(y)[0]
                               ]
                               )
+
+            print(pd.DataFrame(timing_dict.items()))
+
             return fig, True, True
 
     fig = go.Figure(go.Heatmap())
@@ -350,6 +368,8 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                       yaxis_zeroline=False,
                       yaxis_range=[0, 1],
                       plot_bgcolor='rgba(0,0,0,0)')
+
+    print(pd.DataFrame(timing_dict.items()))
 
     return fig, False, False
 
