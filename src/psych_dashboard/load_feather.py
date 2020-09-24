@@ -88,7 +88,7 @@ def load_logs():
     Utility function for the common task of reading manhattan logs DF from feather file, and setting the index.
     """
     # The use of replace is required because the DF usually contains a column that is all-Nones, which remain
-    # as Nones instead of being converted to np.nan unless we do that explictly here.
+    # as Nones instead of being converted to np.nan unless we do that explicitly here.
     dff = pd.read_feather('logs.feather').replace([None], np.nan)
 
     if len(dff) > 0:
