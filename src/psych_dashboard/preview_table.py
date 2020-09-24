@@ -21,7 +21,7 @@ def update_preview_table(df_loaded):
         return html.Div(dash_table.DataTable(
             id='table',
             columns=[{"name": i, "id": i} for i in dff.columns],
-            data=dff.head().to_dict('record'),
+            data=dff.head().to_dict('records'),
         ),
                         )
 

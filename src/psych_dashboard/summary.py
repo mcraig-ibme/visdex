@@ -88,7 +88,7 @@ def update_summary_table(df_loaded, missing_value_cutoff):
                                        'id': i,
                                        'type': 'numeric',
                                        'format': {'specifier': '.2f'}} for i in description_df.columns],
-                             data=description_df.to_dict('record'),
+                             data=description_df.to_dict('records'),
                              fixed_rows={'headers': True},
                              style_table={'height': '300px', 'overflowY': 'auto'},
                              # Highlight any columns that do not have a complete set of records,
