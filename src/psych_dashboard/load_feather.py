@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from psych_dashboard.app import indices
 
 
@@ -86,7 +87,9 @@ def load_logs():
     """
     Utility function for the common task of reading manhattan logs DF from feather file, and setting the index.
     """
-    dff = pd.read_feather('logs.feather')
+    # The use of replace is required because the DF usually contains a column that is all-Nones, which remain
+    # as Nones instead of being converted to np.nan unless we do that explictly here.
+    dff = pd.read_feather('logs.feather').replace([None], np.nan)
 
     if len(dff) > 0:
         dff.set_index('index', inplace=True)

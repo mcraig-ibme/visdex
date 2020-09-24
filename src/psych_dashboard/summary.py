@@ -215,7 +215,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     for v2 in required_new:
         for v1 in overlap:
             new_against_existing_corr.at[v1, v2], new_against_existing_pval.at[v1, v2] = stats.pearsonr(dff[v1], dff[v2])
-            new_against_existing_logs.at[v1, v2] = -np.log10(new_against_existing_corr.at[v1, v2])
+            new_against_existing_logs.at[v1, v2] = -np.log10(new_against_existing_pval.at[v1, v2])
     print('corr', corr)
     print('n_a_e', new_against_existing_corr)
     corr[required_new] = new_against_existing_corr
@@ -226,7 +226,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     # Copy mixed results
     existing_against_new_corr = new_against_existing_corr.transpose()
     existing_against_new_pval = new_against_existing_pval.transpose()
-    existing_against_new_logs = new_against_existing_logs.transpose()
+    existing_against_new_logs = pd.DataFrame(data=np.nan, columns=overlap, index=required_new)
     print('e_a_n', existing_against_new_corr)
 
     new_against_new_corr = pd.DataFrame(columns=required_new, index=required_new)
@@ -235,7 +235,12 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     for v2 in required_new:
         for v1 in required_new:
             new_against_new_corr.at[v1, v2], new_against_new_pval.at[v1, v2] = stats.pearsonr(dff[v1], dff[v2])
-            new_against_new_logs.at[v1, v2] = -np.log10(new_against_new_corr.at[v1, v2])
+            if v1 != v2:
+                if required_new.index(v1) < required_new.index(v2):
+                    new_against_new_logs.at[v1, v2] = -np.log10(new_against_new_pval.at[v1, v2])
+                else:
+                    new_against_new_logs.at[v2, v1] = -np.log10(new_against_new_pval.at[v1, v2])
+            # new_against_new_logs.at[v1, v2] = -np.log10(new_against_new_corr.at[v1, v2])
 
     print('n_a_n', new_against_new_corr)
     existing_against_new_corr[required_new] = new_against_new_corr
@@ -243,8 +248,8 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     existing_against_new_logs[required_new] = new_against_new_logs
     print('e_a_n after append', existing_against_new_corr)
     corr = corr.append(existing_against_new_corr)
-    pvalues = pvalues.append(existing_against_new_corr)
-    logs = logs.append(existing_against_new_corr)
+    pvalues = pvalues.append(existing_against_new_pval)
+    logs = logs.append(existing_against_new_logs)
 
     print('corr', corr)
     # for v1 in selected_columns:
