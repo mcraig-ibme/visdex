@@ -211,47 +211,111 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     new_against_existing_corr = pd.DataFrame(columns=required_new, index=overlap)
     new_against_existing_pval = pd.DataFrame(columns=required_new, index=overlap)
     new_against_existing_logs = pd.DataFrame(columns=required_new, index=overlap)
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-nae_init'] = te1 - ts1
 
+    ts1 = time.time()
+    v1_count = 0
+    v2_count = 0
     for v2 in required_new:
         for v1 in overlap:
-            new_against_existing_corr.at[v1, v2], new_against_existing_pval.at[v1, v2] = stats.pearsonr(dff[v1], dff[v2])
-            new_against_existing_logs.at[v1, v2] = -np.log10(new_against_existing_pval.at[v1, v2])
-    print('corr', corr)
-    print('n_a_e', new_against_existing_corr)
+            if pd.isna(new_against_existing_corr.at[v1, v2]):
+                c, p = stats.pearsonr(np_dff_req[:, v1_count], np_dff_req[:, v2_count])
+                new_against_existing_corr.at[v1, v2] = c
+                new_against_existing_corr.at[v2, v1] = c
+                new_against_existing_pval.at[v1, v2] = p
+                new_against_existing_pval.at[v2, v1] = p
+                if v1 != v2:
+                    if required_new.index(v1) < required_new.index(v2):
+                        new_against_existing_logs.at[v1, v2] = -np.log10(p)
+                    else:
+                        new_against_existing_logs.at[v2, v1] = -np.log10(p)
+            v1_count += 1
+        v1_count = 0
+        v2_count += 1
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-nae_calc'] = te1 - ts1
+
+    ts1 = time.time()
+    # print('corr', corr)
+    # print('n_a_e', new_against_existing_corr)
     corr[required_new] = new_against_existing_corr
     pvalues[required_new] = new_against_existing_pval
     logs[required_new] = new_against_existing_logs
-    print('corr', corr)
+    # print('corr', corr)
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-nae_copy'] = te1 - ts1
 
+    ts1 = time.time()
     # Copy mixed results
     existing_against_new_corr = new_against_existing_corr.transpose()
     existing_against_new_pval = new_against_existing_pval.transpose()
     existing_against_new_logs = pd.DataFrame(data=np.nan, columns=overlap, index=required_new)
-    print('e_a_n', existing_against_new_corr)
+    # print('e_a_n', existing_against_new_corr)
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-nae_transpose'] = te1 - ts1
+
+    ts1 = time.time()
 
     new_against_new_corr = pd.DataFrame(columns=required_new, index=required_new)
     new_against_new_pval = pd.DataFrame(columns=required_new, index=required_new)
     new_against_new_logs = pd.DataFrame(columns=required_new, index=required_new)
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-nan_init'] = te1 - ts1
+
+    ts1 = time.time()
+
+    # np_dff_sel = dff[selected_columns].to_numpy()
+    # np_dff_overlap = dff[overlap].to_numpy()
+    np_dff_req = dff[required_new].to_numpy()
+
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-to_numpy'] = te1 - ts1
+
+    ts1 = time.time()
+
+    v1_count = 0
+    v2_count = 0
     for v2 in required_new:
         for v1 in required_new:
-            new_against_new_corr.at[v1, v2], new_against_new_pval.at[v1, v2] = stats.pearsonr(dff[v1], dff[v2])
-            if v1 != v2:
-                if required_new.index(v1) < required_new.index(v2):
-                    new_against_new_logs.at[v1, v2] = -np.log10(new_against_new_pval.at[v1, v2])
-                else:
-                    new_against_new_logs.at[v2, v1] = -np.log10(new_against_new_pval.at[v1, v2])
-            # new_against_new_logs.at[v1, v2] = -np.log10(new_against_new_corr.at[v1, v2])
+            if pd.isna(new_against_new_corr.at[v1, v2]):
+                c, p = stats.pearsonr(np_dff_req[:, v1_count], np_dff_req[:, v2_count])
+                new_against_new_corr.at[v1, v2] = c
+                new_against_new_corr.at[v2, v1] = c
+                new_against_new_pval.at[v1, v2] = p
+                new_against_new_pval.at[v2, v1] = p
+                if v1 != v2:
+                    if required_new.index(v1) < required_new.index(v2):
+                        new_against_new_logs.at[v1, v2] = -np.log10(p)
+                    else:
+                        new_against_new_logs.at[v2, v1] = -np.log10(p)
+            v1_count += 1
+        v1_count = 0
+        v2_count += 1
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-nan_calc'] = te1 - ts1
 
-    print('n_a_n', new_against_new_corr)
+    ts1 = time.time()
+    # print('n_a_n', new_against_new_corr)
     existing_against_new_corr[required_new] = new_against_new_corr
     existing_against_new_pval[required_new] = new_against_new_pval
     existing_against_new_logs[required_new] = new_against_new_logs
-    print('e_a_n after append', existing_against_new_corr)
+
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-nan_copy'] = te1 - ts1
+
+    ts1 = time.time()
+    # print('e_a_n after append', existing_against_new_corr)
     corr = corr.append(existing_against_new_corr)
     pvalues = pvalues.append(existing_against_new_pval)
     logs = logs.append(existing_against_new_logs)
 
-    print('corr', corr)
+    te1 = time.time()
+    timing_dict['update_summary_heatmap-ean_append'] = te1 - ts1
+
+    ts1 = time.time()
+    # print('corr', corr)
+    # print('logs', logs)
     # for v1 in selected_columns:
     #     v1_slice = np_dff_sel[:, v1_counter]
     #     for v2 in required_new:
@@ -336,9 +400,9 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             timing_dict['update_summary_heatmap-cluster'] = te - ts
             ts = time.time()
 
-            print('clx', clx)
-            print(selected_columns)
-            print(corr.index)
+            # print('clx', clx)
+            # print(selected_columns)
+            # print(corr.index)
             # Save cluster number of each column to a DF and then to feather.
             cluster_df = pd.DataFrame(data=clx, index=corr.index, columns=['column_names'])
             print(cluster_df)
@@ -361,6 +425,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # Send to feather files
             sorted_corr.reset_index().to_feather('corr.feather')
             sorted_pval.reset_index().to_feather('pval.feather')
+            # print('sorted_logs', sorted_logs)
             sorted_logs.reset_index().to_feather('logs.feather')
             flattened_logs = flattened(logs).dropna()
             flattened_logs.reset_index().to_feather('flattened_logs.feather')
