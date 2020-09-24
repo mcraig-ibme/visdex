@@ -159,30 +159,33 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     # TODO: note that if we load in a new file with some of the same column names, then this old correlation
     # TODO: data may be used erroneously.
     existing_cols = corr_dff.columns
-    overlap = set(selected_columns).intersection(set(existing_cols))
+    overlap = list(set(selected_columns).intersection(set(existing_cols)))
     print('these are needed and already available:', overlap)
-    required_new = set(selected_columns).difference(set(existing_cols))
+    required_new = list(set(selected_columns).difference(set(existing_cols)))
     print('these are needed and not already available:', required_new)
 
     # If there is overlap, then create brand new empty dataframes. Otherwise, update the existing dataframes.
     if len(overlap) == 0:
-        corr = pd.DataFrame(index=selected_columns, columns=selected_columns)
-        pvalues = pd.DataFrame(index=selected_columns, columns=selected_columns)
-        logs = pd.DataFrame(index=selected_columns, columns=selected_columns)
+        print('create new')
+        corr = pd.DataFrame()
+        pvalues = pd.DataFrame()
+        logs = pd.DataFrame()
 
     else:
         # Copy across existing data rather than recalculating (so in this operation we drop the unneeded elements)
         # Then create nan elements in corr, p-values and logs matrices for those values which
         # will be calculated.
-        corr = corr_dff[overlap][overlap]
-        corr = add_row_col_to_df(corr, required_new)
+        print('use overlap')
+        corr = corr_dff.loc[overlap, overlap]
+        # corr = add_row_col_to_df(corr, required_new)
 
-        pvalues = pval_dff[overlap][overlap]
-        pvalues = add_row_col_to_df(pvalues, required_new)
+        pvalues = pval_dff.loc[overlap, overlap]
+        # pvalues = add_row_col_to_df(pvalues, required_new)
 
-        logs = logs_dff[overlap][overlap]
-        logs = add_row_col_to_df(logs, required_new)
+        logs = logs_dff.loc[overlap, overlap]
+        # logs = add_row_col_to_df(logs, required_new)
 
+    print('corr init', corr)
     te = time.time()
     timing_dict['update_summary_heatmap-init-corr'] = te - ts
     ts = time.time()
@@ -191,6 +194,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     ts1 = time.time()
 
     np_dff_sel = dff[selected_columns].to_numpy()
+    np_dff_overlap = dff[overlap].to_numpy()
     np_dff_req = dff[required_new].to_numpy()
 
     te1 = time.time()
@@ -204,30 +208,69 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     logs_columns = logs.columns.to_list()
     # Calculate once as this will be reused (for performance)
     len_required_new = len(required_new)
-    for v1 in selected_columns:
-        v1_slice = np_dff_sel[:, v1_counter]
-        for v2 in required_new:
-            # Use counter to work out the indexing into the pre-numpyed arrays.
-            v2_counter = counter % len_required_new
+    new_against_existing_corr = pd.DataFrame(columns=required_new, index=overlap)
+    new_against_existing_pval = pd.DataFrame(columns=required_new, index=overlap)
+    new_against_existing_logs = pd.DataFrame(columns=required_new, index=overlap)
 
-            # Calculate corr and p-val
-            if pd.isna(corr.at[v1, v2]):
-                # We save the correlation and pval to local variables c and p to enable reuse without
-                # having to us .at[,]
-                c, p = stats.pearsonr(v1_slice, np_dff_req[:, v2_counter])
-                corr.at[v1, v2] = c
-                pvalues.at[v1, v2] = p
-                # Populate the other half of the matrix
-                corr.at[v2, v1] = c
-                pvalues.at[v2, v1] = p
-                # Only populate the upper triangle (exc diagonal) of the logs DF.
-                if v1 != v2:
-                    if logs_columns.index(v1) < logs_columns.index(v2):
-                        logs.at[v1, v2] = -np.log10(p)
-                    else:
-                        logs.at[v2, v1] = -np.log10(p)
-            counter += 1
-        v1_counter += 1
+    for v2 in required_new:
+        for v1 in overlap:
+            new_against_existing_corr.at[v1, v2], new_against_existing_pval.at[v1, v2] = stats.pearsonr(dff[v1], dff[v2])
+            new_against_existing_logs.at[v1, v2] = -np.log10(new_against_existing_corr.at[v1, v2])
+    print('corr', corr)
+    print('n_a_e', new_against_existing_corr)
+    corr[required_new] = new_against_existing_corr
+    pvalues[required_new] = new_against_existing_pval
+    logs[required_new] = new_against_existing_logs
+    print('corr', corr)
+
+    # Copy mixed results
+    existing_against_new_corr = new_against_existing_corr.transpose()
+    existing_against_new_pval = new_against_existing_pval.transpose()
+    existing_against_new_logs = new_against_existing_logs.transpose()
+    print('e_a_n', existing_against_new_corr)
+
+    new_against_new_corr = pd.DataFrame(columns=required_new, index=required_new)
+    new_against_new_pval = pd.DataFrame(columns=required_new, index=required_new)
+    new_against_new_logs = pd.DataFrame(columns=required_new, index=required_new)
+    for v2 in required_new:
+        for v1 in required_new:
+            new_against_new_corr.at[v1, v2], new_against_new_pval.at[v1, v2] = stats.pearsonr(dff[v1], dff[v2])
+            new_against_new_logs.at[v1, v2] = -np.log10(new_against_new_corr.at[v1, v2])
+
+    print('n_a_n', new_against_new_corr)
+    existing_against_new_corr[required_new] = new_against_new_corr
+    existing_against_new_pval[required_new] = new_against_new_pval
+    existing_against_new_logs[required_new] = new_against_new_logs
+    print('e_a_n after append', existing_against_new_corr)
+    corr = corr.append(existing_against_new_corr)
+    pvalues = pvalues.append(existing_against_new_corr)
+    logs = logs.append(existing_against_new_corr)
+
+    print('corr', corr)
+    # for v1 in selected_columns:
+    #     v1_slice = np_dff_sel[:, v1_counter]
+    #     for v2 in required_new:
+    #         # Use counter to work out the indexing into the pre-numpyed arrays.
+    #         v2_counter = counter % len_required_new
+    #
+    #         # Calculate corr and p-val
+    #         if pd.isna(corr.at[v1, v2]):
+    #             # We save the correlation and pval to local variables c and p to enable reuse without
+    #             # having to us .at[,]
+    #             c, p = stats.pearsonr(v1_slice, np_dff_req[:, v2_counter])
+    #             corr.at[v1, v2] = c
+    #             pvalues.at[v1, v2] = p
+    #             # Populate the other half of the matrix
+    #             corr.at[v2, v1] = c
+    #             pvalues.at[v2, v1] = p
+    #             # Only populate the upper triangle (exc diagonal) of the logs DF.
+    #             if v1 != v2:
+    #                 if logs_columns.index(v1) < logs_columns.index(v2):
+    #                     logs.at[v1, v2] = -np.log10(p)
+    #                 else:
+    #                     logs.at[v2, v1] = -np.log10(p)
+    #         counter += 1
+    #     v1_counter += 1
 
     te1 = time.time()
     timing_dict['update_summary_heatmap-calc'] = te1 - ts1   # 29 of 43s total. Then 28 of 28 once nan removal is ditched :D. 24s once values are reused.
@@ -288,8 +331,11 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             timing_dict['update_summary_heatmap-cluster'] = te - ts
             ts = time.time()
 
+            print('clx', clx)
+            print(selected_columns)
+            print(corr.index)
             # Save cluster number of each column to a DF and then to feather.
-            cluster_df = pd.DataFrame(data=clx, index=selected_columns, columns=['column_names'])
+            cluster_df = pd.DataFrame(data=clx, index=corr.index, columns=['column_names'])
             print(cluster_df)
             cluster_df.reset_index().to_feather('cluster.feather')
 
@@ -297,7 +343,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # TODO: each cluster - that would reduce the undesirable behaviour whereby currently the clusters can jump about
             # TODO: when re-calculating the clustering.
             # Sort DFs' columns/rows into order based on clustering
-            sorted_column_order = [x for _, x in sorted(zip(clx, selected_columns))]
+            sorted_column_order = [x for _, x in sorted(zip(clx, corr.index))]
 
             sorted_corr = reorder_df(corr, sorted_column_order)
             sorted_pval = reorder_df(pvalues, sorted_column_order)
