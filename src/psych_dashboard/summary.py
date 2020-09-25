@@ -304,7 +304,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     te1 = time.time()
     timing_dict['update_summary_heatmap-ean_append'] = te1 - ts1
 
-    ts1 = time.time()
+    # ts1 = time.time()
     # print('corr', corr)
     # print('logs', logs)
     # for v1 in selected_columns:
@@ -332,8 +332,8 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     #         counter += 1
     #     v1_counter += 1
 
-    te1 = time.time()
-    timing_dict['update_summary_heatmap-calc'] = te1 - ts1   # 29 of 43s total. Then 28 of 28 once nan removal is ditched :D. 24s once values are reused.
+    # te1 = time.time()
+    # timing_dict['update_summary_heatmap-calc'] = te1 - ts1   # 29 of 43s total. Then 28 of 28 once nan removal is ditched :D. 24s once values are reused.
 
     te = time.time()
     timing_dict['update_summary_heatmap-corr'] = te - ts
@@ -589,12 +589,16 @@ def calculate_colorscale(n_values):
 def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     print('plot_manhattan')
 
+    ts = time.time()
     if manhattan_active != ['manhattan-active']:
         raise PreventUpdate
     if pvalue <= 0. or pvalue is None:
         raise PreventUpdate
 
     dff = load('pval')
+    te = time.time()
+    timing_dict['plot_manhattan-load_pval'] = te - ts
+    ts = time.time()
     # print(dff)
     # print([dff[col].dtype for col in dff.columns])
     manhattan_variable = [col for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
@@ -608,24 +612,36 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     # print(logs)
     flattened_logs = load('flattened_logs')
     # print(flattened_logs)
+    te = time.time()
+    timing_dict['plot_manhattan-load_both_logs'] = te - ts
+    ts = time.time()
     transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
-
+    te = time.time()
+    timing_dict['plot_manhattan-tranform'] = te - ts
+    ts = time.time()
     inf_replacement = 0
     if np.inf in flattened_logs.values:
         print('Replacing np.inf in flattened logs')
         temp_vals = flattened_logs.replace([np.inf, -np.inf], np.nan).dropna()
         inf_replacement = 1.2 * np.max(np.flip(temp_vals.values))
         flattened_logs = flattened_logs.replace([np.inf, -np.inf], inf_replacement)
-
+    te = time.time()
+    timing_dict['plot_manhattan-load_cutoff'] = te - ts
+    ts = time.time()
     # Load cluster numbers to use for colouring
     cluster_df = load('cluster')
     # print('cluster', cluster_df)
-
+    te = time.time()
+    timing_dict['plot_manhattan-load_cluster'] = te - ts
+    ts = time.time()
     # Convert to colour array - set to the cluster number if the two variables are in the same cluster,
     # and set any other pairings to -1 (which will be coloured black)
     colors = [cluster_df['column_names'][item[0]]
               if cluster_df['column_names'][item[0]] == cluster_df['column_names'][item[1]] else -1
               for item in flattened_logs.index[::-1]]
+    te = time.time()
+    timing_dict['plot_manhattan-calc_colors'] = te - ts
+    ts = time.time()
     max_cluster = max(cluster_df['column_names'])
     fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
                                y=np.flip(flattened_logs.values),
@@ -684,5 +700,8 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
         yaxis_title='-log10(p)',
         yaxis_type='log' if logscale == ['LOG'] else None
     )
+    te = time.time()
+    timing_dict['plot_manhattan-figure'] = te - ts
+
     print(pd.DataFrame(timing_dict.items()))
     return fig
