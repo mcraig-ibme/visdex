@@ -151,6 +151,10 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     required_new = list(set(selected_columns).difference(set(existing_cols)))
     print('these are needed and not already available:', required_new)
 
+    ########
+    # Create initial existing vs existing DF
+    ########
+
     # If there is overlap, then create brand new empty dataframes. Otherwise, update the existing dataframes.
     if len(overlap) == 0:
         print('create new')
@@ -162,19 +166,9 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         # Copy across existing data rather than recalculating (so in this operation we drop the unneeded elements)
         # Then create nan elements in corr, p-values and logs matrices for those values which
         # will be calculated.
-        # print('use overlap')
         corr = corr_dff.loc[overlap, overlap]
-        # corr = add_row_col_to_df(corr, required_new)
-
         pvalues = pval_dff.loc[overlap, overlap]
-        # pvalues = add_row_col_to_df(pvalues, required_new)
-
-        # print('logs_dff', logs_dff)
         logs = logs_dff.loc[overlap, overlap]
-        # logs = add_row_col_to_df(logs, required_new)
-
-    # print('corr init', corr)
-    # print('logs init', logs)
 
     te = time.time()
     timing_dict['update_summary_heatmap-init-corr'] = te - ts
@@ -183,120 +177,104 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     # Firstly, convert the dff columns needed to numpy (far faster than doing it each iteration)
     ts1 = time.time()
 
-    np_dff_sel = dff[selected_columns].to_numpy()
     np_dff_overlap = dff[overlap].to_numpy()
     np_dff_req = dff[required_new].to_numpy()
 
     te1 = time.time()
     timing_dict['update_summary_heatmap-numpy'] = te1 - ts1  # This is negligible
 
+    ########
+    # Create new vs existing NumPy arrays, fill with calculated data. Then convert to DFs, and append those to
+    # existing vs existing DF, to create all vs existing DFs
+    ########
     ts1 = time.time()
-    counter = 0
-    v1_counter = 0
-    # Explicitly query this here as I can't fully guarantee the relationship between the ordering of this
-    # and the ordering of selected_columns or overlap + required_new
-    logs_columns = logs.columns.to_list()
-    # Calculate once as this will be reused (for performance)
-    len_required_new = len(required_new)
-    new_against_existing_corr = pd.DataFrame(columns=required_new, index=overlap)
-    new_against_existing_pval = pd.DataFrame(columns=required_new, index=overlap)
-    new_against_existing_logs = pd.DataFrame(columns=required_new, index=overlap)
+    new_against_existing_corr = np.full(shape=[len(overlap), len(required_new)], fill_value=np.nan)
+    new_against_existing_pval = np.full(shape=[len(overlap), len(required_new)], fill_value=np.nan)
+    new_against_existing_logs = np.full(shape=[len(overlap), len(required_new)], fill_value=np.nan)
+
     te1 = time.time()
     timing_dict['update_summary_heatmap-nae_init'] = te1 - ts1
-
     ts1 = time.time()
-    v1_count = 0
-    v2_count = 0
-    for v2 in required_new:
-        for v1 in overlap:
-            if pd.isna(new_against_existing_corr.at[v1, v2]):
-                c, p = stats.pearsonr(np_dff_req[:, v1_count], np_dff_req[:, v2_count])
-                # Try doing this all in numpy arrays then copy
-                new_against_existing_corr.at[v1, v2] = c
-                new_against_existing_corr.at[v2, v1] = c
-                new_against_existing_pval.at[v1, v2] = p
-                new_against_existing_pval.at[v2, v1] = p
-                if v1 != v2:
-                    if required_new.index(v1) < required_new.index(v2):
-                        new_against_existing_logs.at[v1, v2] = -np.log10(p)
-                    else:
-                        new_against_existing_logs.at[v2, v1] = -np.log10(p)
-            v1_count += 1
-        v1_count = 0
-        v2_count += 1
+
+    for v2 in range(len(required_new)):
+        for v1 in range(len(overlap)):
+            c, p = stats.pearsonr(np_dff_overlap[:, v1], np_dff_req[:, v2])
+            new_against_existing_corr[v1, v2] = c
+            new_against_existing_pval[v1, v2] = p
+            new_against_existing_logs[v1, v2] = -np.log10(p)
+
     te1 = time.time()
     timing_dict['update_summary_heatmap-nae_calc'] = te1 - ts1
-
     ts1 = time.time()
+
+    new_against_existing_corr_df = pd.DataFrame(data=new_against_existing_corr, columns=required_new, index=overlap)
+    corr[required_new] = new_against_existing_corr_df
     # print('corr', corr)
-    # print('n_a_e', new_against_existing_corr)
-    corr[required_new] = new_against_existing_corr
-    pvalues[required_new] = new_against_existing_pval
-    logs[required_new] = new_against_existing_logs
-    # print('corr', corr)
+    new_against_existing_pval_df = pd.DataFrame(data=new_against_existing_pval, columns=required_new, index=overlap)
+    pvalues[required_new] = new_against_existing_pval_df
+    # As new_against_existing_logs doesn't need to be transposed (the transpose is nans instead),
+    # don't use an intermediate DF.
+    logs[required_new] = pd.DataFrame(data=new_against_existing_logs, columns=required_new, index=overlap)
+
     te1 = time.time()
     timing_dict['update_summary_heatmap-nae_copy'] = te1 - ts1
-
     ts1 = time.time()
-    # Copy mixed results
-    existing_against_new_corr = new_against_existing_corr.transpose()
-    existing_against_new_pval = new_against_existing_pval.transpose()
+
+    ########
+    # Create existing vs new DFs by transpose (apart from logs, whose transpose is nans)
+    ########
+
+    existing_against_new_corr = new_against_existing_corr_df.transpose()
+    existing_against_new_pval = new_against_existing_pval_df.transpose()
     existing_against_new_logs = pd.DataFrame(data=np.nan, columns=overlap, index=required_new)
-    # print('e_a_n', existing_against_new_corr)
+
     te1 = time.time()
     timing_dict['update_summary_heatmap-nae_transpose'] = te1 - ts1
-
     ts1 = time.time()
 
-    new_against_new_corr = pd.DataFrame(columns=required_new, index=required_new)
-    new_against_new_pval = pd.DataFrame(columns=required_new, index=required_new)
-    new_against_new_logs = pd.DataFrame(columns=required_new, index=required_new)
+    ########
+    # Create new vs new NumPy arrays, fill with calculated data. Then convert to DFs, and append those to
+    # existing vs new DF, to create all vs new DFs
+    ########
+
+    new_against_new_corr = np.full(shape=[len(required_new), len(required_new)], fill_value=np.nan)
+    new_against_new_pval = np.full(shape=[len(required_new), len(required_new)], fill_value=np.nan)
+    new_against_new_logs = np.full(shape=[len(required_new), len(required_new)], fill_value=np.nan)
+
     te1 = time.time()
     timing_dict['update_summary_heatmap-nan_init'] = te1 - ts1
-
     ts1 = time.time()
 
-    # np_dff_sel = dff[selected_columns].to_numpy()
-    # np_dff_overlap = dff[overlap].to_numpy()
-    np_dff_req = dff[required_new].to_numpy()
-
-    te1 = time.time()
-    timing_dict['update_summary_heatmap-to_numpy'] = te1 - ts1
-
-    ts1 = time.time()
-
-    v1_count = 0
-    v2_count = 0
-    for v2 in required_new:
-        for v1 in required_new:
-            if pd.isna(new_against_new_corr.at[v1, v2]):
+    for (v2_count, v2) in enumerate(required_new):
+        for (v1_count, v1) in enumerate(required_new):
+            if np.isnan(new_against_new_corr[v1_count, v2_count]):
                 c, p = stats.pearsonr(np_dff_req[:, v1_count], np_dff_req[:, v2_count])
-                new_against_new_corr.at[v1, v2] = c
-                new_against_new_corr.at[v2, v1] = c
-                new_against_new_pval.at[v1, v2] = p
-                new_against_new_pval.at[v2, v1] = p
+                new_against_new_corr[v1_count, v2_count] = c
+                new_against_new_corr[v2_count, v1_count] = c
+                new_against_new_pval[v1_count, v2_count] = p
+                new_against_new_pval[v2_count, v1_count] = p
                 if v1 != v2:
                     if required_new.index(v1) < required_new.index(v2):
-                        new_against_new_logs.at[v1, v2] = -np.log10(p)
+                        new_against_new_logs[v1_count, v2_count] = -np.log10(p)
                     else:
-                        new_against_new_logs.at[v2, v1] = -np.log10(p)
-            v1_count += 1
-        v1_count = 0
-        v2_count += 1
+                        new_against_new_logs[v2_count, v1_count] = -np.log10(p)
+
     te1 = time.time()
     timing_dict['update_summary_heatmap-nan_calc'] = te1 - ts1
-
     ts1 = time.time()
-    # print('n_a_n', new_against_new_corr)
-    existing_against_new_corr[required_new] = new_against_new_corr
-    existing_against_new_pval[required_new] = new_against_new_pval
-    existing_against_new_logs[required_new] = new_against_new_logs
+
+    existing_against_new_corr[required_new] = pd.DataFrame(data=new_against_new_corr, columns=required_new, index=required_new)
+    existing_against_new_pval[required_new] = pd.DataFrame(data=new_against_new_pval, columns=required_new, index=required_new)
+    existing_against_new_logs[required_new] = pd.DataFrame(data=new_against_new_logs, columns=required_new, index=required_new)
 
     te1 = time.time()
     timing_dict['update_summary_heatmap-nan_copy'] = te1 - ts1
-
     ts1 = time.time()
-    # print('e_a_n after append', existing_against_new_corr)
+
+    ########
+    # Append all vs new DFs to all vs existing DFs to give all vs all DFs.
+    ########
+
     corr = corr.append(existing_against_new_corr)
     pvalues = pvalues.append(existing_against_new_pval)
     logs = logs.append(existing_against_new_logs)
