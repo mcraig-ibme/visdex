@@ -133,19 +133,6 @@ def update_heatmap_dropdown(df_loaded):
         [col for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
 
 
-def add_row_col_to_df(df, rowcol_name):
-    """
-    Add columns and rows to df, both named with the elements of rowcol_name and filled with np.nan
-    """
-    # Add rows
-    df = df.append([pd.Series(np.nan, index=df.columns, name=col) for col in rowcol_name])
-    # Add columns
-    for col in rowcol_name:
-        df[col] = np.nan
-
-    return df
-
-
 def reorder_df(df, order):
     """
     Change the row and column order of df to that given in order
