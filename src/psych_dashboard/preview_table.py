@@ -2,7 +2,7 @@ import dash_table
 import dash_html_components as html
 from dash.dependencies import Input, Output
 from psych_dashboard.app import app, indices
-from psych_dashboard.load_feather import load_feather
+from psych_dashboard.load_feather import load
 
 
 @app.callback(
@@ -11,7 +11,7 @@ from psych_dashboard.load_feather import load_feather
 def update_preview_table(df_loaded):
     print('update_preview_table')
 
-    dff = load_feather()
+    dff = load('df')
 
     # Add the indices back in as columns so we can see them in the table preview
     if dff.size > 0:

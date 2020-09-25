@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
-from psych_dashboard.app import indices
+from psych_dashboard.app import indices, cache
+
+use_redis = True
 
 
 def load_cluster_feather():
@@ -69,6 +71,71 @@ def load_corr():
     if len(dff) > 0:
         dff.set_index('index', inplace=True)
     return dff
+
+
+# @cache.cached()
+def load(name):
+    if use_redis:
+        print("get cache", name)
+        try:
+            df = cache.get(name)
+            if df is None:
+                return pd.DataFrame()
+            else:
+                return df
+        except KeyError:
+            return pd.DataFrame()
+    else:
+        # use feather
+        if name == 'cluster':
+            return load_cluster_feather()
+        elif name == 'parsed':
+            return load_parsed_feather()
+        elif name == 'columns':
+            return load_columns_feather()
+        elif name == 'df':
+            return load_feather()
+        elif name == 'filtered':
+            return load_filtered_feather()
+        elif name == 'corr':
+            return load_corr()
+        elif name == 'pval':
+            return load_pval()
+        elif name == 'logs':
+            return load_logs()
+        elif name == 'flattened_logs':
+            return load_flattened_logs()
+        else:
+            raise KeyError(name)
+
+
+def store(name, df):
+    if use_redis:
+        print("set cache", name)
+        cache.set(name, df)
+        return None
+    else:
+        # use feather
+        if name == 'cluster':
+            df.reset_index().to_feather('cluster.feather')
+        elif name == 'parsed':
+            df.reset_index().to_feather('df_parsed.feather')
+        elif name == 'columns':
+            df.reset_index().to_feather('df_columns.feather')
+        elif name == 'df':
+            df.reset_index().to_feather('df.feather')
+        elif name == 'filtered':
+            df.reset_index().to_feather('df_filtered.feather')
+        elif name == 'corr':
+            df.reset_index().to_feather('corr.feather')
+        elif name == 'pval':
+            df.reset_index().to_feather('pval.feather')
+        elif name == 'logs':
+            df.reset_index().to_feather('logs.feather')
+        elif name == 'flattened_logs':
+            df.reset_index().to_feather('flattened_logs.feather')
+        else:
+            raise KeyError(name)
 
 
 def load_pval():

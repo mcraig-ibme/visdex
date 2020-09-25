@@ -8,10 +8,9 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
 from psych_dashboard import preview_table, summary, exploratory_graph_groups
-from psych_dashboard.load_feather import load_parsed_feather, load_columns_feather
+from psych_dashboard.load_feather import store, load
 from psych_dashboard.exploratory_graphs import scatter_graph, bar_graph, manhattan_graph
 from psych_dashboard.app import app, indices, standard_margin_left, div_style
-
 
 global_width = '100%'
 header_image = '/assets/UoN_Primary_Logo_RGB.png'
@@ -324,7 +323,7 @@ def parse_input_data_file(contents, filename, date):
                 'There was an error processing this file.'
             ])]
 
-        df.reset_index().to_feather('df_parsed.feather')
+        store('parsed', df)
 
         return [html.Div([filename, ' loaded, last modified ',
                           datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')],
@@ -361,7 +360,7 @@ def parse_input_filter_file(contents, filename, date):
                 'There was an error processing this file.'
             ])
         df = pd.DataFrame(variables_of_interest, columns=['names'])
-        df.reset_index().to_feather('df_columns.feather')
+        store('columns', df)
 
         return [html.Div([filename, ' loaded, last modified ',
                           datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')],
@@ -384,11 +383,11 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
     # Read in main DataFrame
     if data_file_value is None:
         return [False]
-    df = load_parsed_feather()
+    df = load('parsed')
 
     # Read in column DataFrame, or just use all the columns in the DataFrame (need to make
     if filter_file_value is not None:
-        variables_of_interest = list(load_columns_feather()['names'])
+        variables_of_interest = list(load('columns')['names'])
 
         # Verify that the variables of interest exist in the dataframe
         missing_vars = [var for var in variables_of_interest if var not in df.columns]
@@ -416,8 +415,8 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
     # Set SUBJECTKEY, EVENTNAME as MultiIndex
     df.set_index(indices, inplace=True, verify_integrity=True, drop=True)
 
-    # Fill df.feather with the combined DF, and set df-loaded-div to [True]
-    df.reset_index().to_feather('df.feather')
+    # Store the combined DF, and set df-loaded-div to [True]
+    store('df', df)
 
     return [True]
 
@@ -425,9 +424,8 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
 def main():
     # Create empty feather files to simplify the handling of them if they don't exist or contain
     # old data.
-    for feather_file in ['df.feather', 'df_parsed.feather', 'df_columns.feather', 'df_filtered.feather',
-                         'corr.feather', 'pval.feather', 'logs.feather', 'flattened_logs.feather']:
-        pd.DataFrame().reset_index().to_feather(feather_file)
+    for name in ['cluster', 'parsed', 'columns', 'df', 'filtered', 'corr', 'pval', 'logs', 'flattened_logs']:
+        store(name, pd.DataFrame())
     app.run_server(debug=True)
 
 
