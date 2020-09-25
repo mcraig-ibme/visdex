@@ -428,7 +428,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # print('pval col dtypes3', [sorted_pval[col].dtype for col in sorted_pval.columns])
 
             store('logs', sorted_logs)
-            flattened_logs = flattened(logs).dropna()
+            flattened_logs = flattened(logs)
             print('flattened_logs', flattened_logs)
             store('flattened_logs', flattened_logs)
 

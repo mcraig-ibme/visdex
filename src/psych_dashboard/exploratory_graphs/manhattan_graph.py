@@ -69,9 +69,15 @@ def flattened(df):
     :param df:
     :return:
     """
-    s = pd.Series(index=pd.MultiIndex.from_tuples(itertools.product(df.index, df.columns), names=['first', 'second']), name='value')
-    for (a, b) in itertools.product(df.index, df.columns):
+    # The series contains only half of the matrix, so filter by the order of the two level labels.
+    s = pd.Series(index=pd.MultiIndex.from_tuples(filter(lambda x: df.index.get_loc(x[0]) < df.index.get_loc(x[1]),
+                                                         list(itertools.product(df.index, df.columns))),
+                                                  names=['first', 'second']),
+                  name='value')
+
+    for (a, b) in s.index:
         s[a, b] = df[b][a]
+
     return s
 
 
