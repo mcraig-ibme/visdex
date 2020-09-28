@@ -1,8 +1,11 @@
+import logging
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 from psych_dashboard.app import app, all_bar_components
 from psych_dashboard.load_feather import load
 from psych_dashboard.exploratory_graph_groups import update_graph_components
+
+logging.getLogger(__name__)
 
 
 @app.callback(
@@ -14,7 +17,7 @@ from psych_dashboard.exploratory_graph_groups import update_graph_components
      for component in all_bar_components for prop in component]
 )
 def update_bar_components(df_loaded, style_dict, *args):
-    print('update_bar_components')
+    logging.info(f'update_bar_components')
     dff = load('filtered')
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns]
@@ -26,7 +29,7 @@ def update_bar_components(df_loaded, style_dict, *args):
     [*(Input({'type': 'bar-' + component['id'], 'index': MATCH}, "value") for component in all_bar_components)],
 )
 def make_bar_figure(*args):
-    print('make_bar_figure')
+    logging.info(f'make_bar_figure')
     keys = [component['id'] for component in all_bar_components]
 
     args_dict = dict(zip(keys, args))

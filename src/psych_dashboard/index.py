@@ -1,6 +1,7 @@
 import io
 import base64
 import datetime
+import logging
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
@@ -11,6 +12,8 @@ from psych_dashboard import preview_table, summary, exploratory_graph_groups
 from psych_dashboard.load_feather import store, load
 from psych_dashboard.exploratory_graphs import scatter_graph, bar_graph, manhattan_graph
 from psych_dashboard.app import app, indices, standard_margin_left, div_style
+
+logging.getLogger(__name__)
 
 global_width = '100%'
 header_image = '/assets/UoN_Primary_Logo_RGB.png'
@@ -262,7 +265,7 @@ app.layout = html.Div(children=[
     [State("summary-collapse", "is_open")],
 )
 def toggle_collapse_summary(n, is_open):
-    print('toggle_collapse_summary', n, is_open)
+    logging.info(f'toggle_collapse_summary {n} {is_open}')
     if n:
         return not is_open, "+" if is_open else "-"
     return is_open, "-"
@@ -275,7 +278,7 @@ def toggle_collapse_summary(n, is_open):
     [State("explore-collapse", "is_open")],
 )
 def toggle_collapse_explore(n, is_open):
-    print('toggle_collapse_explore', n, is_open)
+    logging.info(f'toggle_collapse_explore {n} {is_open}')
     if n:
         return not is_open, "+" if is_open else "-"
     return is_open, "-"
@@ -297,7 +300,7 @@ def standardise_subjectkey(subjectkey):
 # This function is triggered by the data file upload, and parses the contents of the triggering file,
 # then saves them to the appropriate children
 def parse_input_data_file(contents, filename, date):
-    print('parse data')
+    logging.info(f'parse data')
 
     if contents is not None:
         content_type, content_string = contents.split(',')
@@ -318,7 +321,7 @@ def parse_input_data_file(contents, filename, date):
             else:
                 raise NotImplementedError
         except Exception as e:
-            print(e)
+            logging.error(f'{e}')
             return [html.Div([
                 'There was an error processing this file.'
             ])]
@@ -343,7 +346,7 @@ def parse_input_data_file(contents, filename, date):
 # This function is triggered by either upload, and parses the contents of the triggering file,
 # then saves them to the appropriate children
 def parse_input_filter_file(contents, filename, date):
-    print('parse filter')
+    logging.info(f'parse filter')
 
     if contents is not None:
         content_type, content_string = contents.split(',')
@@ -355,7 +358,7 @@ def parse_input_filter_file(contents, filename, date):
             variables_of_interest.extend(index for index in indices if index not in variables_of_interest)
 
         except Exception as e:
-            print(e)
+            logging.error(f'{e}')
             return html.Div([
                 'There was an error processing this file.'
             ])

@@ -1,4 +1,5 @@
 import math
+import logging
 import numpy as np
 import pandas as pd
 import time
@@ -19,6 +20,8 @@ from functools import wraps
 
 timing_dict = dict()
 
+logging.getLogger(__name__)
+
 
 def timing(f):
     @wraps(f)
@@ -26,8 +29,7 @@ def timing(f):
         ts = time.time()
         result = f(*args, **kw)
         te = time.time()
-        print('#### func:%r took: %2.4f sec' %
-              (f.__name__, te-ts))
+        logging.info(f'#### func:{f.__name__} took: {te-te:.2f} sec')
         timing_dict[f.__name__] = te-ts
         return result
     return wrap
@@ -40,7 +42,7 @@ def timing(f):
      Input('missing-values-input', 'value')])
 @timing
 def update_summary_table(df_loaded, missing_value_cutoff):
-    print('update_summary_table')
+    logging.info(f'update_summary_table')
     dff = load('df')
 
     # If empty, return an empty Div
@@ -124,7 +126,7 @@ def update_summary_table(df_loaded, missing_value_cutoff):
 )
 @timing
 def update_heatmap_dropdown(df_loaded):
-    print('update_heatmap_dropdown', df_loaded)
+    logging.info(f'update_heatmap_dropdown {df_loaded}')
     dff = load('filtered')
 
     options = [{'label': col,
@@ -147,9 +149,9 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     # TODO: data may be used erroneously.
     existing_cols = corr_dff.columns
     overlap = list(set(selected_columns).intersection(set(existing_cols)))
-    print('these are needed and already available:', overlap)
+    logging.debug(f'these are needed and already available: {overlap}')
     required_new = list(set(selected_columns).difference(set(existing_cols)))
-    print('these are needed and not already available:', required_new)
+    logging.debug(f'these are needed and not already available: {required_new}')
 
     ########
     # Create initial existing vs existing DF
@@ -157,7 +159,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
 
     # If there is overlap, then create brand new empty dataframes. Otherwise, update the existing dataframes.
     if len(overlap) == 0:
-        print('create new')
+        logging.debug(f'create new')
         corr = pd.DataFrame()
         pvalues = pd.DataFrame()
         logs = pd.DataFrame()
@@ -209,7 +211,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
 
     new_against_existing_corr_df = pd.DataFrame(data=new_against_existing_corr, columns=required_new, index=overlap)
     corr[required_new] = new_against_existing_corr_df
-    # print('corr', corr)
+    # logging.debug(f'corr {corr}')
     new_against_existing_pval_df = pd.DataFrame(data=new_against_existing_pval, columns=required_new, index=overlap)
     pvalues[required_new] = new_against_existing_pval_df
     # As new_against_existing_logs doesn't need to be transposed (the transpose is nans instead),
@@ -329,7 +331,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     [State('df-loaded-div', 'children')])
 @timing
 def update_summary_heatmap(dropdown_values, clusters, df_loaded):
-    print('update_summary_heatmap', dropdown_values, clusters)
+    logging.info(f'update_summary_heatmap {dropdown_values} {clusters}')
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
         dff = load('filtered')
@@ -344,11 +346,11 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
 
             # The columns we want to have calculated
             selected_columns = list(dropdown_values)
-            print('selected_columns', selected_columns)
+            logging.debug(f'selected_columns {selected_columns}')
 
             corr, pvalues, logs = recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff)
             ts = time.time()
-            # print('pvalues col dtypes', [pvalues[col].dtype for col in pvalues.columns])
+            # logging.debug(f'pvalues col dtypes {[pvalues[col].dtype for col in pvalues.columns]}')
 
             corr.fillna(0, inplace=True)
             cluster_method = 'hierarchical'
@@ -370,12 +372,12 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             timing_dict['update_summary_heatmap-cluster'] = te - ts
             ts = time.time()
 
-            # print('clx', clx)
-            # print(selected_columns)
-            # print(corr.index)
+            # loggin.debug(f'clx {clx}')
+            # print(f'{selected_columns}')
+            # print(f'{corr.index}')
             # Save cluster number of each column to a DF and then to feather.
             cluster_df = pd.DataFrame(data=clx, index=corr.index, columns=['column_names'])
-            print(cluster_df)
+            logging.debug(f'{cluster_df}')
             store('cluster', cluster_df)
 
             # TODO: what would be good here would be to rename the clusters based on the average variance (diags) within
@@ -387,12 +389,12 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             sorted_corr = reorder_df(corr, sorted_column_order)
             sorted_corr = sorted_corr[sorted_corr.columns].apply(pd.to_numeric, errors='coerce')
             sorted_pval = reorder_df(pvalues, sorted_column_order)
-            # print('sorted_pval before conversion', sorted_pval)
-            # print('pval col dtypes1', [sorted_pval[col].dtype for col in sorted_pval.columns])
+            # logging.debug(f'sorted_pval before conversion {sorted_pval}')
+            # logging.debug(f'pval col dtypes1 {[sorted_pval[col].dtype for col in sorted_pval.columns]}')
 
             sorted_pval = sorted_pval[sorted_pval.columns].apply(pd.to_numeric, errors='coerce')
-            # print('sorted_pval after conversion', sorted_pval)
-            # print('pval col dtypes2', [sorted_pval[col].dtype for col in sorted_pval.columns])
+            # logging.debug(f'sorted_pval after conversion {sorted_pval}')
+            # loggin.debug(f'pval col dtypes2 {[sorted_pval[col].dtype for col in sorted_pval.columns]}')
             sorted_logs = reorder_df(logs, sorted_column_order)
             sorted_logs = sorted_logs[sorted_logs.columns].apply(pd.to_numeric, errors='coerce')
 
@@ -403,11 +405,11 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # Send to feather files
             store('corr', sorted_corr)
             store('pval', sorted_pval)
-            # print('pval col dtypes3', [sorted_pval[col].dtype for col in sorted_pval.columns])
+            # logging.debug(f'pval col dtypes3 {[sorted_pval[col].dtype for col in sorted_pval.columns]}')
 
             store('logs', sorted_logs)
             flattened_logs = flattened(logs)
-            print('flattened_logs', flattened_logs)
+            logging.debug(f'flattened_logs {flattened_logs}')
             store('flattened_logs', flattened_logs)
 
             te = time.time()
@@ -457,7 +459,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                               ]
                               )
 
-            print(pd.DataFrame(timing_dict.items()))
+            logging.info(f'{pd.DataFrame(timing_dict.items())}')
 
             return fig, True, True
 
@@ -470,7 +472,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                       yaxis_range=[0, 1],
                       plot_bgcolor='rgba(0,0,0,0)')
 
-    print(pd.DataFrame(timing_dict.items()))
+    logging.info(f'{pd.DataFrame(timing_dict.items())}')
 
     return fig, False, False
 
@@ -482,7 +484,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
     [State('df-loaded-div', 'children')])
 @timing
 def update_summary_kde(dropdown_values, kde_active, df_loaded):
-    print('update_summary_kde')
+    logging.info(f'update_summary_kde')
     if kde_active != ['kde-active']:
         raise PreventUpdate
 
@@ -565,7 +567,7 @@ def calculate_colorscale(n_values):
 )
 @timing
 def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
-    print('plot_manhattan')
+    logging.info(f'plot_manhattan')
 
     ts = time.time()
     if manhattan_active != ['manhattan-active']:
@@ -577,19 +579,19 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     te = time.time()
     timing_dict['plot_manhattan-load_pval'] = te - ts
     ts = time.time()
-    # print(dff)
-    # print([dff[col].dtype for col in dff.columns])
+    # logging.debug(f'{dff}')
+    # logging.debug(f'{[dff[col].dtype for col in dff.columns]}')
     manhattan_variable = [col for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
 
-    # print(pval_loaded, manhattan_variable)
+    # logging.debug(f'pval_loaded {manhattan_variable}')
     if not pval_loaded or manhattan_variable is None or manhattan_variable == []:
         return go.Figure()
 
     # Load logs and flattened logs from feather file.
     logs = load('logs')
-    # print(logs)
+    # logging.debug(f'{logs}')
     flattened_logs = load('flattened_logs')
-    # print(flattened_logs)
+    # logging.debug(f'{flattened_logs}')
     te = time.time()
     timing_dict['plot_manhattan-load_both_logs'] = te - ts
     ts = time.time()
@@ -599,7 +601,7 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     ts = time.time()
     inf_replacement = 0
     if np.inf in flattened_logs.values:
-        print('Replacing np.inf in flattened logs')
+        logging.debug(f'Replacing np.inf in flattened logs')
         temp_vals = flattened_logs.replace([np.inf, -np.inf], np.nan).dropna()
         inf_replacement = 1.2 * np.max(np.flip(temp_vals.values))
         flattened_logs = flattened_logs.replace([np.inf, -np.inf], inf_replacement)
@@ -608,7 +610,7 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     ts = time.time()
     # Load cluster numbers to use for colouring
     cluster_df = load('cluster')
-    # print('cluster', cluster_df)
+    # logging.debug(f'cluster {cluster_df}')
     te = time.time()
     timing_dict['plot_manhattan-load_cluster'] = te - ts
     ts = time.time()
@@ -681,5 +683,5 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     te = time.time()
     timing_dict['plot_manhattan-figure'] = te - ts
 
-    print(pd.DataFrame(timing_dict.items()))
+    logging.info(f'{pd.DataFrame(timing_dict.items())}')
     return fig

@@ -1,6 +1,9 @@
+import logging
 import pandas as pd
 import numpy as np
 from psych_dashboard.app import indices, cache
+
+logging.getLogger(__name__)
 
 use_redis = True
 
@@ -76,7 +79,7 @@ def load_corr():
 # @cache.cached()
 def load(name):
     if use_redis:
-        print("get cache", name)
+        logging.debug(f'get cache {name}')
         try:
             df = cache.get(name)
             if df is None:
@@ -111,7 +114,7 @@ def load(name):
 
 def store(name, df):
     if use_redis:
-        print("set cache", name)
+        logging.debug(f'set cache {name}')
         cache.set(name, df)
         return None
     else:

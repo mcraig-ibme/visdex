@@ -1,4 +1,5 @@
 import os
+import logging
 import dash
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
@@ -13,6 +14,8 @@ CACHE_CONFIG = {
 }
 cache = Cache()
 cache.init_app(app.server, config=CACHE_CONFIG)
+
+logging.basicConfig(level=logging.INFO)
 
 
 indices = ['SUBJECTKEY', 'EVENTNAME']
