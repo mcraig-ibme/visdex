@@ -5,7 +5,7 @@ from psych_dashboard.app import indices, cache
 
 logging.getLogger(__name__)
 
-use_redis = True
+use_redis = False
 
 
 def load_cluster_feather():
