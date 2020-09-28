@@ -1,3 +1,4 @@
+import logging
 import itertools
 import pandas as pd
 import numpy as np
@@ -12,6 +13,8 @@ from psych_dashboard.app import app, all_scatter_components, default_marker_colo
 from psych_dashboard.load_feather import load
 from psych_dashboard.exploratory_graph_groups import update_graph_components
 
+logging.getLogger(__name__)
+
 
 @app.callback(
     [Output({'type': 'div-scatter-' + component['id'], 'index': MATCH}, 'children')
@@ -22,7 +25,7 @@ from psych_dashboard.exploratory_graph_groups import update_graph_components
      for component in all_scatter_components for prop in component]
 )
 def update_scatter_components(df_loaded, style_dict, *args):
-    print('update_scatter_components')
+    logging.info(f'update_scatter_components')
     dff = load('filtered')
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns]
@@ -66,7 +69,7 @@ max_marker_size = 10
     [*(Input({'type': 'scatter-' + component['id'], 'index': MATCH}, "value") for component in all_scatter_components)],
 )
 def make_scatter_figure(*args):
-    print('make_scatter_figure')
+    logging.info(f'make_scatter_figure')
     # Generate the list of argument names based on the input order
     keys = [component['id'] for component in all_scatter_components]
 

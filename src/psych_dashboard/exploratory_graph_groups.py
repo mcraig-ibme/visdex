@@ -1,9 +1,12 @@
+import logging
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 from collections import defaultdict
 from psych_dashboard.app import app, graph_types, all_scatter_components, all_bar_components, all_manhattan_components, style_dict, div_style
+
+logging.getLogger(__name__)
 
 
 def create_arguments_nested_dict(components_list, args):
@@ -27,7 +30,7 @@ def update_graph_components(graph_type, component_list, dd_options, args):
     :param args:
     :return:
     """
-    print('update_graph_components')
+    logging.info(f'update_graph_components')
     # Generate the list of argument names based on the input order, paired by component id and property name
     args_dict = create_arguments_nested_dict(component_list, args)
 
@@ -75,7 +78,7 @@ def generate_generic_group(n_clicks, group_type, component_list):
     :param component_list:
     :return:
     """
-    print('generate_generic_group', group_type)
+    logging.info(f'generate_generic_group {group_type}')
     children = list()
 
     for component in component_list:
@@ -99,7 +102,7 @@ def generate_generic_group(n_clicks, group_type, component_list):
     children.append(dcc.Graph(id={'type': 'gen-' + group_type + '-graph', 'index': n_clicks},
                               figure=go.Figure(data=go.Scatter()))
                     )
-    print(children)
+    logging.debug(f'{children}')
 
     return html.Div(id={'type': 'filter-graph-group-' + group_type,
                         'index': n_clicks
@@ -115,7 +118,7 @@ def generate_generic_group(n_clicks, group_type, component_list):
      State({'type': 'divgraph-type-dd', 'index': MATCH}, 'children')]
 )
 def change_graph_group_type(graph_type, id, children):
-    print('change_graph_group_type', graph_type, id)
+    logging.info(f'change_graph_group_type {graph_type} {id}')
     # Check whether the value of the dropdown matches the type of the existing group. If it doesn't match, then
     # generate a new group of the right type.
     if graph_type == 'Bar' and children[-1]['props']['id']['type'] != 'filter-graph-group-bar':
@@ -133,7 +136,7 @@ def change_graph_group_type(graph_type, id, children):
     [State('graph-group-container', 'children')])
 def add_graph_group(n_clicks, children):
     # Add a new graph group each time the button is clicked. The if None guard stops there being an initial graph.
-    print('add_graph_group')
+    logging.info(f'add_graph_group')
     if n_clicks is not None:
         # This dropdown controls what type of graph-group to display next to it.
         new_graph_type_dd = html.Div(['Graph type:',

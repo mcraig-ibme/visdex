@@ -1,4 +1,4 @@
-import dash
+import logging
 import pandas as pd
 import numpy as np
 import itertools
@@ -9,6 +9,7 @@ from psych_dashboard.app import app, all_manhattan_components
 from psych_dashboard.load_feather import load
 from psych_dashboard.exploratory_graph_groups import update_graph_components
 
+logging.getLogger(__name__)
 
 # TODO: currently only allows int64 and float64
 valid_manhattan_dtypes = [np.int64, np.float64]
@@ -23,7 +24,7 @@ valid_manhattan_dtypes = [np.int64, np.float64]
      for component in all_manhattan_components for prop in component]
 )
 def update_manhattan_components(df_loaded, style_dict, *args):
-    print('update_manhattan_components')
+    logging.info('update_manhattan_components')
     dff = load('pval')
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
@@ -86,18 +87,19 @@ def flattened(df):
     [*(Input({'type': 'manhattan-' + component['id'], 'index': MATCH}, "value") for component in all_manhattan_components)],
 )
 def make_manhattan_figure(*args):
-    print('make_manhattan_figure', *args)
+    args_string = [*args]
+    logging.info(f'make_manhattan_figure {args_string}')
     # Generate the list of argument names based on the input order
     keys = [component['id'] for component in all_manhattan_components]
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
     if args_dict['base_variable'] is None or args_dict['base_variable'] == []:
-        print('return go.Figure()')
+        logging.debug(f'return go.Figure()')
         raise PreventUpdate
 
     if args_dict['pvalue'] is None or args_dict['pvalue'] <= 0.:
-        print('raise PreventUpdate')
+        logging.debug(f'raise PreventUpdate')
         raise PreventUpdate
 
     # Load logs of all p-values
