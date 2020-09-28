@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import pandas as pd
 from psych_dashboard import preview_table, summary, exploratory_graph_groups
 from psych_dashboard.load_feather import store, load
-from psych_dashboard.exploratory_graphs import scatter_graph, bar_graph, manhattan_graph, violin_graph
+from psych_dashboard.exploratory_graphs import scatter_graph, bar_graph, histogram_graph, manhattan_graph, violin_graph
 from psych_dashboard.app import app, indices, standard_margin_left, div_style
 
 logging.getLogger(__name__)
