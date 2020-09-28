@@ -102,25 +102,33 @@ of input controls to curate the graph.
 Graph types can be modified by adding/removing/modifying input controls,
 or by modifying the calculations performed in response.
 
-New graph types can be also be added. This section discusses the code modifications required to do so.
+New graph types can be also be added. This section discusses the code modifications 
+required to do so.
 
-To add a new type of exploratory graphs (in this example, we add the imaginary graph type "Bubble"):
+To add a new type of exploratory graphs (in this example, we add the imaginary graph 
+type "Bubble"):
 
-Add a new list of components in `app.py` with the name `all_bubble_components`. This should be a list of dictionaries, 
-one dictionary per input control. Each dictionary must as a minimum contain the keys 'component_type', 'id', and 
-'label'. 'component_type' is a reference to the class of the component, e.g. `dcc.Dropdown`. 'id' should be unique
-to that dictionary within the list. 'label' will be the text displayed to label the component on the dashboard.
-All other keys in the dictionary must be valid keyword arguments to the class constructor of the class in 
-`component_type`, and will be passed as input keywords to the component. Ensure `all_bubble_components` is imported
-to `exploratory_graphs.py`.
+Add a new list of components in `app.py` with the name `all_bubble_components`. 
+This should be a list of dictionaries, one dictionary per input control. Each 
+dictionary must as a minimum contain the keys 'component_type', 'id', and 'label'. 
+'component_type' is a reference to the class of the component, e.g. `dcc.Dropdown`. 
+'id' should be unique to that dictionary within the list. 'label' will be the 
+text displayed to label the component on the dashboard. All other keys in the 
+dictionary must be valid keyword arguments to the class constructor of the class in 
+`component_type`, and will be passed as input keywords to the component. Add `Bubble`
+to `graph_types` at the top of `app.py`.
 
-`change_graph_group_type()` handles the creation of a new group type, so add a new `elif` for your graph type and pass
-it the `all_bubble_components` created previously. 
+Ensure `all_bubble_components` is imported to `exploratory_graph_groups.py`.
+`change_graph_group_type()` handles the creation of a new group type, so add a new 
+`elif` for your graph type and pass it the `all_bubble_components` created previously. 
 
-Create `bubble_graph.py` in the `exploratory_graphs` directory, and populate it with `update_bubble_components()` and
-`make_bubble_figure()`, modelled upon those found in the other `*_graph.py` files. `update_bubble_components()` handles
-the recreation of each component whenever one is edited, most of which is handled by `update_graph_components()` in 
-`exploratory_graph_groups.py`.
+Create `bubble_graph.py` in the `exploratory_graphs` directory, and populate it with 
+`update_bubble_components()` and `make_bubble_figure()`, modelled upon those found in 
+the other `*_graph.py` files. `update_bubble_components()` handles the recreation of 
+each component whenever one is edited, most of which is handled by 
+`update_graph_components()` in `exploratory_graph_groups.py`.
+
+Import `bubble_graph` to `index.py`
 
 
 # TODO:
