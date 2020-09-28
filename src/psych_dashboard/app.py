@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 indices = ['SUBJECTKEY', 'EVENTNAME']
-graph_types = ['Scatter', 'Bar', 'Manhattan']
+graph_types = ['Scatter', 'Bar', 'Manhattan', 'Violin']
 
 standard_margin_left = '10px'
 div_style = {'margin-left': standard_margin_left}
@@ -116,6 +116,14 @@ all_manhattan_components = [{'component_type': dcc.Dropdown,
                              'value': ['LOG']
                              },
                             ]
+all_violin_components = [{'component_type': dcc.Dropdown,
+                          'id': 'base_variable',
+                          'label': 'base variable',
+                          'value': None,
+                          'options': [],
+                          'multi': False
+                          },
+                         ]
 
 default_marker_color = "crimson"
 style_dict = {
