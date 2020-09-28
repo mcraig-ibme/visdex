@@ -9,7 +9,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from psych_dashboard.app import app, all_scatter_components, default_marker_color
-from psych_dashboard.load_feather import load_filtered_feather
+from psych_dashboard.load_feather import load
 from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
@@ -23,7 +23,7 @@ from psych_dashboard.exploratory_graph_groups import update_graph_components
 )
 def update_scatter_components(df_loaded, style_dict, *args):
     print('update_scatter_components')
-    dff = load_filtered_feather()
+    dff = load('filtered')
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns]
     return update_graph_components('scatter', all_scatter_components, dd_options, args)
@@ -72,7 +72,7 @@ def make_scatter_figure(*args):
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
-    dff = load_filtered_feather()
+    dff = load('filtered')
 
     facet_row_cats = list(dff[args_dict['facet_row']].unique()) if args_dict['facet_row'] is not None else [None]
     facet_col_cats = list(dff[args_dict['facet_col']].unique()) if args_dict['facet_col'] is not None else [None]

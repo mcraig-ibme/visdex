@@ -6,7 +6,7 @@ from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from psych_dashboard.app import app, all_manhattan_components
-from psych_dashboard.load_feather import load_flattened_logs, load_logs, load_pval
+from psych_dashboard.load_feather import load
 from psych_dashboard.exploratory_graph_groups import update_graph_components
 
 
@@ -24,7 +24,7 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 )
 def update_manhattan_components(df_loaded, style_dict, *args):
     print('update_manhattan_components')
-    dff = load_pval()
+    dff = load('pval')
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
     return update_graph_components('manhattan', all_manhattan_components, dd_options, args)
@@ -69,9 +69,15 @@ def flattened(df):
     :param df:
     :return:
     """
-    s = pd.Series(index=pd.MultiIndex.from_tuples(itertools.product(df.index, df.columns), names=['first', 'second']), name='value')
-    for (a, b) in itertools.product(df.index, df.columns):
+    # The series contains only half of the matrix, so filter by the order of the two level labels.
+    s = pd.Series(index=pd.MultiIndex.from_tuples(filter(lambda x: df.index.get_loc(x[0]) < df.index.get_loc(x[1]),
+                                                         list(itertools.product(df.index, df.columns))),
+                                                  names=['first', 'second']),
+                  name='value')
+
+    for (a, b) in s.index:
         s[a, b] = df[b][a]
+
     return s
 
 
@@ -95,7 +101,7 @@ def make_manhattan_figure(*args):
         raise PreventUpdate
 
     # Load logs of all p-values
-    logs = load_logs()
+    logs = load('logs')
 
     # Select the column and row associated to this variable, and combine the two. Half of the values will be nans,
     # so we keep all the non-nans.

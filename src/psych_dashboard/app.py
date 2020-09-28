@@ -1,9 +1,19 @@
+import os
 import dash
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
+from flask_caching import Cache
 
 app = dash.Dash(__name__, suppress_callback_exceptions=False, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
+
+CACHE_CONFIG = {
+    'CACHE_TYPE': 'redis',
+    'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379')
+}
+cache = Cache()
+cache.init_app(app.server, config=CACHE_CONFIG)
+
 
 indices = ['SUBJECTKEY', 'EVENTNAME']
 graph_types = ['Scatter', 'Bar', 'Manhattan']
