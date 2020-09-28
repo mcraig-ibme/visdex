@@ -39,31 +39,6 @@ def calculate_transformed_corrected_pval(ref_pval, logs):
     return transformed_corrected_ref_pval
 
 
-def calculate_manhattan_data(dff, manhattan_variable):
-    # Filter columns to those with valid types.
-
-    if manhattan_variable is None:
-        manhattan_variables = dff.columns
-    else:
-        if isinstance(manhattan_variable, list):
-            manhattan_variables = manhattan_variable
-        else:
-            manhattan_variables = [manhattan_variable]
-
-    # Create DF to hold the results of the calculations, and perform the log calculation
-    logs = pd.DataFrame(columns=dff.columns, index=manhattan_variables)
-    for variable in dff:
-        logs[variable] = -np.log10(dff[variable])
-
-    # Now blank out any duplicates including the diagonal
-    for ind in logs.index:
-        for col in logs.columns:
-            if ind in logs.columns and col in logs.index and logs[col][ind] == logs[ind][col]:
-                logs[ind][col] = np.nan
-
-    return logs
-
-
 def flattened(df):
     """
     Convert a DF into a Series, where the MultiIndex of each element is a combination of the index/col from the original DF

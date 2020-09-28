@@ -14,8 +14,7 @@ from psych_dashboard.app import app, indices
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
 from psych_dashboard.load_feather import store, load
-from psych_dashboard.exploratory_graphs.manhattan_graph import calculate_transformed_corrected_pval, calculate_manhattan_data, flattened
-from itertools import product
+from psych_dashboard.exploratory_graphs.manhattan_graph import calculate_transformed_corrected_pval, flattened
 from functools import wraps
 
 timing_dict = dict()
