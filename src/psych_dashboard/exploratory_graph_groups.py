@@ -5,7 +5,7 @@ from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 from collections import defaultdict
 from psych_dashboard.app import app, graph_types, all_scatter_components, all_bar_components, \
-    all_manhattan_components, all_violin_components, style_dict, div_style
+    all_histogram_components, all_manhattan_components, all_violin_components, style_dict, div_style
 
 logging.getLogger(__name__)
 
@@ -126,6 +126,8 @@ def change_graph_group_type(graph_type, id, children):
         children[-1] = generate_generic_group(id['index'], 'bar', all_bar_components)
     elif graph_type == 'Scatter' and children[-1]['props']['id']['type'] != 'filter-graph-group-scatter':
         children[-1] = generate_generic_group(id['index'], 'scatter', all_scatter_components)
+    elif graph_type == 'Histogram' and children[-1]['props']['id']['type'] != 'filter-graph-group-histogram':
+        children[-1] = generate_generic_group(id['index'], 'histogram', all_histogram_components)
     elif graph_type == 'Manhattan' and children[-1]['props']['id']['type'] != 'filter-graph-group-manhattan':
         children[-1] = generate_generic_group(id['index'], 'manhattan', all_manhattan_components)
     elif graph_type == 'Violin' and children[-1]['props']['id']['type'] != 'filter-graph-group-violin':
