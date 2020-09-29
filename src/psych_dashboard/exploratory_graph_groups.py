@@ -4,8 +4,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 from collections import defaultdict
-from psych_dashboard.app import app, graph_types, all_scatter_components, all_bar_components, \
-    all_histogram_components, all_manhattan_components, all_violin_components, style_dict, div_style
+from psych_dashboard.app import app, all_components, style_dict, div_style
 
 logging.getLogger(__name__)
 
@@ -120,18 +119,8 @@ def generate_generic_group(n_clicks, group_type, component_list):
 )
 def change_graph_group_type(graph_type, id, children):
     logging.info(f'change_graph_group_type {graph_type} {id}')
-    # Check whether the value of the dropdown matches the type of the existing group. If it doesn't match, then
-    # generate a new group of the right type.
-    if graph_type == 'Bar' and children[-1]['props']['id']['type'] != 'filter-graph-group-bar':
-        children[-1] = generate_generic_group(id['index'], 'bar', all_bar_components)
-    elif graph_type == 'Scatter' and children[-1]['props']['id']['type'] != 'filter-graph-group-scatter':
-        children[-1] = generate_generic_group(id['index'], 'scatter', all_scatter_components)
-    elif graph_type == 'Histogram' and children[-1]['props']['id']['type'] != 'filter-graph-group-histogram':
-        children[-1] = generate_generic_group(id['index'], 'histogram', all_histogram_components)
-    elif graph_type == 'Manhattan' and children[-1]['props']['id']['type'] != 'filter-graph-group-manhattan':
-        children[-1] = generate_generic_group(id['index'], 'manhattan', all_manhattan_components)
-    elif graph_type == 'Violin' and children[-1]['props']['id']['type'] != 'filter-graph-group-violin':
-        children[-1] = generate_generic_group(id['index'], 'violin', all_violin_components)
+    # Generate a new group of the right type.
+    children[-1] = generate_generic_group(id['index'], graph_type, all_components[graph_type])
     return children
 
 
@@ -148,12 +137,12 @@ def add_graph_group(n_clicks, children):
                                       dcc.Dropdown(id={'type': 'graph-type-dd',
                                                        'index': n_clicks
                                                        },
-                                                   options=[{'label': value,
+                                                   options=[{'label': str(value).capitalize(),
                                                              'value': value
                                                              }
-                                                            for value in graph_types
+                                                            for value in all_components.keys()
                                                             ],
-                                                   value='Scatter',
+                                                   value='scatter',
                                                    style={'width': '50%'}
                                                    ),
                                       # This is a placeholder for the 'filter-graph-group-scatter' or
