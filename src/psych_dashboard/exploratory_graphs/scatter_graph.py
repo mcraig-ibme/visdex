@@ -9,7 +9,7 @@ import plotly.express as px
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
-from psych_dashboard.app import app, all_scatter_components, default_marker_color
+from psych_dashboard.app import app, all_components, default_marker_color
 from psych_dashboard.load_feather import load
 from psych_dashboard.exploratory_graph_groups import update_graph_components
 
@@ -18,18 +18,18 @@ logging.getLogger(__name__)
 
 @app.callback(
     [Output({'type': 'div-scatter-' + component['id'], 'index': MATCH}, 'children')
-     for component in all_scatter_components],
+     for component in all_components['scatter']],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div-scatter-x', 'index': MATCH}, 'style')] +
     [State({'type': 'scatter-' + component['id'], 'index': MATCH}, prop)
-     for component in all_scatter_components for prop in component]
+     for component in all_components['scatter'] for prop in component]
 )
 def update_scatter_components(df_loaded, style_dict, *args):
     logging.info(f'update_scatter_components')
     dff = load('filtered')
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns]
-    return update_graph_components('scatter', all_scatter_components, dd_options, args)
+    return update_graph_components('scatter', all_components['scatter'], dd_options, args)
 
 
 def make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats):
@@ -66,12 +66,12 @@ max_marker_size = 10
 
 @app.callback(
     Output({'type': 'gen-scatter-graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter-' + component['id'], 'index': MATCH}, "value") for component in all_scatter_components)],
+    [*(Input({'type': 'scatter-' + component['id'], 'index': MATCH}, "value") for component in all_components['scatter'])],
 )
 def make_scatter_figure(*args):
     logging.info(f'make_scatter_figure')
     # Generate the list of argument names based on the input order
-    keys = [component['id'] for component in all_scatter_components]
+    keys = [component['id'] for component in all_components['scatter']]
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))

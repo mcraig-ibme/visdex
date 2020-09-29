@@ -5,7 +5,7 @@ import itertools
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-from psych_dashboard.app import app, all_manhattan_components
+from psych_dashboard.app import app, all_components
 from psych_dashboard.load_feather import load
 from psych_dashboard.exploratory_graph_groups import update_graph_components
 
@@ -17,18 +17,18 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 
 @app.callback(
     [Output({'type': 'div-manhattan-' + component['id'], 'index': MATCH}, 'children')
-     for component in all_manhattan_components],
+     for component in all_components['manhattan']],
     [Input('df-loaded-div', 'children')],
     [State({'type': 'div-manhattan-base_variable', 'index': MATCH}, 'style')] +
     [State({'type': 'manhattan-' + component['id'], 'index': MATCH}, prop)
-     for component in all_manhattan_components for prop in component]
+     for component in all_components['manhattan'] for prop in component]
 )
 def update_manhattan_components(df_loaded, style_dict, *args):
     logging.info('update_manhattan_components')
     dff = load('pval')
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
-    return update_graph_components('manhattan', all_manhattan_components, dd_options, args)
+    return update_graph_components('manhattan', all_components['manhattan'], dd_options, args)
 
 
 def calculate_transformed_corrected_pval(ref_pval, logs):
@@ -59,13 +59,13 @@ def flattened(df):
 
 @app.callback(
     Output({'type': 'gen-manhattan-graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'manhattan-' + component['id'], 'index': MATCH}, "value") for component in all_manhattan_components)],
+    [*(Input({'type': 'manhattan-' + component['id'], 'index': MATCH}, "value") for component in all_components['manhattan'])],
 )
 def make_manhattan_figure(*args):
     args_string = [*args]
     logging.info(f'make_manhattan_figure {args_string}')
     # Generate the list of argument names based on the input order
-    keys = [component['id'] for component in all_manhattan_components]
+    keys = [component['id'] for component in all_components['manhattan']]
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
