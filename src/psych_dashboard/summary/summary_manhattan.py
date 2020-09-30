@@ -1,0 +1,165 @@
+import logging
+import numpy as np
+import pandas as pd
+import time
+from dash.exceptions import PreventUpdate
+from dash.dependencies import Input, Output
+import plotly.graph_objects as go
+from psych_dashboard.app import app
+from psych_dashboard.exploratory_graphs.manhattan_graph import calculate_transformed_corrected_pval
+from psych_dashboard.load_feather import load
+from psych_dashboard.timing import timing, timing_dict
+
+
+# TODO: currently only allows int64 and float64
+valid_manhattan_dtypes = [np.int64, np.float64]
+
+
+def calculate_colorscale(n_values):
+    """
+    Split the colorscale into n_values + 1 values. The first is black for
+    points representing pairs of variables not in the same cluster.
+    :param n_values:
+    :return:
+    """
+    # First 2 entries define a black colour for the "none" category
+    colorscale = [[0, 'rgb(0,0,0)'], [1 / (n_values + 1), 'rgb(0,0,0)']]
+
+    plotly_colorscale = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52']
+
+    # Add colours from plotly_colorscale as required.
+    for i in range(1, n_values+1):
+        colorscale.append([i/(n_values+1), plotly_colorscale[(i-1) % len(plotly_colorscale)]])
+        colorscale.append([(i+1)/(n_values+1), plotly_colorscale[(i-1) % len(plotly_colorscale)]])
+
+    return colorscale
+
+
+@app.callback(
+    Output('manhattan-figure', 'figure'),
+    [Input('manhattan-pval-input', 'value'),
+     Input('manhattan-logscale-check', 'value'),
+     Input('df-filtered-loaded-div', 'children'),
+     Input('pval-loaded-div', 'children'),
+     Input('manhattan-active-check', 'value')]
+)
+@timing
+def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
+    logging.info(f'plot_manhattan')
+
+    ts = time.time()
+    if manhattan_active != ['manhattan-active']:
+        raise PreventUpdate
+    if pvalue <= 0. or pvalue is None:
+        raise PreventUpdate
+
+    dff = load('pval')
+    te = time.time()
+    timing_dict['plot_manhattan-load_pval'] = te - ts
+    ts = time.time()
+    # logging.debug(f'{dff}')
+    # logging.debug(f'{[dff[col].dtype for col in dff.columns]}')
+    manhattan_variable = [col for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
+
+    # logging.debug(f'pval_loaded {manhattan_variable}')
+    if not pval_loaded or manhattan_variable is None or manhattan_variable == []:
+        return go.Figure()
+
+    # Load logs and flattened logs from feather file.
+    logs = load('logs')
+    # logging.debug(f'{logs}')
+    flattened_logs = load('flattened_logs')
+    # logging.debug(f'{flattened_logs}')
+    te = time.time()
+    timing_dict['plot_manhattan-load_both_logs'] = te - ts
+    ts = time.time()
+    transformed_corrected_ref_pval = calculate_transformed_corrected_pval(float(pvalue), logs)
+    te = time.time()
+    timing_dict['plot_manhattan-tranform'] = te - ts
+    ts = time.time()
+    inf_replacement = 0
+    if np.inf in flattened_logs.values:
+        logging.debug(f'Replacing np.inf in flattened logs')
+        temp_vals = flattened_logs.replace([np.inf, -np.inf], np.nan).dropna()
+        inf_replacement = 1.2 * np.max(np.flip(temp_vals.values))
+        flattened_logs = flattened_logs.replace([np.inf, -np.inf], inf_replacement)
+    te = time.time()
+    timing_dict['plot_manhattan-load_cutoff'] = te - ts
+    ts = time.time()
+    # Load cluster numbers to use for colouring
+    cluster_df = load('cluster')
+    # logging.debug(f'cluster {cluster_df}')
+    te = time.time()
+    timing_dict['plot_manhattan-load_cluster'] = te - ts
+    ts = time.time()
+    # Convert to colour array - set to the cluster number if the two variables are in the same cluster,
+    # and set any other pairings to -1 (which will be coloured black)
+    colors = [cluster_df['column_names'][item[0]]
+              if cluster_df['column_names'][item[0]] == cluster_df['column_names'][item[1]] else -1
+              for item in flattened_logs.index[::-1]]
+    te = time.time()
+    timing_dict['plot_manhattan-calc_colors'] = te - ts
+    ts = time.time()
+    max_cluster = max(cluster_df['column_names'])
+    fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
+                               y=np.flip(flattened_logs.values),
+                               mode='markers',
+                               marker=dict(
+                                   color=colors,
+                                   colorscale=calculate_colorscale(max_cluster + 1),
+                                   colorbar=dict(
+                                       tickmode='array',
+                                       # Offset by 0.5 to centre the text within the boxes
+                                       tickvals=[i - 0.5 for i in range(max_cluster + 2)],
+                                       # The bottom of the colorbar is black for "cross-cluster pair"s
+                                       ticktext=["cross-cluster pair"] + [str(i) for i in range(max_cluster + 2)],
+                                       title='Cluster'
+                                   ),
+                                   cmax=max_cluster + 1,
+                                   # Minimum is -1 to represent the points of variables not in the same cluster
+                                   cmin=-1,
+                                   showscale=True
+                                           ),
+                               ),
+                    )
+
+    fig.update_layout(shapes=[
+        dict(
+            type='line',
+            yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
+            xref='x', x0=0, x1=len(flattened_logs)-1
+        )
+    ],
+        annotations=[
+            # This annotation prints the transformed pvalue
+            dict(
+                x=0,
+                y=transformed_corrected_ref_pval if logscale != ['LOG'] else np.log10(transformed_corrected_ref_pval),
+                xref='x',
+                yref='y',
+                text='{:f}'.format(transformed_corrected_ref_pval),
+                showarrow=True,
+                arrowhead=7,
+                ax=-50,
+                ay=0
+            ),
+            # This annotation above the top of the graph is only shown if any inf values have been replaced.
+            # It highlights what value has been used to replace them (1.2*max)
+            dict(
+                x=0,
+                y=1.1,
+                xref='paper',
+                yref='paper',
+                text='Infinite values (corresponding to a 0 p-value after numerical errors) have been replaced with {:f}'.format(inf_replacement) if inf_replacement != 0 else '',
+                showarrow=False
+            ),
+            ],
+        xaxis_title='variable',
+        yaxis_title='-log10(p)',
+        yaxis_type='log' if logscale == ['LOG'] else None
+    )
+    te = time.time()
+    timing_dict['plot_manhattan-figure'] = te - ts
+
+    logging.info(f'{pd.DataFrame(timing_dict.items())}')
+    return fig

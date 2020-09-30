@@ -1,7 +1,5 @@
 import logging
-import pandas as pd
 import numpy as np
-import itertools
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
@@ -37,24 +35,6 @@ def calculate_transformed_corrected_pval(ref_pval, logs):
     # Transform corrected p-value by -log10
     transformed_corrected_ref_pval = -np.log10(corrected_ref_pval)
     return transformed_corrected_ref_pval
-
-
-def flattened(df):
-    """
-    Convert a DF into a Series, where the MultiIndex of each element is a combination of the index/col from the original DF
-    :param df:
-    :return:
-    """
-    # The series contains only half of the matrix, so filter by the order of the two level labels.
-    s = pd.Series(index=pd.MultiIndex.from_tuples(filter(lambda x: df.index.get_loc(x[0]) < df.index.get_loc(x[1]),
-                                                         list(itertools.product(df.index, df.columns))),
-                                                  names=['first', 'second']),
-                  name='value')
-
-    for (a, b) in s.index:
-        s[a, b] = df[b][a]
-
-    return s
 
 
 @app.callback(
