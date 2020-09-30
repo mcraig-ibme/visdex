@@ -12,8 +12,9 @@ setup(name="psych_dashboard",
                         'scipy>=1.2.0',
                         'feather-format>=0.4.0',
                         'dash-bootstrap-components>=0.10.0',
+                        'selenium>=3.0.0',
                         ],
-      entry_points = {
+      entry_points={
          'console_scripts': ['run-dashboard=psych_dashboard.index:main'],
         },
       packages=find_packages(where='src'),
