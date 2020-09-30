@@ -1,16 +1,16 @@
-import math
+import itertools
 import logging
+import math
 import numpy as np
 import pandas as pd
 import time
 import scipy.stats as stats
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
-from psych_dashboard.app import app, indices
+from psych_dashboard.app import app
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
 from psych_dashboard.load_feather import store, load
-from psych_dashboard.exploratory_graphs.manhattan_graph import flattened
 from psych_dashboard.timing import timing, timing_dict
 
 logging.getLogger(__name__)
@@ -30,6 +30,24 @@ def update_heatmap_dropdown(df_loaded):
                 'value': col} for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
     return options, \
         [col for col in dff.columns if dff[col].dtype in [np.int64, np.float64]]
+
+
+def flattened(df):
+    """
+    Convert a DF into a Series, where the MultiIndex of each element is a combination of the index/col from the original DF
+    :param df:
+    :return:
+    """
+    # The series contains only half of the matrix, so filter by the order of the two level labels.
+    s = pd.Series(index=pd.MultiIndex.from_tuples(filter(lambda x: df.index.get_loc(x[0]) < df.index.get_loc(x[1]),
+                                                         list(itertools.product(df.index, df.columns))),
+                                                  names=['first', 'second']),
+                  name='value')
+
+    for (a, b) in s.index:
+        s[a, b] = df[b][a]
+
+    return s
 
 
 def reorder_df(df, order):
