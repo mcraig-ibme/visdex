@@ -119,6 +119,8 @@ def store(name, df):
         return None
     else:
         # use feather
+        if df is None:
+            df = pd.DataFrame()
         if name == 'cluster':
             df.reset_index().to_feather('cluster.feather')
         elif name == 'parsed':

@@ -428,7 +428,7 @@ def main():
     # Create empty feather files to simplify the handling of them if they don't exist or contain
     # old data.
     for name in ['cluster', 'parsed', 'columns', 'df', 'filtered', 'corr', 'pval', 'logs', 'flattened_logs']:
-        store(name, pd.DataFrame())
+        store(name, None)
     app.run_server(debug=True)
 
 
