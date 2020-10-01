@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from psych_dashboard.app import app, all_components, default_marker_color
 from psych_dashboard.load_feather import load
@@ -115,6 +116,8 @@ def make_scatter_figure(*args):
             dff['color_to_use'] = color_to_use
     if args_dict['size'] is not None:
         dff.dropna(inplace=True, subset=[args_dict['size']])
+
+    annotations = []
     for i in range(len(facet_row_cats)):
         for j in range(len(facet_col_cats)):
             working_dff = dff
@@ -149,11 +152,30 @@ def make_scatter_figure(*args):
                     try:
                         reg = model.fit(np.vstack(X), Y)
                         Y_pred = reg.predict(np.vstack(X))
+                        r2 = r2_score(np.vstack(Y), Y_pred)
+                        logging.debug(f'r2 is {r2}')
                         fig.add_trace(go.Scatter(name='line of best fit', x=X, y=Y_pred, mode='lines'),
                                       row=i + 1,
                                       col=j + 1)
-                    except (TypeError, ValueError):
+                        annotations.append(dict(
+                                                x=working_dff[args_dict['x']].max(),
+                                                y=working_dff[args_dict['y']].max(),
+                                                xref='x' + str(i + 1 + j * len(facet_row_cats)),
+                                                yref='y' + str(i + 1 + j * len(facet_row_cats)),
+                                                xanchor='left',
+                                                yanchor='bottom',
+                                                text=f'r^2 = {r2:.2f}',
+                                                showarrow=False,
+                                                ax=0,
+                                                ay=0
+                                            )
+                                           )
+                    except (TypeError, ValueError) as e:
+                        logging.debug(e)
                         pass
+
+    for annotation in annotations:
+        fig.add_annotation(annotation)
 
     fig.update_layout(coloraxis=dict(colorscale='Bluered_r'), showlegend=False, )
     fig.update_xaxes(matches='x')
