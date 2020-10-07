@@ -17,6 +17,7 @@ from psych_dashboard.app import app, indices, standard_margin_left, div_style
 logging.getLogger(__name__)
 
 global_width = '100%'
+table_width = '95%'
 header_image = '/assets/UoN_Primary_Logo_RGB.png'
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -122,7 +123,7 @@ app.layout = html.Div(children=[
                          id='loading-table-preview',
                          children=[
                              html.Div(id='table_preview',
-                                      style={'width': global_width})
+                                      style={'width': table_width, 'margin-left': '10px', 'margin-right': '10px'})
                          ]
                      ),
                      html.H3(children="Table Summary and Filter",
@@ -139,8 +140,11 @@ app.layout = html.Div(children=[
                      dcc.Loading(
                          id='loading-table-summary',
                          children=[
+                             html.Div(id='other_summary',
+                                      style={'width': global_width, 'margin-left': '10px', 'margin-right': '10px'}),
                              html.Div(id='table_summary',
-                                      style={'width': global_width})
+                                      style={'width': table_width, 'margin-left': '10px', 'margin-right': '10px'},
+                                      )
                              ]
                      ),
                      html.H2(children='Correlation Heatmap (Pearson\'s)',

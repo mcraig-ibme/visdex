@@ -25,6 +25,7 @@ def update_preview_table(df_loaded):
             id='table',
             columns=[{"name": i, "id": i} for i in dff.columns],
             data=dff.head().to_dict('records'),
+            style_table={'overflowX': 'auto'},
         ),
                         )
 
