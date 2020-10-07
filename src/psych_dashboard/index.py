@@ -2,13 +2,14 @@ import io
 import base64
 import datetime
 import logging
+import os
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
-from psych_dashboard import preview_table, exploratory_graph_groups
+from psych_dashboard import preview_table, exploratory_graph_groups, export
 from psych_dashboard.load_feather import store, load
 from psych_dashboard.exploratory_graphs import scatter_graph, bar_graph, histogram_graph, manhattan_graph, violin_graph
 from psych_dashboard.summary import summary_heatmap, summary_kde, summary_manhattan, summary_table
@@ -106,6 +107,10 @@ app.layout = html.Div(children=[
              children=['No file loaded']),
     html.Button('Analyse', id='load-files-button',
                 style=div_style),
+    html.Button('Export to PDF', id='export-pdf-button',
+                style=div_style),
+    html.Div(children=[''], id='export-div',
+             style=div_style),
     html.Div([
         html.H1('Summary', style={'display': 'inline-block', 'margin-left': standard_margin_left}),
         dbc.Button(
