@@ -2,7 +2,7 @@ import os
 from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-from psych_dashboard.app import app
+from psych_dashboard.app import app, all_components
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch, mm
@@ -71,8 +71,7 @@ def process_table(datatable):
      State('kde-figure', 'figure'),
      State('table_summary', 'children'),
      State('table_preview', 'children'),
-     State({'type': 'gen-scatter-graph', 'index': ALL}, 'figure'),
-     State({'type': 'gen-manhattan-graph', 'index': ALL}, 'figure'),
+     *[State({'type': 'gen-'+str(graph_type)+'-graph', 'index': ALL}, 'figure') for graph_type in all_components],
      ]
 )
 def export_to_pdf(n_clicks, *figs):
@@ -83,12 +82,11 @@ def export_to_pdf(n_clicks, *figs):
     go.Figure(figs[1]).write_image(os.path.join(output_directory, 'test_manhattan.jpg'))
     go.Figure(figs[2]).write_image(os.path.join(output_directory, 'test_kde.jpg'))
     tables = [process_table(fig) for fig in figs[3:5]]
-    if len(figs[5]) > 0:
-        for number, fig in enumerate(figs[5]):
-            go.Figure(fig).write_image(os.path.join(output_directory, 'test_scatter'+str(number)+'.jpg'))
-    if len(figs[6]) > 0:
-        for number, fig in enumerate(figs[6]):
-            go.Figure(fig).write_image(os.path.join(output_directory, 'test_man'+str(number)+'.jpg'))
+    for list_of_graphs_of_type, graph_type in zip(figs[5:], list(all_components.keys())):
+        print('process1', list_of_graphs_of_type, graph_type)
+        for number, fig in enumerate(list_of_graphs_of_type):
+            print('  process2', number, fig)
+            go.Figure(fig).write_image(os.path.join(output_directory, 'test_'+str(graph_type)+str(number)+'.jpg'))
 
     styles = getSampleStyleSheet()
 
@@ -121,16 +119,14 @@ def export_to_pdf(n_clicks, *figs):
         Story.append(Image(os.path.join(output_directory, 'test_kde.jpg'), kind='proportional', height=500, width=500))
         for table in tables:
             Story.append(table)
-        if len(figs[5]) > 0:
-            for number, fig in enumerate(figs[5]):
-                Story.append(Paragraph(f'Scatter {number}'))
+        for list_of_graphs_of_type, graph_type in zip(figs[5:], list(all_components.keys())):
+            print('print1', list_of_graphs_of_type, graph_type)
+            for number, fig in enumerate(list_of_graphs_of_type):
+                Story.append(Paragraph(f'{graph_type} {number}'))
+                print('print2 test_' + str(graph_type) + str(number) + '.jpg')
                 Story.append(
-                    Image(os.path.join(output_directory, 'test_scatter' + str(number) + '.jpg'), kind='proportional',
+                    Image(os.path.join(output_directory, 'test_' + str(graph_type) + str(number) + '.jpg'), kind='proportional',
                           height=500, width=500))
-        if len(figs[6]) > 0:
-            for number, fig in enumerate(figs[6]):
-                Story.append(Paragraph(f'Manhattan {number}'))
-                Story.append(Image(os.path.join(output_directory, 'test_man' + str(number) + '.jpg'), kind='proportional', height=500, width=500))
 
         doc.build(Story, onFirstPage=my_first_page, onLaterPages=my_later_pages)
 
