@@ -11,7 +11,6 @@ PAGE_WIDTH, PAGE_HEIGHT = (210 * mm, 297 * mm)
 
 
 def process_table(datatable):
-    print(datatable)
 
     n_cols = len(datatable['props']['children']['props']['columns'])
     # Guard against 'format.specifier' not existing
@@ -21,7 +20,6 @@ def process_table(datatable):
     except KeyError:
         column_specifiers = ['any'] * n_cols
     data_raw = datatable['props']['children']['props']['data']
-    print(data_raw)
 
     # Process and append each row
     # Start with column headers
@@ -39,8 +37,6 @@ def process_table(datatable):
                 else:
                     row_contents.append(f'{val}')
         table_contents.append(row_contents)
-
-    print(table_contents)
 
     # Construct command sequence for TableStyle to align columns based upon data type
     # Guard against 'type' not existing
@@ -78,20 +74,28 @@ def export_to_pdf(n_clicks, *figs):
     if n_clicks is None:
         raise PreventUpdate
     output_directory = '/Users/samcox/Desktop'
-    go.Figure(figs[0]).write_image(os.path.join(output_directory, 'test_heatmap.jpg'))
-    go.Figure(figs[1]).write_image(os.path.join(output_directory, 'test_manhattan.jpg'))
-    go.Figure(figs[2]).write_image(os.path.join(output_directory, 'test_kde.jpg'))
-    tables = [process_table(fig) for fig in figs[3:5]]
-    for list_of_graphs_of_type, graph_type in zip(figs[5:], list(all_components.keys())):
-        print('process1', list_of_graphs_of_type, graph_type)
-        for number, fig in enumerate(list_of_graphs_of_type):
-            print('  process2', number, fig)
-            go.Figure(fig).write_image(os.path.join(output_directory, 'test_'+str(graph_type)+str(number)+'.jpg'))
 
     styles = getSampleStyleSheet()
 
     Title = "Dashboard Printout"
     pageinfo = ""
+
+    tables = [process_table(fig) for fig in figs[3:5]]
+
+    def save_images():
+        print(figs[0])
+        print(figs[1])
+        print(figs[2])
+        # Only save if the figure contains data
+        if figs[0]['data']:
+            go.Figure(figs[0]).write_image(os.path.join(output_directory, 'test_heatmap.jpg'))
+        if figs[1]['data']:
+            go.Figure(figs[1]).write_image(os.path.join(output_directory, 'test_manhattan.jpg'))
+        if figs[2]['data']:
+            go.Figure(figs[2]).write_image(os.path.join(output_directory, 'test_kde.jpg'))
+        for list_of_graphs_of_type, graph_type in zip(figs[5:], list(all_components.keys())):
+            for number, fig in enumerate(list_of_graphs_of_type):
+                go.Figure(fig).write_image(os.path.join(output_directory, 'test_'+str(graph_type)+str(number)+'.jpg'))
 
     def my_first_page(canvas, doc):
         canvas.saveState()
@@ -111,19 +115,25 @@ def export_to_pdf(n_clicks, *figs):
         doc = SimpleDocTemplate(os.path.join(output_directory, "dashboard_printout.pdf"))
         Story = [Spacer(1, 2 * inch)]
         style = styles["Normal"]
-        Story.append(Paragraph('Sample paragraph 1'))
-        Story.append(Image(os.path.join(output_directory, 'test_heatmap.jpg'), kind='proportional', height=500, width=500))
-        Story.append(Paragraph('Sample paragraph 2', style))
-        Story.append(Image(os.path.join(output_directory, 'test_manhattan.jpg'), kind='proportional', height=500, width=500))
-        Story.append(Paragraph('Sample paragraph 3', style))
-        Story.append(Image(os.path.join(output_directory, 'test_kde.jpg'), kind='proportional', height=500, width=500))
+
+        save_images()
+
+        # Only include image if the figure contains data
+        if figs[0]['data']:
+            Story.append(Paragraph('Correlation matrix:'))
+            Story.append(Image(os.path.join(output_directory, 'test_heatmap.jpg'), kind='proportional', height=500, width=500))
+        if figs[1]['data']:
+            Story.append(Paragraph('Manhattan graph with corrected p-value threshold', style))
+            Story.append(Image(os.path.join(output_directory, 'test_manhattan.jpg'), kind='proportional', height=500, width=500))
+        if figs[2]['data']:
+            Story.append(Paragraph('KDE for each variable', style))
+            Story.append(Image(os.path.join(output_directory, 'test_kde.jpg'), kind='proportional', height=500, width=500))
+
         for table in tables:
             Story.append(table)
         for list_of_graphs_of_type, graph_type in zip(figs[5:], list(all_components.keys())):
-            print('print1', list_of_graphs_of_type, graph_type)
             for number, fig in enumerate(list_of_graphs_of_type):
                 Story.append(Paragraph(f'{graph_type} {number}'))
-                print('print2 test_' + str(graph_type) + str(number) + '.jpg')
                 Story.append(
                     Image(os.path.join(output_directory, 'test_' + str(graph_type) + str(number) + '.jpg'), kind='proportional',
                           height=500, width=500))
