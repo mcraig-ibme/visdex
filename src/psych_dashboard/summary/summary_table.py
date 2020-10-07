@@ -9,7 +9,8 @@ from psych_dashboard.timing import timing
 
 
 @app.callback(
-    [Output('table_summary', 'children'),
+    [Output('other_summary', 'children'),
+     Output('table_summary', 'children'),
      Output('df-filtered-loaded-div', 'children')],
     [Input('df-loaded-div', 'children'),
      Input('missing-values-input', 'value')])
@@ -20,7 +21,7 @@ def update_summary_table(df_loaded, missing_value_cutoff):
 
     # If empty, return an empty Div
     if dff.size == 0:
-        return html.Div(), False
+        return html.Div(), html.Div(), False
 
     for index_level, index in enumerate(indices):
         dff.insert(loc=index_level, column=index, value=dff.index.get_level_values(index_level))
@@ -53,40 +54,44 @@ def update_summary_table(df_loaded, missing_value_cutoff):
 
     # Reorder the columns so that 50% centile is next to 'mean'
     description_df = description_df.reindex(columns=['column name', 'count', 'mean', '50%', 'std', 'min', '25%', '75%', 'max', '% missing values'])
-
+    specifiers = ['s', 'd', '.2f', '.2f', '.2f', '.2f', '.2f', '.2f', '.2f', '.2f']
     return html.Div([html.Div('#rows: ' + str(dff.shape[0])),
-                     html.Div('#columns: ' + str(dff.shape[1])),
-                     html.Div(
-                         dash_table.DataTable(
-                             id='table',
-                             columns=[{'name': i.upper(),
-                                       'id': i,
-                                       'type': 'numeric',
-                                       'format': {'specifier': '.2f'}} for i in description_df.columns],
-                             data=description_df.to_dict('records'),
-                             fixed_rows={'headers': True},
-                             style_table={'height': '300px', 'overflowY': 'auto'},
-                             # Highlight any columns that do not have a complete set of records,
-                             # by comparing count against the length of the DF.
-                             style_data_conditional=[
-                                 {
-                                     'if': {
-                                         'filter_query': '{{count}} < {}'.format(dff.shape[0]),
-                                         'column_id': 'count'
-                                     },
-                                     'backgroundColor': 'FireBrick',
-                                     'color': 'white'
-                                  }] +
-                             [{
-                                 'if': {
-                                     'filter_query': '{{column name}} = {}'.format(i)
-                                 },
-                                 'backgroundColor': 'Grey',
-                                 'color': 'white'
-                               }
-                              for i in dropped_columns
-                              ]
-                         )
-                     )
-                     ]
-                    ), True
+                     html.Div('#columns: ' + str(dff.shape[1]))]), \
+        html.Div(
+            dash_table.DataTable(
+                id='table',
+                columns=[{'name': description_df.columns[0].upper(),
+                          'id': description_df.columns[0],
+                          'type': 'text',
+                          'format': {'specifier': 's'}}] +
+                        [{'name': i.upper(),
+                          'id': i,
+                          'type': 'numeric',
+                          'format': {'specifier': j}} for i, j in zip(description_df.columns[1:], specifiers[1:])],
+                data=description_df.to_dict('records'),
+                page_size=20,
+                # style_table={'height': '300px'},
+                # Highlight any columns that do not have a complete set of records,
+                # by comparing count against the length of the DF.
+                style_data_conditional=[
+                    {
+                        'if': {
+                            'filter_query': '{{count}} < {}'.format(dff.shape[0]),
+                            'column_id': 'count'
+                        },
+                        'backgroundColor': 'FireBrick',
+                        'color': 'white'
+                     }] +
+                [{
+                    'if': {
+                        'filter_query': '{{column name}} = {}'.format(i)
+                    },
+                    'backgroundColor': 'Grey',
+                    'color': 'white',
+                  }
+                 for i in dropped_columns
+                 ]
+            ),
+            # style={'width': '90%'}
+        ),\
+        True
