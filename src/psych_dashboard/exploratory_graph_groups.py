@@ -120,7 +120,8 @@ def generate_generic_group(n_clicks, group_type, component_list):
 def change_graph_group_type(graph_type, id, children):
     logging.info(f'change_graph_group_type {graph_type} {id}')
     # Generate a new group of the right type.
-    children[-1] = generate_generic_group(id['index'], graph_type, all_components[graph_type])
+    if 'filter-graph-group-' + str(graph_type) != children[-1]['props']['id']['type']:
+        children[-1] = generate_generic_group(id['index'], graph_type, all_components[graph_type])
     return children
 
 
