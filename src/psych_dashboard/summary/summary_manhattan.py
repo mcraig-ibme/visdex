@@ -41,7 +41,8 @@ def calculate_colorscale(n_values):
      Input('manhattan-logscale-check', 'value'),
      Input('df-filtered-loaded-div', 'children'),
      Input('pval-loaded-div', 'children'),
-     Input('manhattan-active-check', 'value')]
+     Input('manhattan-active-check', 'value')],
+    prevent_initial_call=True
 )
 @timing
 def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):

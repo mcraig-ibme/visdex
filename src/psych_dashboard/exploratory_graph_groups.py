@@ -128,7 +128,9 @@ def change_graph_group_type(graph_type, id, children):
 @app.callback(
     Output('graph-group-container', 'children'),
     [Input('add-graph-button', 'n_clicks')],
-    [State('graph-group-container', 'children')])
+    [State('graph-group-container', 'children')],
+    prevent_initial_call=True
+)
 def add_graph_group(n_clicks, children):
     # Add a new graph group each time the button is clicked. The if None guard stops there being an initial graph.
     logging.info(f'add_graph_group')

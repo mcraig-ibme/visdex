@@ -19,7 +19,8 @@ logging.getLogger(__name__)
 @app.callback(
     [Output('heatmap-dropdown', 'options'),
      Output('heatmap-dropdown', 'value')],
-    [Input('df-filtered-loaded-div', 'children')]
+    [Input('df-filtered-loaded-div', 'children')],
+    prevent_initial_call=True
 )
 @timing
 def update_heatmap_dropdown(df_loaded):
@@ -243,7 +244,9 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
      ],
     [Input('heatmap-dropdown', 'value'),
      Input('heatmap-clustering-input', 'value')],
-    [State('df-loaded-div', 'children')])
+    [State('df-loaded-div', 'children')],
+    prevent_initial_call=True
+)
 @timing
 def update_summary_heatmap(dropdown_values, clusters, df_loaded):
     logging.info(f'update_summary_heatmap {dropdown_values} {clusters}')
