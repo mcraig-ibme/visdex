@@ -11,6 +11,8 @@ PAGE_WIDTH, PAGE_HEIGHT = (210 * mm, 297 * mm)
 
 
 def process_table(datatable):
+    if datatable is None:
+        return None
 
     n_cols = len(datatable['props']['children']['props']['columns'])
     # Guard against 'format.specifier' not existing
@@ -120,21 +122,21 @@ def export_to_pdf(n_clicks, *figs):
 
         # Only include image if the figure contains data
         if figs[0]['data']:
-            Story.append(Paragraph('Correlation matrix:'))
+            Story.append(Paragraph('Correlation matrix:', style=styles['Heading1']))
             Story.append(Image(os.path.join(output_directory, 'summary_heatmap.jpg'),
                                kind='proportional',
                                height=500,
                                width=500)
                          )
         if figs[1]['data']:
-            Story.append(Paragraph('Manhattan graph with corrected p-value threshold', style))
+            Story.append(Paragraph('Manhattan graph with corrected p-value threshold', style=styles['Heading1']))
             Story.append(Image(os.path.join(output_directory, 'summary_manhattan.jpg'),
                                kind='proportional',
                                height=500,
                                width=500)
                          )
         if figs[2]['data']:
-            Story.append(Paragraph('KDE for each variable', style))
+            Story.append(Paragraph('KDE for each variable', style=styles['Heading1']))
             Story.append(Image(os.path.join(output_directory, 'summary_kde.jpg'),
                                kind='proportional',
                                height=500,
@@ -145,7 +147,7 @@ def export_to_pdf(n_clicks, *figs):
             Story.append(table)
         for list_of_graphs_of_type, graph_type in zip(figs[5:], list(all_components.keys())):
             for number, fig in enumerate(list_of_graphs_of_type):
-                Story.append(Paragraph(f'{graph_type} {number}'))
+                Story.append(Paragraph(f'{graph_type} {number}', style=styles['Heading2']))
                 Story.append(
                     Image(os.path.join(output_directory, 'exploratory_' + str(graph_type) + str(number) + '.jpg'),
                           kind='proportional',
