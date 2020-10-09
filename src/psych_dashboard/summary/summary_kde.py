@@ -15,7 +15,9 @@ from psych_dashboard.timing import timing
     Output('kde-figure', 'figure'),
     [Input('heatmap-dropdown', 'value'),
      Input('kde-checkbox', 'value')],
-    [State('df-loaded-div', 'children')])
+    [State('df-loaded-div', 'children')],
+    prevent_initial_call=True
+)
 @timing
 def update_summary_kde(dropdown_values, kde_active, df_loaded):
     logging.info(f'update_summary_kde')

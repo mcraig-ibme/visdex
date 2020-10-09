@@ -19,7 +19,8 @@ logging.getLogger(__name__)
 @app.callback(
     [Output('heatmap-dropdown', 'options'),
      Output('heatmap-dropdown', 'value')],
-    [Input('df-filtered-loaded-div', 'children')]
+    [Input('df-filtered-loaded-div', 'children')],
+    prevent_initial_call=True
 )
 @timing
 def update_heatmap_dropdown(df_loaded):
@@ -243,7 +244,9 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
      ],
     [Input('heatmap-dropdown', 'value'),
      Input('heatmap-clustering-input', 'value')],
-    [State('df-loaded-div', 'children')])
+    [State('df-loaded-div', 'children')],
+    prevent_initial_call=True
+)
 @timing
 def update_summary_heatmap(dropdown_values, clusters, df_loaded):
     logging.info(f'update_summary_heatmap {dropdown_values} {clusters}')
@@ -255,7 +258,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
         logs_dff = load('logs')
 
         # Add the index back in as a column so we can see it in the table preview
-        if dff.size > 0 and dropdown_values != []:
+        if dff.size > 0 and len(dropdown_values) > 1:
             dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
             dff.dropna(inplace=True)
 
@@ -277,9 +280,12 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                 clx, _ = vq(w_corr, centroids)
 
             elif cluster_method == 'hierarchical':
-                cluster = AgglomerativeClustering(n_clusters=clusters, affinity='euclidean', linkage='ward')
-                cluster.fit_predict(corr)
-                clx = cluster.labels_
+                try:
+                    cluster = AgglomerativeClustering(n_clusters=min(clusters, len(selected_columns)), affinity='euclidean', linkage='ward')
+                    cluster.fit_predict(corr)
+                    clx = cluster.labels_
+                except ValueError:
+                    clx = [0] * len(selected_columns)
             else:
                 raise ValueError
 
@@ -378,14 +384,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
 
             return fig, True, True
 
-    fig = go.Figure(go.Heatmap())
-    fig.update_layout(xaxis_showgrid=False,
-                      xaxis_zeroline=False,
-                      xaxis_range=[0, 1],
-                      yaxis_showgrid=False,
-                      yaxis_zeroline=False,
-                      yaxis_range=[0, 1],
-                      plot_bgcolor='rgba(0,0,0,0)')
+    fig = go.Figure()
 
     logging.info(f'{pd.DataFrame(timing_dict.items())}')
 

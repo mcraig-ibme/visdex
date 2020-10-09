@@ -2,13 +2,14 @@ import io
 import base64
 import datetime
 import logging
+import os
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
-from psych_dashboard import preview_table, exploratory_graph_groups
+from psych_dashboard import preview_table, exploratory_graph_groups, export
 from psych_dashboard.load_feather import store, load
 from psych_dashboard.exploratory_graphs import scatter_graph, bar_graph, histogram_graph, manhattan_graph, violin_graph
 from psych_dashboard.summary import summary_heatmap, summary_kde, summary_manhattan, summary_table
@@ -83,7 +84,8 @@ app.layout = html.Div(children=[
         },
     ),
     html.Div(id='output-data-file-upload',
-             children=['No file loaded']),
+             children=['No file loaded'],
+             style=div_style),
     html.Label(children='Column Filter File Selection (initial data read will happen immediately)',
                style=div_style),
     dcc.Upload(
@@ -103,9 +105,14 @@ app.layout = html.Div(children=[
         },
     ),
     html.Div(id='output-filter-file-upload',
-             children=['No file loaded']),
+             children=['No file loaded'],
+             style=div_style),
     html.Button('Analyse', id='load-files-button',
                 style=div_style),
+    html.Button('Export to PDF', id='export-pdf-button',
+                style=div_style),
+    html.Div(children=[''], id='export-div',
+             style=div_style),
     html.Div([
         html.H1('Summary', style={'display': 'inline-block', 'margin-left': standard_margin_left}),
         dbc.Button(
@@ -268,6 +275,7 @@ app.layout = html.Div(children=[
      Output("collapse-summary-button", "children")],
     [Input("collapse-summary-button", "n_clicks")],
     [State("summary-collapse", "is_open")],
+    prevent_initial_call=True
 )
 def toggle_collapse_summary(n, is_open):
     logging.info(f'toggle_collapse_summary {n} {is_open}')
@@ -281,6 +289,7 @@ def toggle_collapse_summary(n, is_open):
      Output("collapse-explore-button", "children")],
     [Input("collapse-explore-button", "n_clicks")],
     [State("explore-collapse", "is_open")],
+    prevent_initial_call=True
 )
 def toggle_collapse_explore(n, is_open):
     logging.info(f'toggle_collapse_explore {n} {is_open}')
@@ -300,7 +309,8 @@ def standardise_subjectkey(subjectkey):
     [Output('output-data-file-upload', 'children')],
     [Input('data-file-upload', 'contents')],
     [State('data-file-upload', 'filename'),
-     State('data-file-upload', 'last_modified')]
+     State('data-file-upload', 'last_modified')],
+    prevent_initial_call=True
 )
 # This function is triggered by the data file upload, and parses the contents of the triggering file,
 # then saves them to the appropriate children
@@ -333,20 +343,17 @@ def parse_input_data_file(contents, filename, date):
 
         store('parsed', df)
 
-        return [html.Div([filename, ' loaded, last modified ',
-                          datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')],
-                         style=div_style),
-                ]
+        return [f"{filename} loaded, last modified {datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}"]
 
-    return [html.Div('No file loaded',
-                     style=div_style)]
+    return ['No file loaded']
 
 
 @app.callback(
     [Output('output-filter-file-upload', 'children')],
     [Input('filter-file-upload', 'contents')],
     [State('filter-file-upload', 'filename'),
-     State('filter-file-upload', 'last_modified')]
+     State('filter-file-upload', 'last_modified')],
+    prevent_initial_call=True
 )
 # This function is triggered by either upload, and parses the contents of the triggering file,
 # then saves them to the appropriate children
@@ -370,24 +377,22 @@ def parse_input_filter_file(contents, filename, date):
         df = pd.DataFrame(variables_of_interest, columns=['names'])
         store('columns', df)
 
-        return [html.Div([filename, ' loaded, last modified ',
-                          datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')],
-                         style=div_style),
-                ]
+        return [f"{filename} loaded, last modified {datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}"]
 
-    return [html.Div('No file loaded',
-                     style=div_style)]
+    return ['No file loaded']
 
 
 @app.callback(
     [Output('df-loaded-div', 'children')],
     [Input('load-files-button', 'n_clicks')],
     [State('data-file-upload', 'filename'),
-     State('filter-file-upload', 'filename')]
+     State('filter-file-upload', 'filename')],
+    prevent_initial_call=True
 )
 # This function is triggered by the button, and takes the parsed values of the 1 or 2 upload
 # components, and outputs the resulting df to the div.
 def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
+    logging.info(f'update_df_loaded_div')
     # Read in main DataFrame
     if data_file_value is None:
         return [False]

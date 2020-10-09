@@ -13,7 +13,9 @@ from psych_dashboard.timing import timing
      Output('table_summary', 'children'),
      Output('df-filtered-loaded-div', 'children')],
     [Input('df-loaded-div', 'children'),
-     Input('missing-values-input', 'value')])
+     Input('missing-values-input', 'value')],
+    prevent_initial_call=True
+)
 @timing
 def update_summary_table(df_loaded, missing_value_cutoff):
     logging.info(f'update_summary_table')

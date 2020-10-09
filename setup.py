@@ -13,6 +13,7 @@ setup(name="psych_dashboard",
                         'feather-format>=0.4.0',
                         'dash-bootstrap-components>=0.10.0',
                         'selenium>=3.0.0',
+                        'reportlab>=3.5.50',
                         ],
       entry_points={
          'console_scripts': ['run-dashboard=psych_dashboard.index:main'],

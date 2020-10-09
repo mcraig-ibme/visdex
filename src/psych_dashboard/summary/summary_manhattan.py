@@ -41,7 +41,8 @@ def calculate_colorscale(n_values):
      Input('manhattan-logscale-check', 'value'),
      Input('df-filtered-loaded-div', 'children'),
      Input('pval-loaded-div', 'children'),
-     Input('manhattan-active-check', 'value')]
+     Input('manhattan-active-check', 'value')],
+    prevent_initial_call=True
 )
 @timing
 def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
@@ -101,63 +102,67 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     timing_dict['plot_manhattan-calc_colors'] = te - ts
     ts = time.time()
     max_cluster = max(cluster_df['column_names'])
-    fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
-                               y=np.flip(flattened_logs.values),
-                               mode='markers',
-                               marker=dict(
-                                   color=colors,
-                                   colorscale=calculate_colorscale(max_cluster + 1),
-                                   colorbar=dict(
-                                       tickmode='array',
-                                       # Offset by 0.5 to centre the text within the boxes
-                                       tickvals=[i - 0.5 for i in range(max_cluster + 2)],
-                                       # The bottom of the colorbar is black for "cross-cluster pair"s
-                                       ticktext=["cross-cluster pair"] + [str(i) for i in range(max_cluster + 2)],
-                                       title='Cluster'
+    # Create graph, unless there's no data, in which case create a blank graph
+    if len(flattened_logs) > 0:
+        fig = go.Figure(go.Scatter(x=[[item[i] for item in flattened_logs.index[::-1]] for i in range(0, 2)],
+                                   y=np.flip(flattened_logs.values),
+                                   mode='markers',
+                                   marker=dict(
+                                       color=colors,
+                                       colorscale=calculate_colorscale(max_cluster + 1),
+                                       colorbar=dict(
+                                           tickmode='array',
+                                           # Offset by 0.5 to centre the text within the boxes
+                                           tickvals=[i - 0.5 for i in range(max_cluster + 2)],
+                                           # The bottom of the colorbar is black for "cross-cluster pair"s
+                                           ticktext=["cross-cluster pair"] + [str(i) for i in range(max_cluster + 2)],
+                                           title='Cluster'
+                                       ),
+                                       cmax=max_cluster + 1,
+                                       # Minimum is -1 to represent the points of variables not in the same cluster
+                                       cmin=-1,
+                                       showscale=True
+                                               ),
                                    ),
-                                   cmax=max_cluster + 1,
-                                   # Minimum is -1 to represent the points of variables not in the same cluster
-                                   cmin=-1,
-                                   showscale=True
-                                           ),
-                               ),
-                    )
+                        )
 
-    fig.update_layout(shapes=[
-        dict(
-            type='line',
-            yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
-            xref='x', x0=0, x1=len(flattened_logs)-1
+        fig.update_layout(shapes=[
+            dict(
+                type='line',
+                yref='y', y0=transformed_corrected_ref_pval, y1=transformed_corrected_ref_pval,
+                xref='x', x0=0, x1=len(flattened_logs)-1
+            )
+        ],
+            annotations=[
+                # This annotation prints the transformed pvalue
+                dict(
+                    x=0,
+                    y=transformed_corrected_ref_pval if logscale != ['LOG'] else np.log10(transformed_corrected_ref_pval),
+                    xref='x',
+                    yref='y',
+                    text='{:f}'.format(transformed_corrected_ref_pval),
+                    showarrow=True,
+                    arrowhead=7,
+                    ax=-50,
+                    ay=0
+                ),
+                # This annotation above the top of the graph is only shown if any inf values have been replaced.
+                # It highlights what value has been used to replace them (1.2*max)
+                dict(
+                    x=0,
+                    y=1.1,
+                    xref='paper',
+                    yref='paper',
+                    text='Infinite values (corresponding to a 0 p-value after numerical errors) have been replaced with {:f}'.format(inf_replacement) if inf_replacement != 0 else '',
+                    showarrow=False
+                ),
+                ],
+            xaxis_title='variable',
+            yaxis_title='-log10(p)',
+            yaxis_type='log' if logscale == ['LOG'] else None
         )
-    ],
-        annotations=[
-            # This annotation prints the transformed pvalue
-            dict(
-                x=0,
-                y=transformed_corrected_ref_pval if logscale != ['LOG'] else np.log10(transformed_corrected_ref_pval),
-                xref='x',
-                yref='y',
-                text='{:f}'.format(transformed_corrected_ref_pval),
-                showarrow=True,
-                arrowhead=7,
-                ax=-50,
-                ay=0
-            ),
-            # This annotation above the top of the graph is only shown if any inf values have been replaced.
-            # It highlights what value has been used to replace them (1.2*max)
-            dict(
-                x=0,
-                y=1.1,
-                xref='paper',
-                yref='paper',
-                text='Infinite values (corresponding to a 0 p-value after numerical errors) have been replaced with {:f}'.format(inf_replacement) if inf_replacement != 0 else '',
-                showarrow=False
-            ),
-            ],
-        xaxis_title='variable',
-        yaxis_title='-log10(p)',
-        yaxis_type='log' if logscale == ['LOG'] else None
-    )
+    else:
+        fig = go.Figure()
     te = time.time()
     timing_dict['plot_manhattan-figure'] = te - ts
 

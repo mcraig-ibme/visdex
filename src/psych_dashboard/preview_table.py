@@ -10,7 +10,9 @@ logging.getLogger(__name__)
 
 @app.callback(
     Output('table_preview', 'children'),
-    [Input('df-loaded-div', 'children')])
+    [Input('df-loaded-div', 'children')],
+    prevent_initial_call=True
+)
 def update_preview_table(df_loaded):
     logging.info(f'update_preview_table')
 
