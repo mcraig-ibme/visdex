@@ -83,11 +83,13 @@ def make_scatter_figure(*args):
 
     try:
         if len(facet_row_cats) > 1:
+            facet_row_cats = [x for x in facet_row_cats if ~np.isnan(x)]
             facet_row_cats.remove(None)
     except ValueError:
         pass
     try:
         if len(facet_col_cats) > 1:
+            facet_col_cats = [x for x in facet_col_cats if ~np.isnan(x)]
             facet_col_cats.remove(None)
     except ValueError:
         pass
@@ -177,7 +179,26 @@ def make_scatter_figure(*args):
     for annotation in annotations:
         fig.add_annotation(annotation)
 
-    fig.update_layout(coloraxis=dict(colorscale='Bluered_r'), showlegend=False, )
+    # Generate the appropriate title
+    title = f"Scatter plot(s) of {args_dict['x']} against {args_dict['y']}"
+    if args_dict['facet_row'] is not None and args_dict['facet_col'] is not None:
+        title += f", split by {args_dict['facet_row']} and {args_dict['facet_col']}"
+    elif args_dict['facet_row'] is not None:
+        title += f", split by {args_dict['facet_row']}"
+    elif args_dict['facet_col'] is not None:
+        title += f", split by {args_dict['facet_col']}"
+
+    if args_dict['color'] is not None and args_dict['size'] is not None:
+        title += f", coloured by {args_dict['color']} and sized by {args_dict['size']}"
+    elif args_dict['color'] is not None:
+        title += f", coloured by {args_dict['color']}"
+    elif args_dict['size'] is not None:
+        title += f", sized by {args_dict['size']}"
+
+    fig.update_layout(coloraxis=dict(colorscale='Bluered_r'),
+                      showlegend=False,
+                      title=title,
+                      )
     fig.update_xaxes(matches='x')
     fig.update_yaxes(matches='y')
     return fig
