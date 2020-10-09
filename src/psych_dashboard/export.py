@@ -83,19 +83,19 @@ def export_to_pdf(n_clicks, *figs):
     tables = [process_table(fig) for fig in figs[3:5]]
 
     def save_images():
-        print(figs[0])
-        print(figs[1])
-        print(figs[2])
+        """
+        Save each image to an intermediate file, which will then be included in the final report.
+        """
         # Only save if the figure contains data
         if figs[0]['data']:
-            go.Figure(figs[0]).write_image(os.path.join(output_directory, 'test_heatmap.jpg'))
+            go.Figure(figs[0]).write_image(os.path.join(output_directory, 'summary_heatmap.jpg'))
         if figs[1]['data']:
-            go.Figure(figs[1]).write_image(os.path.join(output_directory, 'test_manhattan.jpg'))
+            go.Figure(figs[1]).write_image(os.path.join(output_directory, 'summary_manhattan.jpg'))
         if figs[2]['data']:
-            go.Figure(figs[2]).write_image(os.path.join(output_directory, 'test_kde.jpg'))
+            go.Figure(figs[2]).write_image(os.path.join(output_directory, 'summary_kde.jpg'))
         for list_of_graphs_of_type, graph_type in zip(figs[5:], list(all_components.keys())):
             for number, fig in enumerate(list_of_graphs_of_type):
-                go.Figure(fig).write_image(os.path.join(output_directory, 'test_'+str(graph_type)+str(number)+'.jpg'))
+                go.Figure(fig).write_image(os.path.join(output_directory, 'exploratory_'+str(graph_type)+str(number)+'.jpg'))
 
     def my_first_page(canvas, doc):
         canvas.saveState()
@@ -121,13 +121,25 @@ def export_to_pdf(n_clicks, *figs):
         # Only include image if the figure contains data
         if figs[0]['data']:
             Story.append(Paragraph('Correlation matrix:'))
-            Story.append(Image(os.path.join(output_directory, 'test_heatmap.jpg'), kind='proportional', height=500, width=500))
+            Story.append(Image(os.path.join(output_directory, 'summary_heatmap.jpg'),
+                               kind='proportional',
+                               height=500,
+                               width=500)
+                         )
         if figs[1]['data']:
             Story.append(Paragraph('Manhattan graph with corrected p-value threshold', style))
-            Story.append(Image(os.path.join(output_directory, 'test_manhattan.jpg'), kind='proportional', height=500, width=500))
+            Story.append(Image(os.path.join(output_directory, 'summary_manhattan.jpg'),
+                               kind='proportional',
+                               height=500,
+                               width=500)
+                         )
         if figs[2]['data']:
             Story.append(Paragraph('KDE for each variable', style))
-            Story.append(Image(os.path.join(output_directory, 'test_kde.jpg'), kind='proportional', height=500, width=500))
+            Story.append(Image(os.path.join(output_directory, 'summary_kde.jpg'),
+                               kind='proportional',
+                               height=500,
+                               width=500)
+                         )
 
         for table in tables:
             Story.append(table)
@@ -135,8 +147,11 @@ def export_to_pdf(n_clicks, *figs):
             for number, fig in enumerate(list_of_graphs_of_type):
                 Story.append(Paragraph(f'{graph_type} {number}'))
                 Story.append(
-                    Image(os.path.join(output_directory, 'test_' + str(graph_type) + str(number) + '.jpg'), kind='proportional',
-                          height=500, width=500))
+                    Image(os.path.join(output_directory, 'exploratory_' + str(graph_type) + str(number) + '.jpg'),
+                          kind='proportional',
+                          height=500,
+                          width=500)
+                )
 
         doc.build(Story, onFirstPage=my_first_page, onLaterPages=my_later_pages)
 
