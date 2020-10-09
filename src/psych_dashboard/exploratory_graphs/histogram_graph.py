@@ -44,8 +44,14 @@ def make_histogram_figure(*args):
     fig = go.Figure(data=go.Histogram(x=data_column,
                                       xbins=dict(size=(data_column.max() - data_column.min())/(args_dict['nbins']-1)),
                                       autobinx=False,
-                                      ))
+                                      ),
+                    )
 
-    fig.update_layout(yaxis_zeroline=False)
+    fig.update_layout(yaxis_zeroline=False,
+                      xaxis_title=args_dict['base_variable'],
+                      yaxis_title='count',
+                      title=f'Histogram of {args_dict["base_variable"]} with '
+                            f"{args_dict['nbins']  if args_dict['nbins'] > 1 else 'automatically detected'} bins.",
+                      )
 
     return fig
