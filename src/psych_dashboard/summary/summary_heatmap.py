@@ -277,9 +277,12 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                 clx, _ = vq(w_corr, centroids)
 
             elif cluster_method == 'hierarchical':
-                cluster = AgglomerativeClustering(n_clusters=clusters, affinity='euclidean', linkage='ward')
-                cluster.fit_predict(corr)
-                clx = cluster.labels_
+                try:
+                    cluster = AgglomerativeClustering(n_clusters=clusters, affinity='euclidean', linkage='ward')
+                    cluster.fit_predict(corr)
+                    clx = cluster.labels_
+                except ValueError:
+                    clx = [0] * len(selected_columns)
             else:
                 raise ValueError
 
