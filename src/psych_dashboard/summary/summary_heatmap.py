@@ -258,7 +258,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
         logs_dff = load('logs')
 
         # Add the index back in as a column so we can see it in the table preview
-        if dff.size > 0 and dropdown_values != []:
+        if dff.size > 0 and len(dropdown_values) > 1:
             dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
             dff.dropna(inplace=True)
 
@@ -281,7 +281,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
 
             elif cluster_method == 'hierarchical':
                 try:
-                    cluster = AgglomerativeClustering(n_clusters=clusters, affinity='euclidean', linkage='ward')
+                    cluster = AgglomerativeClustering(n_clusters=min(clusters, len(selected_columns)), affinity='euclidean', linkage='ward')
                     cluster.fit_predict(corr)
                     clx = cluster.labels_
                 except ValueError:
@@ -384,14 +384,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
 
             return fig, True, True
 
-    fig = go.Figure(go.Heatmap())
-    fig.update_layout(xaxis_showgrid=False,
-                      xaxis_zeroline=False,
-                      xaxis_range=[0, 1],
-                      yaxis_showgrid=False,
-                      yaxis_zeroline=False,
-                      yaxis_range=[0, 1],
-                      plot_bgcolor='rgba(0,0,0,0)')
+    fig = go.Figure()
 
     logging.info(f'{pd.DataFrame(timing_dict.items())}')
 
