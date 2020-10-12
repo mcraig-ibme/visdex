@@ -81,18 +81,25 @@ def make_scatter_figure(*args):
     facet_row_cats = list(dff[args_dict['facet_row']].unique()) if args_dict['facet_row'] is not None else [None]
     facet_col_cats = list(dff[args_dict['facet_col']].unique()) if args_dict['facet_col'] is not None else [None]
 
-    try:
-        if len(facet_row_cats) > 1:
+    # Remove nans and Nones
+    if len(facet_row_cats) > 1:
+        try:
             facet_row_cats = [x for x in facet_row_cats if ~np.isnan(x)]
+        except TypeError:
+            pass
+        try:
             facet_row_cats.remove(None)
-    except ValueError:
-        pass
-    try:
-        if len(facet_col_cats) > 1:
+        except ValueError:
+            pass
+    if len(facet_col_cats) > 1:
+        try:
             facet_col_cats = [x for x in facet_col_cats if ~np.isnan(x)]
+        except TypeError:
+            pass
+        try:
             facet_col_cats.remove(None)
-    except ValueError:
-        pass
+        except ValueError:
+            pass
 
     # Return empty scatter if not enough options are selected, or the data is empty.
     if dff.columns.size == 0 or args_dict['x'] is None or args_dict['y'] is None:
