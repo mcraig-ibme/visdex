@@ -96,6 +96,6 @@ def make_manhattan_figure(*args):
         xaxis_title='variable',
         yaxis_title='-log10(p)',
         yaxis_type='log' if args_dict['logscale'] == ['LOG'] else None,
-        title=args_dict['base_variable']
+        title=f"Manhattan plot with base variable {args_dict['base_variable']} and p-value reference of {args_dict['pvalue']}",
     )
     return fig
