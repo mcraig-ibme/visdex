@@ -104,6 +104,41 @@ Changing the `Graph type` on a graph will change it to another type, e.g.
 Bar graph or Manhattan graph. Each graph type has a different collection
 of input controls to curate the graph.
 
+### Exploratory graph documentation
+
+#### Scatter
+Plot a Scatter graph to compare two variables. Options exist to encode further 
+variables into colour and size of markers, and to split into separate graphs by
+values of further variables.
+
+Select a `regression degree` value to plot a regression line on each graph, 
+with `r^2` displayed for each. 
+
+#### Bar
+Plot a Bar graph for a single variable, optionally split into value of a second 
+variable.
+
+Note that the Bar graph type is not suitable for float-type datasets. Instead, use the 
+Histogram type in these instances. 
+
+#### Manhattan
+Plot a Manhattan graph for a single base variable against all other variables.
+Select a reference p-value to see the correct p-value (taking into account the
+number of correlations displayed) plotted as a horizontal line. Anything above
+the horizontal line is potentially "significant".
+
+#### Violin
+Plot a Violin graph for a single variable. This displays a kernel density 
+estimate, and box and whisker plot including mean.
+
+#### Histogram
+Plot a Histogram for a single variable.
+
+- `n bins`: select the number of bins. Selecting `1` uses the default Plotly 
+algorithm to determine the optimum number of bins.
+
+
+
 ### Adding/modifying exploratory graph types
 Graph types can be modified by adding/removing/modifying input controls,
 or by modifying the calculations performed in response.
