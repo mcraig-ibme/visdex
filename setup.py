@@ -14,6 +14,7 @@ setup(name="psych_dashboard",
                         'dash-bootstrap-components>=0.10.0',
                         'selenium>=3.0.0',
                         'reportlab>=3.5.50',
+                        'flask-caching>=1.9.0',
                         ],
       entry_points={
          'console_scripts': ['run-dashboard=psych_dashboard.index:main'],

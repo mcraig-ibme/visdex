@@ -24,6 +24,12 @@ run-dashboard
 This will begin a new app. In a browser, go to http://127.0.0.1:8050/ 
 to view the app.
 
+By default, the dashboard uses Feather format for data caching. If you
+want to use Redis instead, you will need to set up a Redis server on port
+6379, and set `use_redis = True` in `app.py`.
+
+TODO: add redis install documentation?
+
 # Documentation of functionality
 The dashboard is split into 3 sections:
 1. File selection

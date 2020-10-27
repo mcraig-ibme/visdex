@@ -3,20 +3,26 @@ import logging
 import dash
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
-from flask_caching import Cache
 
 app = dash.Dash(__name__, suppress_callback_exceptions=False, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
-CACHE_CONFIG = {
-    'CACHE_TYPE': 'redis',
-    'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379')
-}
-cache = Cache()
-cache.init_app(app.server, config=CACHE_CONFIG)
-
 logging.basicConfig(level=logging.INFO)
 
+use_redis = False
+
+if use_redis:
+    from flask_caching import Cache
+    CACHE_CONFIG = {
+        'CACHE_TYPE': 'redis',
+        'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379')
+    }
+    cache = Cache()
+    cache.init_app(app.server, config=CACHE_CONFIG)
+    logging.info('Using Redis for data caching')
+else:
+    cache = None
+    logging.info('Using Feather for data caching')
 
 indices = ['SUBJECTKEY', 'EVENTNAME']
 
