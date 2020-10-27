@@ -1,11 +1,9 @@
 import logging
 import pandas as pd
 import numpy as np
-from psych_dashboard.app import indices, cache
+from psych_dashboard.app import indices, cache, use_redis
 
 logging.getLogger(__name__)
-
-use_redis = False
 
 
 def load_cluster_feather():
@@ -76,7 +74,6 @@ def load_corr():
     return dff
 
 
-# @cache.cached()
 def load(name):
     if use_redis:
         logging.debug(f'get cache {name}')

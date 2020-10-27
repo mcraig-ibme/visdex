@@ -23,7 +23,8 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 )
 def update_manhattan_components(df_loaded, style_dict, *args):
     logging.info('update_manhattan_components')
-    dff = load('pval')
+    dff = load('df')
+    # Only allow user to select columns that have data type that is valid for correlation
     dd_options = [{'label': col,
                    'value': col} for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes]
     return update_graph_components('manhattan', all_components['manhattan'], dd_options, args)
