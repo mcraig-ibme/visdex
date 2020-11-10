@@ -116,7 +116,10 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
 
     for v2 in range(len(required_new)):
         for v1 in range(len(overlap)):
-            c, p = stats.pearsonr(np_dff_overlap[:, v1], np_dff_req[:, v2])
+            # Mask out any pairs that contain nans (this is done pairwise rather than using .dropna on the
+            # full dataframe)
+            mask = ~np.isnan(np_dff_overlap[:, v1]) & ~np.isnan(np_dff_req[:, v2])
+            c, p = stats.pearsonr(np_dff_overlap[mask, v1], np_dff_req[mask, v2])
             new_against_existing_corr[v1, v2] = c
             new_against_existing_pval[v1, v2] = p
             new_against_existing_logs[v1, v2] = -np.log10(p)
@@ -166,7 +169,10 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     for (v2_count, v2) in enumerate(required_new):
         for (v1_count, v1) in enumerate(required_new):
             if np.isnan(new_against_new_corr[v1_count, v2_count]):
-                c, p = stats.pearsonr(np_dff_req[:, v1_count], np_dff_req[:, v2_count])
+                # Mask out any pairs that contain nans (this is done pairwise rather than using .dropna on the
+                # full dataframe)
+                mask = ~np.isnan(np_dff_req[:, v1_count]) & ~np.isnan(np_dff_req[:, v2_count])
+                c, p = stats.pearsonr(np_dff_req[mask, v1_count], np_dff_req[mask, v2_count])
                 new_against_new_corr[v1_count, v2_count] = c
                 new_against_new_corr[v2_count, v1_count] = c
                 new_against_new_pval[v1_count, v2_count] = p
@@ -260,7 +266,6 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
         # Add the index back in as a column so we can see it in the table preview
         if dff.size > 0 and len(dropdown_values) > 1:
             dff.insert(loc=0, column='SUBJECTKEY(INDEX)', value=dff.index)
-            dff.dropna(inplace=True)
 
             # The columns we want to have calculated
             selected_columns = list(dropdown_values)
