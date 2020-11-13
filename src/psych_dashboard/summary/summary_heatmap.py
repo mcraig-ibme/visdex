@@ -3,7 +3,6 @@ import logging
 import math
 import numpy as np
 import pandas as pd
-import time
 import scipy.stats as stats
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
@@ -11,7 +10,7 @@ from psych_dashboard.app import app
 from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
 from psych_dashboard.load_feather import store, load
-from psych_dashboard.timing import timing, timing_dict
+from psych_dashboard.timing import timing, start_timer, log_timing, print_timings
 
 logging.getLogger(__name__)
 
@@ -67,7 +66,7 @@ def reorder_df(df, order):
 
 
 def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
-    ts = time.time()
+    start_timer("recalculate_corr_etc")
     # Work out which columns/rows are needed anew, and which are already populated
     # TODO: note that if we load in a new file with some of the same column names, then this old
     #  correlation data may be used erroneously.
@@ -98,24 +97,21 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         pvalues = pval_dff.loc[overlap, overlap]
         logs = logs_dff.loc[overlap, overlap]
 
-    te = time.time()
-    timing_dict["update_summary_heatmap-init-corr"] = te - ts
-    ts = time.time()
+    log_timing("recalculate_corr_etc", "update_summary_heatmap-init-corr")
+
     # Populate missing elements in correlation matrix and p-values matrix using stats.pearsonr
     # Firstly, convert the dff columns needed to numpy (far faster than doing it each iteration)
-    ts1 = time.time()
+    start_timer("inner")
 
     np_dff_overlap = dff[overlap].to_numpy()
     np_dff_req = dff[required_new].to_numpy()
 
-    te1 = time.time()
-    timing_dict["update_summary_heatmap-numpy"] = te1 - ts1  # This is negligible
+    log_timing("inner", "update_summary_heatmap-numpy")  # This is negligible
 
     ########
     # Create new vs existing NumPy arrays, fill with calculated data. Then convert to
     # DFs, and append those to existing vs existing DF, to create all vs existing DFs
     ########
-    ts1 = time.time()
     new_against_existing_corr = np.full(
         shape=[len(overlap), len(required_new)], fill_value=np.nan
     )
@@ -126,9 +122,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         shape=[len(overlap), len(required_new)], fill_value=np.nan
     )
 
-    te1 = time.time()
-    timing_dict["update_summary_heatmap-nae_init"] = te1 - ts1
-    ts1 = time.time()
+    log_timing("inner", "update_summary_heatmap-nae_init")
 
     for v2 in range(len(required_new)):
         for v1 in range(len(overlap)):
@@ -140,9 +134,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
             new_against_existing_pval[v1, v2] = p
             new_against_existing_logs[v1, v2] = -np.log10(p)
 
-    te1 = time.time()
-    timing_dict["update_summary_heatmap-nae_calc"] = te1 - ts1
-    ts1 = time.time()
+    log_timing("inner", "update_summary_heatmap-nae_calc")
 
     new_against_existing_corr_df = pd.DataFrame(
         data=new_against_existing_corr, columns=required_new, index=overlap
@@ -159,9 +151,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         data=new_against_existing_logs, columns=required_new, index=overlap
     )
 
-    te1 = time.time()
-    timing_dict["update_summary_heatmap-nae_copy"] = te1 - ts1
-    ts1 = time.time()
+    log_timing("inner", "update_summary_heatmap-nae_copy")
 
     ########
     # Create existing vs new DFs by transpose (apart from logs, whose transpose is nans)
@@ -173,9 +163,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         data=np.nan, columns=overlap, index=required_new
     )
 
-    te1 = time.time()
-    timing_dict["update_summary_heatmap-nae_transpose"] = te1 - ts1
-    ts1 = time.time()
+    log_timing("inner", "update_summary_heatmap-nae_transpose")
 
     ########
     # Create new vs new NumPy arrays, fill with calculated data. Then convert to DFs, and append those to
@@ -192,9 +180,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         shape=[len(required_new), len(required_new)], fill_value=np.nan
     )
 
-    te1 = time.time()
-    timing_dict["update_summary_heatmap-nan_init"] = te1 - ts1
-    ts1 = time.time()
+    log_timing("inner", "update_summary_heatmap-nan_init")
 
     for (v2_count, v2) in enumerate(required_new):
         for (v1_count, v1) in enumerate(required_new):
@@ -217,9 +203,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
                     else:
                         new_against_new_logs[v2_count, v1_count] = -np.log10(p)
 
-    te1 = time.time()
-    timing_dict["update_summary_heatmap-nan_calc"] = te1 - ts1
-    ts1 = time.time()
+    log_timing("inner", "update_summary_heatmap-nan_calc")
 
     existing_against_new_corr[required_new] = pd.DataFrame(
         data=new_against_new_corr, columns=required_new, index=required_new
@@ -231,9 +215,7 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         data=new_against_new_logs, columns=required_new, index=required_new
     )
 
-    te1 = time.time()
-    timing_dict["update_summary_heatmap-nan_copy"] = te1 - ts1
-    ts1 = time.time()
+    log_timing("inner", "update_summary_heatmap-nan_copy")
 
     ########
     # Append all vs new DFs to all vs existing DFs to give all vs all DFs.
@@ -243,11 +225,8 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     pvalues = pvalues.append(existing_against_new_pval)
     logs = logs.append(existing_against_new_logs)
 
-    te1 = time.time()
-    timing_dict["update_summary_heatmap-ean_append"] = te1 - ts1
-
-    te = time.time()
-    timing_dict["update_summary_heatmap-corr"] = te - ts
+    log_timing("inner", "update_summary_heatmap-ean_append", restart=False)
+    log_timing("recalculate_corr_etc", "update_summary_heatmap-corr", restart=False)
 
     return corr, pvalues, logs
 
@@ -283,7 +262,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             corr, pvalues, logs = recalculate_corr_etc(
                 selected_columns, dff, corr_dff, pval_dff, logs_dff
             )
-            ts = time.time()
+            start_timer("update_summary_heatmap")
 
             corr.fillna(0, inplace=True)
             cluster_method = "hierarchical"
@@ -308,9 +287,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             else:
                 raise ValueError
 
-            te = time.time()
-            timing_dict["update_summary_heatmap-cluster"] = te - ts
-            ts = time.time()
+            log_timing("update_summary_heatmap", "update_summary_heatmap-cluster")
 
             # Save cluster number of each column to a DF and then to feather.
             cluster_df = pd.DataFrame(
@@ -340,9 +317,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                 pd.to_numeric, errors="coerce"
             )
 
-            te = time.time()
-            timing_dict["update_summary_heatmap-reorder"] = te - ts
-            ts = time.time()
+            log_timing("update_summary_heatmap", "update_summary_heatmap-reorder")
 
             # Send to feather files
             store("corr", sorted_corr)
@@ -352,9 +327,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             flattened_logs = flattened(logs)
             store("flattened_logs", flattened_logs)
 
-            te = time.time()
-            timing_dict["update_summary_heatmap-save"] = te - ts
-            ts = time.time()
+            log_timing("update_summary_heatmap", "update_summary_heatmap-save")
 
             # Remove the upper triangle and diagonal
             triangular = sorted_corr.to_numpy()
@@ -362,8 +335,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             triangular_pval = sorted_pval.to_numpy()
             triangular_pval[np.tril_indices(triangular_pval.shape[0], 0)] = np.nan
 
-            te = time.time()
-            timing_dict["update_summary_heatmap-triangular"] = te - ts
+            log_timing("update_summary_heatmap", "update_summary_heatmap-triangular", restart=False)
 
             fig = go.Figure(
                 go.Heatmap(
@@ -402,12 +374,12 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                 ]
             )
 
-            logging.info(f"{pd.DataFrame(timing_dict.items())}")
+            print_timings()
 
             return fig, True, True
 
     fig = go.Figure()
 
-    logging.info(f"{pd.DataFrame(timing_dict.items())}")
+    print_timings()
 
     return fig, False, False

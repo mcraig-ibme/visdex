@@ -10,7 +10,7 @@ from psych_dashboard.exploratory_graphs.manhattan_graph import (
     calculate_transformed_corrected_pval,
 )
 from psych_dashboard.load_feather import load
-from psych_dashboard.timing import timing, timing_dict
+from psych_dashboard.timing import timing, start_timer, log_timing, print_timings
 
 
 # TODO: currently only allows int64 and float64
@@ -70,55 +70,49 @@ def calculate_colorscale(n_values):
 def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     logging.info(f"plot_manhattan")
 
-    ts = time.time()
+    start_timer("plot_manhattan")
     if manhattan_active != ["manhattan-active"]:
         raise PreventUpdate
     if pvalue <= 0.0 or pvalue is None:
         raise PreventUpdate
 
     dff = load("pval")
-    te = time.time()
-    timing_dict["plot_manhattan-load_pval"] = te - ts
-    ts = time.time()
-    # logging.debug(f'{dff}')
-    # logging.debug(f'{[dff[col].dtype for col in dff.columns]}')
+
+    log_timing("plot_manhattan", "plot_manhattan-load_pval")
+
     manhattan_variable = [
         col for col in dff.columns if dff[col].dtype in valid_manhattan_dtypes
     ]
 
-    # logging.debug(f'pval_loaded {manhattan_variable}')
     if not pval_loaded or manhattan_variable is None or manhattan_variable == []:
         return go.Figure()
 
     # Load logs and flattened logs from feather file.
     logs = load("logs")
-    # logging.debug(f'{logs}')
     flattened_logs = load("flattened_logs")
-    # logging.debug(f'{flattened_logs}')
-    te = time.time()
-    timing_dict["plot_manhattan-load_both_logs"] = te - ts
-    ts = time.time()
+
+    log_timing("plot_manhattan", "plot_manhattan-load_both_logs")
+
     transformed_corrected_ref_pval = calculate_transformed_corrected_pval(
         float(pvalue), logs
     )
-    te = time.time()
-    timing_dict["plot_manhattan-tranform"] = te - ts
-    ts = time.time()
+
+    log_timing("plot_manhattan", "plot_manhattan-tranform")
+
     inf_replacement = 0
     if np.inf in flattened_logs.values:
         logging.debug(f"Replacing np.inf in flattened logs")
         temp_vals = flattened_logs.replace([np.inf, -np.inf], np.nan).dropna()
         inf_replacement = 1.2 * np.max(np.flip(temp_vals.values))
         flattened_logs = flattened_logs.replace([np.inf, -np.inf], inf_replacement)
-    te = time.time()
-    timing_dict["plot_manhattan-load_cutoff"] = te - ts
-    ts = time.time()
+
+    log_timing("plot_manhattan", "plot_manhattan-load_cutoff")
+
     # Load cluster numbers to use for colouring
     cluster_df = load("cluster")
-    # logging.debug(f'cluster {cluster_df}')
-    te = time.time()
-    timing_dict["plot_manhattan-load_cluster"] = te - ts
-    ts = time.time()
+
+    log_timing("plot_manhattan", "plot_manhattan-load_cluster")
+
     # Convert to colour array - set to the cluster number if the two variables are in the same cluster,
     # and set any other pairings to -1 (which will be coloured black)
     colors = [
@@ -127,9 +121,9 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
         else -1
         for item in flattened_logs.index[::-1]
     ]
-    te = time.time()
-    timing_dict["plot_manhattan-calc_colors"] = te - ts
-    ts = time.time()
+
+    log_timing("plot_manhattan", "plot_manhattan-calc_colors")
+
     max_cluster = max(cluster_df["column_names"])
     # Create graph, unless there's no data, in which case create a blank graph
     if len(flattened_logs) > 0:
@@ -209,8 +203,8 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
         )
     else:
         fig = go.Figure()
-    te = time.time()
-    timing_dict["plot_manhattan-figure"] = te - ts
 
-    logging.info(f"{pd.DataFrame(timing_dict.items())}")
+    log_timing("plot_manhattan", "plot_manhattan-figure", restart=False)
+
+    print_timings()
     return fig
