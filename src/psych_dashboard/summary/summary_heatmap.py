@@ -38,9 +38,8 @@ def update_heatmap_dropdown(df_loaded):
 
 def flattened(df):
     """
-    Convert a DF into a Series, where the MultiIndex of each element is a combination of the index/col from the original DF
-    :param df:
-    :return:
+    Convert a DF into a Series, where the MultiIndex of each element is a combination of the
+    index/col from the original DF
     """
     # The series contains only half of the matrix, so filter by the order of the two level labels.
     s = pd.Series(
@@ -70,8 +69,8 @@ def reorder_df(df, order):
 def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     ts = time.time()
     # Work out which columns/rows are needed anew, and which are already populated
-    # TODO: note that if we load in a new file with some of the same column names, then this old correlation
-    # TODO: data may be used erroneously.
+    # TODO: note that if we load in a new file with some of the same column names, then this old
+    #  correlation data may be used erroneously.
     existing_cols = corr_dff.columns
     overlap = list(set(selected_columns).intersection(set(existing_cols)))
     logging.debug(f"these are needed and already available: {overlap}")
@@ -82,7 +81,8 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     # Create initial existing vs existing DF
     ########
 
-    # If there is overlap, then create brand new empty dataframes. Otherwise, update the existing dataframes.
+    # If there is overlap, then create brand new empty dataframes.
+    # Otherwise, update the existing dataframes.
     if len(overlap) == 0:
         logging.debug(f"create new")
         corr = pd.DataFrame()
@@ -90,9 +90,10 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         logs = pd.DataFrame()
 
     else:
-        # Copy across existing data rather than recalculating (so in this operation we drop the unneeded elements)
-        # Then create nan elements in corr, p-values and logs matrices for those values which
-        # will be calculated.
+        # Copy across existing data rather than recalculating (so in this operation
+        # we drop the unneeded elements)
+        # Then create nan elements in corr, p-values and logs matrices for those values
+        # which will be calculated.
         corr = corr_dff.loc[overlap, overlap]
         pvalues = pval_dff.loc[overlap, overlap]
         logs = logs_dff.loc[overlap, overlap]
@@ -111,8 +112,8 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     timing_dict["update_summary_heatmap-numpy"] = te1 - ts1  # This is negligible
 
     ########
-    # Create new vs existing NumPy arrays, fill with calculated data. Then convert to DFs, and append those to
-    # existing vs existing DF, to create all vs existing DFs
+    # Create new vs existing NumPy arrays, fill with calculated data. Then convert to
+    # DFs, and append those to existing vs existing DF, to create all vs existing DFs
     ########
     ts1 = time.time()
     new_against_existing_corr = np.full(
@@ -131,8 +132,8 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
 
     for v2 in range(len(required_new)):
         for v1 in range(len(overlap)):
-            # Mask out any pairs that contain nans (this is done pairwise rather than using .dropna on the
-            # full dataframe)
+            # Mask out any pairs that contain nans (this is done pairwise rather than
+            # using .dropna on the full dataframe)
             mask = ~np.isnan(np_dff_overlap[:, v1]) & ~np.isnan(np_dff_req[:, v2])
             c, p = stats.pearsonr(np_dff_overlap[mask, v1], np_dff_req[mask, v2])
             new_against_existing_corr[v1, v2] = c
@@ -283,7 +284,6 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                 selected_columns, dff, corr_dff, pval_dff, logs_dff
             )
             ts = time.time()
-            # logging.debug(f'pvalues col dtypes {[pvalues[col].dtype for col in pvalues.columns]}')
 
             corr.fillna(0, inplace=True)
             cluster_method = "hierarchical"
@@ -312,9 +312,6 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             timing_dict["update_summary_heatmap-cluster"] = te - ts
             ts = time.time()
 
-            # logging.debug(f'clx {clx}')
-            # print(f'{selected_columns}')
-            # print(f'{corr.index}')
             # Save cluster number of each column to a DF and then to feather.
             cluster_df = pd.DataFrame(
                 data=clx, index=corr.index, columns=["column_names"]
@@ -332,15 +329,12 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             sorted_corr = sorted_corr[sorted_corr.columns].apply(
                 pd.to_numeric, errors="coerce"
             )
-            sorted_pval = reorder_df(pvalues, sorted_column_order)
-            # logging.debug(f'sorted_pval before conversion {sorted_pval}')
-            # logging.debug(f'pval col dtypes1 {[sorted_pval[col].dtype for col in sorted_pval.columns]}')
 
+            sorted_pval = reorder_df(pvalues, sorted_column_order)
             sorted_pval = sorted_pval[sorted_pval.columns].apply(
                 pd.to_numeric, errors="coerce"
             )
-            # logging.debug(f'sorted_pval after conversion {sorted_pval}')
-            # loggin.debug(f'pval col dtypes2 {[sorted_pval[col].dtype for col in sorted_pval.columns]}')
+
             sorted_logs = reorder_df(logs, sorted_column_order)
             sorted_logs = sorted_logs[sorted_logs.columns].apply(
                 pd.to_numeric, errors="coerce"
@@ -353,11 +347,9 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # Send to feather files
             store("corr", sorted_corr)
             store("pval", sorted_pval)
-            # logging.debug(f'pval col dtypes3 {[sorted_pval[col].dtype for col in sorted_pval.columns]}')
-
             store("logs", sorted_logs)
+
             flattened_logs = flattened(logs)
-            logging.debug(f"flattened_logs {flattened_logs}")
             store("flattened_logs", flattened_logs)
 
             te = time.time()
