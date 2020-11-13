@@ -206,37 +206,6 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     te1 = time.time()
     timing_dict['update_summary_heatmap-ean_append'] = te1 - ts1
 
-    # ts1 = time.time()
-    # print('corr', corr)
-    # print('logs', logs)
-    # for v1 in selected_columns:
-    #     v1_slice = np_dff_sel[:, v1_counter]
-    #     for v2 in required_new:
-    #         # Use counter to work out the indexing into the pre-numpyed arrays.
-    #         v2_counter = counter % len_required_new
-    #
-    #         # Calculate corr and p-val
-    #         if pd.isna(corr.at[v1, v2]):
-    #             # We save the correlation and pval to local variables c and p to enable reuse without
-    #             # having to us .at[,]
-    #             c, p = stats.pearsonr(v1_slice, np_dff_req[:, v2_counter])
-    #             corr.at[v1, v2] = c
-    #             pvalues.at[v1, v2] = p
-    #             # Populate the other half of the matrix
-    #             corr.at[v2, v1] = c
-    #             pvalues.at[v2, v1] = p
-    #             # Only populate the upper triangle (exc diagonal) of the logs DF.
-    #             if v1 != v2:
-    #                 if logs_columns.index(v1) < logs_columns.index(v2):
-    #                     logs.at[v1, v2] = -np.log10(p)
-    #                 else:
-    #                     logs.at[v2, v1] = -np.log10(p)
-    #         counter += 1
-    #     v1_counter += 1
-
-    # te1 = time.time()
-    # timing_dict['update_summary_heatmap-calc'] = te1 - ts1   # 29 of 43s total. Then 28 of 28 once nan removal is ditched :D. 24s once values are reused.
-
     te = time.time()
     timing_dict['update_summary_heatmap-corr'] = te - ts
 
