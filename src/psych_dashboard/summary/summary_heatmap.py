@@ -267,27 +267,17 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             start_timer("update_summary_heatmap")
 
             corr.fillna(0, inplace=True)
-            cluster_method = "hierarchical"
-            if cluster_method == "Kmeans":
-                # K-means clustering of correlation values.
-                w_corr = whiten(corr)
-                centroids, _ = kmeans(w_corr, min(7, int(math.sqrt(w_corr.shape[0]))))
-                # Generate the indices for each column, which cluster they belong to.
-                clx, _ = vq(w_corr, centroids)
 
-            elif cluster_method == "hierarchical":
-                try:
-                    cluster = AgglomerativeClustering(
-                        n_clusters=min(clusters, len(selected_columns)),
-                        affinity="euclidean",
-                        linkage="ward",
-                    )
-                    cluster.fit_predict(corr)
-                    clx = cluster.labels_
-                except ValueError:
-                    clx = [0] * len(selected_columns)
-            else:
-                raise ValueError
+            try:
+                cluster = AgglomerativeClustering(
+                    n_clusters=min(clusters, len(selected_columns)),
+                    affinity="euclidean",
+                    linkage="ward",
+                )
+                cluster.fit_predict(corr)
+                clx = cluster.labels_
+            except ValueError:
+                clx = [0] * len(selected_columns)
 
             log_timing("update_summary_heatmap", "update_summary_heatmap-cluster")
 
