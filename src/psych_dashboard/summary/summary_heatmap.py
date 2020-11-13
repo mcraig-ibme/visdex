@@ -338,8 +338,11 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             triangular_pval = sorted_pval.to_numpy()
             triangular_pval[np.tril_indices(triangular_pval.shape[0], 0)] = np.nan
 
-            log_timing("update_summary_heatmap", "update_summary_heatmap-triangular",
-                       restart=False)
+            log_timing(
+                "update_summary_heatmap",
+                "update_summary_heatmap-triangular",
+                restart=False,
+            )
 
             fig = go.Figure(
                 go.Heatmap(
@@ -350,11 +353,13 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                     zmax=1,
                     colorscale="RdBu",
                     customdata=np.fliplr(triangular_pval),
-                    hovertemplate=("%{x}<br>"
-                                   "vs.<br>"
-                                   "%{y}<br>"
-                                   "      r: %{z:.2g}<br>"
-                                   " pval: %{customdata:.2g}<extra></extra>"),
+                    hovertemplate=(
+                        "%{x}<br>"
+                        "vs.<br>"
+                        "%{y}<br>"
+                        "      r: %{z:.2g}<br>"
+                        " pval: %{customdata:.2g}<extra></extra>"
+                    ),
                     colorbar_title_text="r",
                     hoverongaps=False,
                 ),

@@ -16,6 +16,7 @@ def timing(f):
     :param f:
     :return:
     """
+
     @wraps(f)
     def wrap(*args, **kw):
         ts = time.time()
@@ -54,7 +55,9 @@ def log_timing(i, label, restart=True):
         else:
             del timers[i]
     else:
-        logging.info(f"Timer {i} attempted to log value but had not been started previously.")
+        logging.info(
+            f"Timer {i} attempted to log value but had not been started previously."
+        )
 
 
 def print_timings():
