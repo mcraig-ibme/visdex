@@ -13,7 +13,8 @@ def timing(f):
         ts = time.time()
         result = f(*args, **kw)
         te = time.time()
-        logging.info(f'#### func:{f.__name__} took: {te-ts:.2f} sec')
-        timing_dict[f.__name__] = te-ts
+        logging.info(f"#### func:{f.__name__} took: {te-ts:.2f} sec")
+        timing_dict[f.__name__] = te - ts
         return result
+
     return wrap

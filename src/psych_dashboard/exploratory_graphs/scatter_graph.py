@@ -18,19 +18,25 @@ logging.getLogger(__name__)
 
 
 @app.callback(
-    [Output({'type': 'div-scatter-' + component['id'], 'index': MATCH}, 'children')
-     for component in all_components['scatter']],
-    [Input('df-loaded-div', 'children')],
-    [State({'type': 'div-scatter-x', 'index': MATCH}, 'style')] +
-    [State({'type': 'scatter-' + component['id'], 'index': MATCH}, prop)
-     for component in all_components['scatter'] for prop in component]
+    [
+        Output({"type": "div-scatter-" + component["id"], "index": MATCH}, "children")
+        for component in all_components["scatter"]
+    ],
+    [Input("df-loaded-div", "children")],
+    [State({"type": "div-scatter-x", "index": MATCH}, "style")]
+    + [
+        State({"type": "scatter-" + component["id"], "index": MATCH}, prop)
+        for component in all_components["scatter"]
+        for prop in component
+    ],
 )
 def update_scatter_components(df_loaded, style_dict, *args):
-    logging.info(f'update_scatter_components')
-    dff = load('filtered')
-    dd_options = [{'label': col,
-                   'value': col} for col in dff.columns]
-    return update_graph_components('scatter', all_components['scatter'], dd_options, args)
+    logging.info(f"update_scatter_components")
+    dff = load("filtered")
+    dd_options = [{"label": col, "value": col} for col in dff.columns]
+    return update_graph_components(
+        "scatter", all_components["scatter"], dd_options, args
+    )
 
 
 def make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats):
@@ -44,12 +50,14 @@ def make_subplot_titles(facet_row, facet_row_cats, facet_col, facet_col_cats):
     None is returned if no facets in use.
     """
     if facet_row is not None and facet_col is not None:
-        return [str(facet_row) + '=' + str(row) + ', ' + str(facet_col) + '=' + str(col)
-                for row, col in itertools.product(facet_row_cats, facet_col_cats)]
+        return [
+            str(facet_row) + "=" + str(row) + ", " + str(facet_col) + "=" + str(col)
+            for row, col in itertools.product(facet_row_cats, facet_col_cats)
+        ]
     elif facet_row is not None:
-        return [str(facet_row) + '=' + str(row) for row in facet_row_cats]
+        return [str(facet_row) + "=" + str(row) for row in facet_row_cats]
     elif facet_col is not None:
-        return [str(facet_col) + '=' + str(col) for col in facet_col_cats]
+        return [str(facet_col) + "=" + str(col) for col in facet_col_cats]
     else:
         return None
 
@@ -66,20 +74,33 @@ max_marker_size = 10
 
 
 @app.callback(
-    Output({'type': 'gen-scatter-graph', 'index': MATCH}, "figure"),
-    [*(Input({'type': 'scatter-' + component['id'], 'index': MATCH}, "value") for component in all_components['scatter'])],
+    Output({"type": "gen-scatter-graph", "index": MATCH}, "figure"),
+    [
+        *(
+            Input({"type": "scatter-" + component["id"], "index": MATCH}, "value")
+            for component in all_components["scatter"]
+        )
+    ],
 )
 def make_scatter_figure(*args):
-    logging.info(f'make_scatter_figure')
+    logging.info(f"make_scatter_figure")
     # Generate the list of argument names based on the input order
-    keys = [component['id'] for component in all_components['scatter']]
+    keys = [component["id"] for component in all_components["scatter"]]
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
-    dff = load('filtered')
+    dff = load("filtered")
 
-    facet_row_cats = list(dff[args_dict['facet_row']].unique()) if args_dict['facet_row'] is not None else [None]
-    facet_col_cats = list(dff[args_dict['facet_col']].unique()) if args_dict['facet_col'] is not None else [None]
+    facet_row_cats = (
+        list(dff[args_dict["facet_row"]].unique())
+        if args_dict["facet_row"] is not None
+        else [None]
+    )
+    facet_col_cats = (
+        list(dff[args_dict["facet_col"]].unique())
+        if args_dict["facet_col"] is not None
+        else [None]
+    )
 
     # Remove nans and Nones
     if len(facet_row_cats) > 1:
@@ -102,83 +123,119 @@ def make_scatter_figure(*args):
             pass
 
     # Return empty scatter if not enough options are selected, or the data is empty.
-    if dff.columns.size == 0 or args_dict['x'] is None or args_dict['y'] is None:
+    if dff.columns.size == 0 or args_dict["x"] is None or args_dict["y"] is None:
         return px.scatter()
 
     # Create titles for each of the subplots, and initialise the subplots with them.
-    subplot_titles = make_subplot_titles(args_dict['facet_row'], facet_row_cats, args_dict['facet_col'], facet_col_cats)
-    fig = make_subplots(rows=len(facet_row_cats), cols=len(facet_col_cats),
-                        subplot_titles=subplot_titles)
-    
+    subplot_titles = make_subplot_titles(
+        args_dict["facet_row"], facet_row_cats, args_dict["facet_col"], facet_col_cats
+    )
+    fig = make_subplots(
+        rows=len(facet_row_cats),
+        cols=len(facet_col_cats),
+        subplot_titles=subplot_titles,
+    )
+
     # If color is not provided, then use default
-    if args_dict['color'] is None:
+    if args_dict["color"] is None:
         color_to_use = default_marker_color
     # Otherwise, if the dtype is categorical, then we need to map - otherwise, leave as it is
     else:
-        dff.dropna(inplace=True, subset=[args_dict['color']])
-        color_to_use = pd.DataFrame(dff[args_dict['color']])
+        dff.dropna(inplace=True, subset=[args_dict["color"]])
+        color_to_use = pd.DataFrame(dff[args_dict["color"]])
 
-        if args_dict['color'] in dff.select_dtypes(include='object').columns:
-            dff['color_to_use'] = map_color(dff[args_dict['color']])
+        if args_dict["color"] in dff.select_dtypes(include="object").columns:
+            dff["color_to_use"] = map_color(dff[args_dict["color"]])
         else:
             color_to_use.set_index(dff.index, inplace=True)
-            dff['color_to_use'] = color_to_use
-    if args_dict['size'] is not None:
-        dff.dropna(inplace=True, subset=[args_dict['size']])
+            dff["color_to_use"] = color_to_use
+    if args_dict["size"] is not None:
+        dff.dropna(inplace=True, subset=[args_dict["size"]])
 
     annotations = []
     for i in range(len(facet_row_cats)):
         for j in range(len(facet_col_cats)):
             working_dff = dff
-            working_dff = filter_facet(working_dff, args_dict['facet_row'], facet_row_cats, i)
-            working_dff = filter_facet(working_dff, args_dict['facet_col'], facet_col_cats, j)
+            working_dff = filter_facet(
+                working_dff, args_dict["facet_row"], facet_row_cats, i
+            )
+            working_dff = filter_facet(
+                working_dff, args_dict["facet_col"], facet_col_cats, j
+            )
 
-            fig.add_trace(go.Scatter(x=working_dff[args_dict['x']],
-                                     y=working_dff[args_dict['y']],
-                                     mode='markers',
-                                     marker=dict(color=working_dff[
-                                         'color_to_use'] if 'color_to_use' in working_dff.columns else color_to_use,
-                                                 coloraxis="coloraxis",
-                                                 showscale=True),
-                                     marker_size=map_size(working_dff[args_dict['size']], min_marker_size, max_marker_size) if args_dict['size'] is not None else max_marker_size,
-                                     hovertemplate=['SUBJECTKEY: ' + str(i) + '<br>EVENTNAME: ' + str(j) +
-                                                    '<extra></extra>'
-                                                    for (i, j) in working_dff.index],
-                                     ),
-                          row=i + 1,
-                          col=j + 1)
+            fig.add_trace(
+                go.Scatter(
+                    x=working_dff[args_dict["x"]],
+                    y=working_dff[args_dict["y"]],
+                    mode="markers",
+                    marker=dict(
+                        color=working_dff["color_to_use"]
+                        if "color_to_use" in working_dff.columns
+                        else color_to_use,
+                        coloraxis="coloraxis",
+                        showscale=True,
+                    ),
+                    marker_size=map_size(
+                        working_dff[args_dict["size"]], min_marker_size, max_marker_size
+                    )
+                    if args_dict["size"] is not None
+                    else max_marker_size,
+                    hovertemplate=[
+                        "SUBJECTKEY: "
+                        + str(i)
+                        + "<br>EVENTNAME: "
+                        + str(j)
+                        + "<extra></extra>"
+                        for (i, j) in working_dff.index
+                    ],
+                ),
+                row=i + 1,
+                col=j + 1,
+            )
 
             # Add regression lines
-            if args_dict['regression'] is not None:
+            if args_dict["regression"] is not None:
                 working_dff.dropna(inplace=True)
                 # Guard against fitting an empty graph
                 if len(working_dff) > 0:
-                    working_dff.sort_values(by=args_dict['x'], inplace=True)
-                    Y = working_dff[args_dict['y']]
-                    X = working_dff[args_dict['x']]
-                    model = Pipeline([('poly', PolynomialFeatures(degree=args_dict['regression'])),
-                                      ('linear', LinearRegression(fit_intercept=False))])
+                    working_dff.sort_values(by=args_dict["x"], inplace=True)
+                    Y = working_dff[args_dict["y"]]
+                    X = working_dff[args_dict["x"]]
+                    model = Pipeline(
+                        [
+                            (
+                                "poly",
+                                PolynomialFeatures(degree=args_dict["regression"]),
+                            ),
+                            ("linear", LinearRegression(fit_intercept=False)),
+                        ]
+                    )
                     try:
                         reg = model.fit(np.vstack(X), Y)
                         Y_pred = reg.predict(np.vstack(X))
                         r2 = r2_score(np.vstack(Y), Y_pred)
-                        logging.debug(f'r2 is {r2}')
-                        fig.add_trace(go.Scatter(name='line of best fit', x=X, y=Y_pred, mode='lines'),
-                                      row=i + 1,
-                                      col=j + 1)
-                        annotations.append(dict(
-                                                x=working_dff[args_dict['x']].max(),
-                                                y=working_dff[args_dict['y']].max(),
-                                                xref='x' + str(i + 1 + j * len(facet_row_cats)),
-                                                yref='y' + str(i + 1 + j * len(facet_row_cats)),
-                                                xanchor='left',
-                                                yanchor='bottom',
-                                                text=f'r^2 = {r2:.2f}',
-                                                showarrow=False,
-                                                ax=0,
-                                                ay=0
-                                            )
-                                           )
+                        logging.debug(f"r2 is {r2}")
+                        fig.add_trace(
+                            go.Scatter(
+                                name="line of best fit", x=X, y=Y_pred, mode="lines"
+                            ),
+                            row=i + 1,
+                            col=j + 1,
+                        )
+                        annotations.append(
+                            dict(
+                                x=working_dff[args_dict["x"]].max(),
+                                y=working_dff[args_dict["y"]].max(),
+                                xref="x" + str(i + 1 + j * len(facet_row_cats)),
+                                yref="y" + str(i + 1 + j * len(facet_row_cats)),
+                                xanchor="left",
+                                yanchor="bottom",
+                                text=f"r^2 = {r2:.2f}",
+                                showarrow=False,
+                                ax=0,
+                                ay=0,
+                            )
+                        )
                     except (TypeError, ValueError) as e:
                         logging.debug(e)
                         pass
@@ -188,26 +245,27 @@ def make_scatter_figure(*args):
 
     # Generate the appropriate title
     title = f"Scatter plot(s) of {args_dict['x']} against {args_dict['y']}"
-    if args_dict['facet_row'] is not None and args_dict['facet_col'] is not None:
+    if args_dict["facet_row"] is not None and args_dict["facet_col"] is not None:
         title += f", split by {args_dict['facet_row']} and {args_dict['facet_col']}"
-    elif args_dict['facet_row'] is not None:
+    elif args_dict["facet_row"] is not None:
         title += f", split by {args_dict['facet_row']}"
-    elif args_dict['facet_col'] is not None:
+    elif args_dict["facet_col"] is not None:
         title += f", split by {args_dict['facet_col']}"
 
-    if args_dict['color'] is not None and args_dict['size'] is not None:
+    if args_dict["color"] is not None and args_dict["size"] is not None:
         title += f", coloured by {args_dict['color']} and sized by {args_dict['size']}"
-    elif args_dict['color'] is not None:
+    elif args_dict["color"] is not None:
         title += f", coloured by {args_dict['color']}"
-    elif args_dict['size'] is not None:
+    elif args_dict["size"] is not None:
         title += f", sized by {args_dict['size']}"
 
-    fig.update_layout(coloraxis=dict(colorscale='Bluered_r'),
-                      showlegend=False,
-                      title=title,
-                      )
-    fig.update_xaxes(matches='x')
-    fig.update_yaxes(matches='y')
+    fig.update_layout(
+        coloraxis=dict(colorscale="Bluered_r"),
+        showlegend=False,
+        title=title,
+    )
+    fig.update_xaxes(matches="x")
+    fig.update_yaxes(matches="y")
     return fig
 
 

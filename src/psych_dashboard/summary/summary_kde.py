@@ -12,21 +12,20 @@ from psych_dashboard.timing import timing
 
 
 @app.callback(
-    Output('kde-figure', 'figure'),
-    [Input('heatmap-dropdown', 'value'),
-     Input('kde-checkbox', 'value')],
-    [State('df-loaded-div', 'children')],
-    prevent_initial_call=True
+    Output("kde-figure", "figure"),
+    [Input("heatmap-dropdown", "value"), Input("kde-checkbox", "value")],
+    [State("df-loaded-div", "children")],
+    prevent_initial_call=True,
 )
 @timing
 def update_summary_kde(dropdown_values, kde_active, df_loaded):
-    logging.info(f'update_summary_kde')
-    if kde_active != ['kde-active']:
+    logging.info(f"update_summary_kde")
+    if kde_active != ["kde-active"]:
         raise PreventUpdate
 
     # Guard against the second argument being an empty list, as happens at first invocation
     if df_loaded is True:
-        dff = load('filtered')
+        dff = load("filtered")
 
         n_columns = len(dropdown_values) if dropdown_values is not None else 0
         if n_columns > 0:
@@ -38,8 +37,8 @@ def update_summary_kde(dropdown_values, kde_active, df_loaded):
             # For each column, calculate its KDE and then plot that over the histogram.
             for j in range(n_cols):
                 for i in range(n_rows):
-                    if i*n_cols+j < n_columns:
-                        col_name = dropdown_values[i*n_cols+j]
+                    if i * n_cols + j < n_columns:
+                        col_name = dropdown_values[i * n_cols + j]
                         this_col = dff[col_name]
                         col_min = this_col.min()
                         col_max = this_col.max()
@@ -51,19 +50,28 @@ def update_summary_kde(dropdown_values, kde_active, df_loaded):
                             kernel = stats.gaussian_kde(this_col.dropna())
                             pad = 0.1
                             # Generate linspace
-                            x = np.linspace(col_min - pad*data_range, col_max + pad*data_range, num=21)
+                            x = np.linspace(
+                                col_min - pad * data_range,
+                                col_max + pad * data_range,
+                                num=21,
+                            )
                             # Sample kernel
                             y = kernel(x)
                             # Plot KDE line graph using sampled data
-                            fig.add_trace(go.Scatter(x=x, y=y, name=col_name),
-                                          i+1,
-                                          j+1)
+                            fig.add_trace(
+                                go.Scatter(x=x, y=y, name=col_name), i + 1, j + 1
+                            )
                         # Plot normalised histogram of data, regardless of KDE completion or not
-                        fig.add_trace(go.Histogram(x=this_col, name=col_name, histnorm='probability density'),
-                                      i+1,
-                                      j+1)
-            fig.update_layout(height=200*n_rows,
-                              showlegend=False)
+                        fig.add_trace(
+                            go.Histogram(
+                                x=this_col,
+                                name=col_name,
+                                histnorm="probability density",
+                            ),
+                            i + 1,
+                            j + 1,
+                        )
+            fig.update_layout(height=200 * n_rows, showlegend=False)
             return fig
 
     return go.Figure(go.Scatter())
