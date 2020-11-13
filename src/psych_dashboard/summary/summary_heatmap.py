@@ -1,12 +1,10 @@
 import itertools
 import logging
-import math
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
-from scipy.cluster.vq import kmeans, vq, whiten
 from sklearn.cluster import AgglomerativeClustering
 from psych_dashboard.app import app
 from psych_dashboard.load_feather import store, load
@@ -106,8 +104,8 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
     # than doing it each iteration)
     start_timer("inner")
 
-    np_dff_overlap = dff[overlap].to_numpy()
-    np_dff_req = dff[required_new].to_numpy()
+    np_overlap = dff[overlap].to_numpy()
+    np_req = dff[required_new].to_numpy()
 
     log_timing("inner", "update_summary_heatmap-numpy")  # This is negligible
 
@@ -131,8 +129,8 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
         for v1 in range(len(overlap)):
             # Mask out any pairs that contain nans (this is done pairwise rather than
             # using .dropna on the full dataframe)
-            mask = ~np.isnan(np_dff_overlap[:, v1]) & ~np.isnan(np_dff_req[:, v2])
-            c, p = stats.pearsonr(np_dff_overlap[mask, v1], np_dff_req[mask, v2])
+            mask = ~np.isnan(np_overlap[:, v1]) & ~np.isnan(np_req[:, v2])
+            c, p = stats.pearsonr(np_overlap[mask, v1], np_req[mask, v2])
             new_against_existing_corr[v1, v2] = c
             new_against_existing_pval[v1, v2] = p
             new_against_existing_logs[v1, v2] = -np.log10(p)
@@ -183,26 +181,22 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
 
     log_timing("inner", "update_summary_heatmap-nan_init")
 
-    for (v2_count, v2) in enumerate(required_new):
-        for (v1_count, v1) in enumerate(required_new):
-            if np.isnan(new_against_new_corr[v1_count, v2_count]):
+    for (v2_idx, v2) in enumerate(required_new):
+        for (v1_idx, v1) in enumerate(required_new):
+            if np.isnan(new_against_new_corr[v1_idx, v2_idx]):
                 # Mask out any pairs that contain nans (this is done pairwise rather
                 # than using .dropna on the full dataframe)
-                mask = ~np.isnan(np_dff_req[:, v1_count]) & ~np.isnan(
-                    np_dff_req[:, v2_count]
-                )
-                c, p = stats.pearsonr(
-                    np_dff_req[mask, v1_count], np_dff_req[mask, v2_count]
-                )
-                new_against_new_corr[v1_count, v2_count] = c
-                new_against_new_corr[v2_count, v1_count] = c
-                new_against_new_pval[v1_count, v2_count] = p
-                new_against_new_pval[v2_count, v1_count] = p
+                mask = ~np.isnan(np_req[:, v1_idx]) & ~np.isnan(np_req[:, v2_idx])
+                c, p = stats.pearsonr(np_req[mask, v1_idx], np_req[mask, v2_idx])
+                new_against_new_corr[v1_idx, v2_idx] = c
+                new_against_new_corr[v2_idx, v1_idx] = c
+                new_against_new_pval[v1_idx, v2_idx] = p
+                new_against_new_pval[v2_idx, v1_idx] = p
                 if v1 != v2:
                     if required_new.index(v1) < required_new.index(v2):
-                        new_against_new_logs[v1_count, v2_count] = -np.log10(p)
+                        new_against_new_logs[v1_idx, v2_idx] = -np.log10(p)
                     else:
-                        new_against_new_logs[v2_count, v1_count] = -np.log10(p)
+                        new_against_new_logs[v2_idx, v1_idx] = -np.log10(p)
 
     log_timing("inner", "update_summary_heatmap-nan_calc")
 
@@ -362,7 +356,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
             # Find the indices where the sorted classes from the clustering change.
             # Use these indices to plot vertical lines on the heatmap to demarcate
             # the different categories visually
-            y = np.concatenate((np.array([0]), np.diff(sorted(clx))))
+            category_edges = np.concatenate((np.array([0]), np.diff(sorted(clx))))
             fig.update_layout(
                 shapes=[
                     dict(
@@ -374,7 +368,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
                         x0=len(sorted_corr.columns) - float(i) - 0.5,
                         x1=len(sorted_corr.columns) - float(i) - 0.5,
                     )
-                    for i in np.where(y)[0]
+                    for i in np.where(category_edges)[0]
                 ]
             )
 
