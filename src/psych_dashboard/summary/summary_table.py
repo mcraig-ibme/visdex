@@ -45,7 +45,8 @@ def update_summary_table(df_loaded, missing_value_cutoff):
 
     # Create a filtered version of the DF which doesn't have the index columns.
     dff_filtered = dff.drop(indices, axis=1)
-    # Take out the columns which are filtered out by failing the 'missing values' threshold.
+    # Take out the columns which are filtered out by failing the 'missing values'
+    # threshold.
     dropped_columns = []
     if missing_value_cutoff not in [None, ""]:
         for col in description_df.index:
@@ -53,7 +54,8 @@ def update_summary_table(df_loaded, missing_value_cutoff):
                 dff_filtered.drop(col, axis=1, inplace=True)
                 dropped_columns.append(col)
 
-    # Save the filtered dff to feather file. This is the file that will be used for all further processing.
+    # Save the filtered dff to feather file. This is the file that will be used for
+    # all further processing.
     store("filtered", dff_filtered)
 
     # Add the index back in as a column so we can see it in the table preview
