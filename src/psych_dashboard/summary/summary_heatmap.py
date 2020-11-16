@@ -239,145 +239,141 @@ def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
 @timing
 def update_summary_heatmap(dropdown_values, clusters, df_loaded):
     logging.info(f"update_summary_heatmap {dropdown_values} {clusters}")
-    # Guard against the second argument being an empty list, as happens at first
-    # invocation
-    if df_loaded is True:
-        dff = load("filtered")
-        corr_dff = load("corr")
-        pval_dff = load("pval")
-        logs_dff = load("logs")
+    # Guard against the first argument being an empty list, as happens at first
+    # invocation, or df_loaded being False
+    if df_loaded is False or len(dropdown_values) <= 1:
+        fig = go.Figure()
+        return fig, False, False
 
-        # Add the index back in as a column so we can see it in the table preview
-        if dff.size > 0 and len(dropdown_values) > 1:
-            dff.insert(loc=0, column="SUBJECTKEY(INDEX)", value=dff.index)
+    # Load main dataframe
+    dff = load("filtered")
 
-            # The columns we want to have calculated
-            selected_columns = list(dropdown_values)
-            logging.debug(f"selected_columns {selected_columns}")
+    # Guard against the dataframe being empty
+    if dff.size == 0:
+        fig = go.Figure()
+        return fig, False, False
 
-            corr, pvalues, logs = recalculate_corr_etc(
-                selected_columns, dff, corr_dff, pval_dff, logs_dff
+    # Load data from previous calculation
+    corr_dff = load("corr")
+    pval_dff = load("pval")
+    logs_dff = load("logs")
+
+    # Add the index back in as a column so we can see it in the table preview
+    dff.insert(loc=0, column="SUBJECTKEY(INDEX)", value=dff.index)
+
+    # The columns we want to have calculated
+    selected_columns = list(dropdown_values)
+    logging.debug(f"selected_columns {selected_columns}")
+
+    corr, pvalues, logs = recalculate_corr_etc(
+        selected_columns, dff, corr_dff, pval_dff, logs_dff
+    )
+    start_timer("update_summary_heatmap")
+
+    corr.fillna(0, inplace=True)
+
+    try:
+        cluster = AgglomerativeClustering(
+            n_clusters=min(clusters, len(selected_columns)),
+            affinity="euclidean",
+            linkage="ward",
+        )
+        cluster.fit_predict(corr)
+        clx = cluster.labels_
+    except ValueError:
+        clx = [0] * len(selected_columns)
+
+    log_timing("update_summary_heatmap", "update_summary_heatmap-cluster")
+
+    # Save cluster number of each column to a DF and then to feather.
+    cluster_df = pd.DataFrame(data=clx, index=corr.index, columns=["column_names"])
+    logging.debug(f"{cluster_df}")
+    store("cluster", cluster_df)
+
+    # TODO: what would be good here would be to rename the clusters based on the
+    #  average variance (diags) within each cluster - that would reduce the
+    #  undesirable behaviour whereby currently the clusters can jump about when
+    #  re-calculating the clustering. Sort DFs' columns/rows into order based on
+    #  clustering
+    sorted_column_order = [x for _, x in sorted(zip(clx, corr.index))]
+
+    sorted_corr = reorder_df(corr, sorted_column_order)
+    sorted_corr = sorted_corr[sorted_corr.columns].apply(pd.to_numeric, errors="coerce")
+
+    sorted_pval = reorder_df(pvalues, sorted_column_order)
+    sorted_pval = sorted_pval[sorted_pval.columns].apply(pd.to_numeric, errors="coerce")
+
+    sorted_logs = reorder_df(logs, sorted_column_order)
+    sorted_logs = sorted_logs[sorted_logs.columns].apply(pd.to_numeric, errors="coerce")
+
+    log_timing("update_summary_heatmap", "update_summary_heatmap-reorder")
+
+    # Send to feather files
+    store("corr", sorted_corr)
+    store("pval", sorted_pval)
+    store("logs", sorted_logs)
+
+    flattened_logs = flattened(logs)
+    store("flattened_logs", flattened_logs)
+
+    log_timing("update_summary_heatmap", "update_summary_heatmap-save")
+
+    # Remove the upper triangle and diagonal
+    triangular = sorted_corr.to_numpy()
+    triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
+    triangular_pval = sorted_pval.to_numpy()
+    triangular_pval[np.tril_indices(triangular_pval.shape[0], 0)] = np.nan
+
+    log_timing(
+        "update_summary_heatmap",
+        "update_summary_heatmap-triangular",
+        restart=False,
+    )
+
+    fig = go.Figure(
+        go.Heatmap(
+            z=np.fliplr(triangular),
+            x=sorted_corr.columns[-1::-1],
+            y=sorted_corr.columns[:-1],
+            zmin=-1,
+            zmax=1,
+            colorscale="RdBu",
+            customdata=np.fliplr(triangular_pval),
+            hovertemplate=(
+                "%{x}<br>"
+                "vs.<br>"
+                "%{y}<br>"
+                "      r: %{z:.2g}<br>"
+                " pval: %{customdata:.2g}<extra></extra>"
+            ),
+            colorbar_title_text="r",
+            hoverongaps=False,
+        ),
+    )
+
+    fig.update_layout(
+        xaxis_showgrid=False, yaxis_showgrid=False, plot_bgcolor="rgba(0,0,0,0)"
+    )
+
+    # Find the indices where the sorted classes from the clustering change.
+    # Use these indices to plot vertical lines on the heatmap to demarcate the different
+    # categories visually
+    category_edges = np.concatenate((np.array([0]), np.diff(sorted(clx))))
+    fig.update_layout(
+        shapes=[
+            dict(
+                type="line",
+                yref="y",
+                y0=-0.5,
+                y1=len(sorted_corr.columns) - 1.5,
+                xref="x",
+                x0=len(sorted_corr.columns) - float(i) - 0.5,
+                x1=len(sorted_corr.columns) - float(i) - 0.5,
             )
-            start_timer("update_summary_heatmap")
-
-            corr.fillna(0, inplace=True)
-
-            try:
-                cluster = AgglomerativeClustering(
-                    n_clusters=min(clusters, len(selected_columns)),
-                    affinity="euclidean",
-                    linkage="ward",
-                )
-                cluster.fit_predict(corr)
-                clx = cluster.labels_
-            except ValueError:
-                clx = [0] * len(selected_columns)
-
-            log_timing("update_summary_heatmap", "update_summary_heatmap-cluster")
-
-            # Save cluster number of each column to a DF and then to feather.
-            cluster_df = pd.DataFrame(
-                data=clx, index=corr.index, columns=["column_names"]
-            )
-            logging.debug(f"{cluster_df}")
-            store("cluster", cluster_df)
-
-            # TODO: what would be good here would be to rename the clusters based on
-            #  the average variance (diags) within each cluster - that would reduce the
-            #  undesirable behaviour whereby currently the clusters can jump about when
-            #  re-calculating the clustering. Sort DFs' columns/rows into order based on
-            #  clustering
-            sorted_column_order = [x for _, x in sorted(zip(clx, corr.index))]
-
-            sorted_corr = reorder_df(corr, sorted_column_order)
-            sorted_corr = sorted_corr[sorted_corr.columns].apply(
-                pd.to_numeric, errors="coerce"
-            )
-
-            sorted_pval = reorder_df(pvalues, sorted_column_order)
-            sorted_pval = sorted_pval[sorted_pval.columns].apply(
-                pd.to_numeric, errors="coerce"
-            )
-
-            sorted_logs = reorder_df(logs, sorted_column_order)
-            sorted_logs = sorted_logs[sorted_logs.columns].apply(
-                pd.to_numeric, errors="coerce"
-            )
-
-            log_timing("update_summary_heatmap", "update_summary_heatmap-reorder")
-
-            # Send to feather files
-            store("corr", sorted_corr)
-            store("pval", sorted_pval)
-            store("logs", sorted_logs)
-
-            flattened_logs = flattened(logs)
-            store("flattened_logs", flattened_logs)
-
-            log_timing("update_summary_heatmap", "update_summary_heatmap-save")
-
-            # Remove the upper triangle and diagonal
-            triangular = sorted_corr.to_numpy()
-            triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
-            triangular_pval = sorted_pval.to_numpy()
-            triangular_pval[np.tril_indices(triangular_pval.shape[0], 0)] = np.nan
-
-            log_timing(
-                "update_summary_heatmap",
-                "update_summary_heatmap-triangular",
-                restart=False,
-            )
-
-            fig = go.Figure(
-                go.Heatmap(
-                    z=np.fliplr(triangular),
-                    x=sorted_corr.columns[-1::-1],
-                    y=sorted_corr.columns[:-1],
-                    zmin=-1,
-                    zmax=1,
-                    colorscale="RdBu",
-                    customdata=np.fliplr(triangular_pval),
-                    hovertemplate=(
-                        "%{x}<br>"
-                        "vs.<br>"
-                        "%{y}<br>"
-                        "      r: %{z:.2g}<br>"
-                        " pval: %{customdata:.2g}<extra></extra>"
-                    ),
-                    colorbar_title_text="r",
-                    hoverongaps=False,
-                ),
-            )
-
-            fig.update_layout(
-                xaxis_showgrid=False, yaxis_showgrid=False, plot_bgcolor="rgba(0,0,0,0)"
-            )
-
-            # Find the indices where the sorted classes from the clustering change.
-            # Use these indices to plot vertical lines on the heatmap to demarcate
-            # the different categories visually
-            category_edges = np.concatenate((np.array([0]), np.diff(sorted(clx))))
-            fig.update_layout(
-                shapes=[
-                    dict(
-                        type="line",
-                        yref="y",
-                        y0=-0.5,
-                        y1=len(sorted_corr.columns) - 1.5,
-                        xref="x",
-                        x0=len(sorted_corr.columns) - float(i) - 0.5,
-                        x1=len(sorted_corr.columns) - float(i) - 0.5,
-                    )
-                    for i in np.where(category_edges)[0]
-                ]
-            )
-
-            print_timings()
-
-            return fig, True, True
-
-    fig = go.Figure()
+            for i in np.where(category_edges)[0]
+        ]
+    )
 
     print_timings()
 
-    return fig, False, False
+    return fig, True, True
