@@ -1,7 +1,5 @@
 import logging
 import numpy as np
-import pandas as pd
-import time
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output
 import plotly.graph_objects as go
@@ -113,8 +111,8 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
 
     log_timing("plot_manhattan", "plot_manhattan-load_cluster")
 
-    # Convert to colour array - set to the cluster number if the two variables are in the same cluster,
-    # and set any other pairings to -1 (which will be coloured black)
+    # Convert to colour array - set to the cluster number if the two variables are in
+    # the same cluster, and set any other pairings to -1 (which will be coloured black)
     colors = [
         cluster_df["column_names"][item[0]]
         if cluster_df["column_names"][item[0]] == cluster_df["column_names"][item[1]]
@@ -148,7 +146,8 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
                         title="Cluster",
                     ),
                     cmax=max_cluster + 1,
-                    # Minimum is -1 to represent the points of variables not in the same cluster
+                    # Minimum is -1 to represent the points of variables not in the
+                    # same cluster
                     cmin=-1,
                     showscale=True,
                 ),
@@ -182,14 +181,16 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
                     ax=-50,
                     ay=0,
                 ),
-                # This annotation above the top of the graph is only shown if any inf values have been replaced.
-                # It highlights what value has been used to replace them (1.2*max)
+                # This annotation above the top of the graph is only shown if any inf
+                # values have been replaced. It highlights what value has been used to
+                # replace them (1.2*max)
                 dict(
                     x=0,
                     y=1.1,
                     xref="paper",
                     yref="paper",
-                    text="Infinite values (corresponding to a 0 p-value after numerical errors) have been replaced with {:f}".format(
+                    text="Infinite values (corresponding to a 0 p-value after "
+                    "numerical errors) have been replaced with {:f}".format(
                         inf_replacement
                     )
                     if inf_replacement != 0
