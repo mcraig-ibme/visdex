@@ -119,25 +119,24 @@ def store(name, df):
         # use feather
         if df is None:
             df = pd.DataFrame()
-        if name == "cluster":
-            df.reset_index().to_feather("cluster.feather")
-        elif name == "parsed":
-            df.reset_index().to_feather("df_parsed.feather")
-        elif name == "columns":
-            df.reset_index().to_feather("df_columns.feather")
-        elif name == "df":
-            df.reset_index().to_feather("df.feather")
-        elif name == "filtered":
-            df.reset_index().to_feather("df_filtered.feather")
-        elif name == "corr":
-            df.reset_index().to_feather("corr.feather")
-        elif name == "pval":
-            df.reset_index().to_feather("pval.feather")
-        elif name == "logs":
-            df.reset_index().to_feather("logs.feather")
-        elif name == "flattened_logs":
-            df.reset_index().to_feather("flattened_logs.feather")
-        raise KeyError(name)
+
+        # Map from file nickname to filename
+        feather_filenames_dict = {
+            "cluster": "cluster.feather",
+            "parsed": "df_parsed.feather",
+            "columns": "df_columns.feather",
+            "df": "df.feather",
+            "filtered": "df_filtered.feather",
+            "corr": "corr.feather",
+            "pval": "pval.feather",
+            "logs": "logs.feather",
+            "flattened_logs": "flattened_logs.feather"
+        }
+
+        try:
+            df.reset_index().to_feather(feather_filenames_dict[name])
+        except KeyError:
+            raise KeyError(name)
 
 
 def load_pval():
