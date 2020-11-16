@@ -2,7 +2,6 @@ import io
 import base64
 import datetime
 import logging
-import os
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
@@ -28,9 +27,9 @@ from psych_dashboard.app import app, indices, standard_margin_left, div_style
 
 logging.getLogger(__name__)
 
-global_width = "100%"
-table_width = "95%"
-header_image = "/assets/UoN_Primary_Logo_RGB.png"
+GLOBAL_WIDTH = "100%"
+TABLE_WIDTH = "95%"
+HEADER_IMAGE = "/assets/UoN_Primary_Logo_RGB.png"
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 
@@ -79,7 +78,7 @@ def create_header(title):
 
 app.layout = html.Div(
     children=[
-        html.Img(src=header_image, height=100),
+        html.Img(src=HEADER_IMAGE, height=100),
         create_header("ABCD data exploration dashboard"),
         html.H1(children="File selection", style=div_style),
         html.Label(
@@ -103,7 +102,8 @@ app.layout = html.Div(
             id="output-data-file-upload", children=["No file loaded"], style=div_style
         ),
         html.Label(
-            children="Column Filter File Selection (initial data read will happen immediately)",
+            children="Column Filter File Selection (initial data read will happen"
+                     " immediately)",
             style=div_style,
         ),
         dcc.Upload(
@@ -155,7 +155,7 @@ app.layout = html.Div(
                         html.Div(
                             id="table_preview",
                             style={
-                                "width": table_width,
+                                "width": TABLE_WIDTH,
                                 "margin-left": "10px",
                                 "margin-right": "10px",
                             },
@@ -182,7 +182,7 @@ app.layout = html.Div(
                         html.Div(
                             id="other_summary",
                             style={
-                                "width": global_width,
+                                "width": GLOBAL_WIDTH,
                                 "margin-left": "10px",
                                 "margin-right": "10px",
                             },
@@ -190,7 +190,7 @@ app.layout = html.Div(
                         html.Div(
                             id="table_summary",
                             style={
-                                "width": table_width,
+                                "width": TABLE_WIDTH,
                                 "margin-left": "10px",
                                 "margin-right": "10px",
                             },
@@ -290,12 +290,12 @@ app.layout = html.Div(
             ],
             is_open=True,
         ),
-        # Hidden div for holding the boolean identifying whether a DF is loaded
+        # Hidden divs for holding the booleans identifying whether a DF is loaded in
+        # each case
         html.Div(id="df-loaded-div", style={"display": "none"}, children=[]),
         html.Div(id="df-filtered-loaded-div", style={"display": "none"}, children=[]),
         html.Div(id="corr-loaded-div", style={"display": "none"}, children=[]),
         html.Div(id="pval-loaded-div", style={"display": "none"}, children=[]),
-        # html.H1('Exploratory graphs', style={'margin-top': '10px', 'margin-bottom': '10px'}),
         html.Div(
             [
                 html.H1(
@@ -349,9 +349,9 @@ app.layout = html.Div(
     [State("summary-collapse", "is_open")],
     prevent_initial_call=True,
 )
-def toggle_collapse_summary(n, is_open):
-    logging.info(f"toggle_collapse_summary {n} {is_open}")
-    if n:
+def toggle_collapse_summary(n_clicks, is_open):
+    logging.info(f"toggle_collapse_summary {n_clicks} {is_open}")
+    if n_clicks:
         return not is_open, "+" if is_open else "-"
     return is_open, "-"
 
@@ -385,8 +385,8 @@ def standardise_subjectkey(subjectkey):
     [State("data-file-upload", "filename"), State("data-file-upload", "last_modified")],
     prevent_initial_call=True,
 )
-# This function is triggered by the data file upload, and parses the contents of the triggering file,
-# then saves them to the appropriate children
+# This function is triggered by the data file upload, and parses the contents of the
+# triggering file, then saves them to the appropriate children
 def parse_input_data_file(contents, filename, date):
     logging.info(f"parse data")
 
@@ -415,7 +415,8 @@ def parse_input_data_file(contents, filename, date):
         store("parsed", df)
 
         return [
-            f"{filename} loaded, last modified {datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}"
+            f"{filename} loaded, last modified "
+            f"{datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}"
         ]
 
     return ["No file loaded"]
@@ -430,8 +431,8 @@ def parse_input_data_file(contents, filename, date):
     ],
     prevent_initial_call=True,
 )
-# This function is triggered by either upload, and parses the contents of the triggering file,
-# then saves them to the appropriate children
+# This function is triggered by either upload, and parses the contents of the
+# triggering file, then saves them to the appropriate children
 def parse_input_filter_file(contents, filename, date):
     logging.info(f"parse filter")
 
@@ -453,7 +454,8 @@ def parse_input_filter_file(contents, filename, date):
         store("columns", df)
 
         return [
-            f"{filename} loaded, last modified {datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}"
+            f"{filename} loaded, last modified "
+            f"{datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}"
         ]
 
     return ["No file loaded"]
@@ -465,8 +467,8 @@ def parse_input_filter_file(contents, filename, date):
     [State("data-file-upload", "filename"), State("filter-file-upload", "filename")],
     prevent_initial_call=True,
 )
-# This function is triggered by the button, and takes the parsed values of the 1 or 2 upload
-# components, and outputs the resulting df to the div.
+# This function is triggered by the button, and takes the parsed values of the 1 or 2
+# upload components, and outputs the resulting df to the div.
 def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
     logging.info(f"update_df_loaded_div")
     # Read in main DataFrame
@@ -474,7 +476,7 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
         return [False]
     df = load("parsed")
 
-    # Read in column DataFrame, or just use all the columns in the DataFrame (need to make
+    # Read in column DataFrame, or just use all the columns in the DataFrame
     if filter_file_value is not None:
         variables_of_interest = list(load("columns")["names"])
 
@@ -514,8 +516,8 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
 
 
 def main():
-    # Create empty feather files to simplify the handling of them if they don't exist or contain
-    # old data.
+    # Create empty feather files to simplify the handling of them if they don't exist
+    # or contain old data.
     for name in [
         "cluster",
         "parsed",

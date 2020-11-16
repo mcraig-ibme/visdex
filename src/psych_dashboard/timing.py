@@ -38,8 +38,8 @@ def start_timer(i):
 
 def log_timing(i, label, restart=True):
     """
-    Logs the elapsed time since the timer i was last (re)started, in the timing_dict under
-    the supplied label, and restarts the timer unless restart=False.
+    Logs the elapsed time since the timer i was last (re)started, in the timing_dict
+    under the supplied label, and restarts the timer unless restart=False.
 
     This is for use _within_ functions.
 

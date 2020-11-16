@@ -40,7 +40,8 @@ def process_table(datatable):
     table_contents = [column_names]
     for row in data_raw:
         row_contents = []
-        # Handle each field in the row, applying the correct format specifier to match the DataTable.
+        # Handle each field in the row, applying the correct format specifier to match
+        # the DataTable.
         for val, spec in zip(list(row.values()), column_specifiers):
             try:
                 row_contents.append(f"{val:{spec}}")
@@ -109,7 +110,8 @@ def export_to_pdf(n_clicks, *figs):
 
     def save_images():
         """
-        Save each image to an intermediate file, which will then be included in the final report.
+        Save each image to an intermediate file, which will then be included in the
+        final report.
         """
         # Only save if the figure contains data
         if figs[0]["data"]:

@@ -10,11 +10,13 @@ logging.getLogger(__name__)
 
 
 def create_arguments_nested_dict(components_list, args):
-    # Generate the list of argument names based on the input order, paired by component id and property name
+    # Generate the list of argument names based on the input order, paired by component
+    # id and property name
     keys = [
         (component["id"], prop) for component in components_list for prop in component
     ]
-    # Convert inputs to a nested dict, with the outer key the component id, and the inner key the property name
+    # Convert inputs to a nested dict, with the outer key the component id, and the
+    # inner key the property name
     args_dict = defaultdict(dict)
     for key, value in zip(keys, args):
         args_dict[key[0]][key[1]] = value
@@ -32,15 +34,16 @@ def update_graph_components(graph_type, component_list, dd_options, args):
     :return:
     """
     logging.info(f"update_graph_components")
-    # Generate the list of argument names based on the input order, paired by component id and property name
+    # Generate the list of argument names based on the input order, paired by component
+    # id and property name
     args_dict = create_arguments_nested_dict(component_list, args)
 
     children = list()
     for component in component_list:
         name = component["id"]
         # Pass most of the input arguments for this component to the constructor via
-        # args_to_replicate. Remove component_type and label as they are used in other ways,
-        # not passed to the constructor.
+        # args_to_replicate. Remove component_type and label as they are used in other
+        # ways, not passed to the constructor.
         args_to_replicate = dict(args_dict[name])
         del args_to_replicate["component_type"]
         del args_to_replicate["label"]
@@ -99,7 +102,8 @@ def generate_generic_group(n_clicks, group_type, component_list):
         del args_to_replicate["id"]
         del args_to_replicate["label"]
 
-        # Generate each component with the correct id, index, and arguments, inside its own Div.
+        # Generate each component with the correct id, index, and arguments, inside its
+        # own Div.
         children.append(
             html.Div(
                 [
@@ -153,7 +157,8 @@ def change_graph_group_type(graph_type, id, children):
     prevent_initial_call=True,
 )
 def add_graph_group(n_clicks, children):
-    # Add a new graph group each time the button is clicked. The if None guard stops there being an initial graph.
+    # Add a new graph group each time the button is clicked. The if None guard stops
+    # there being an initial graph.
     logging.info(f"add_graph_group")
     if n_clicks is not None:
         # This dropdown controls what type of graph-group to display next to it.
@@ -173,8 +178,9 @@ def add_graph_group(n_clicks, children):
                 # 'filter-graph-group-bar' to be placed here.
                 # Because graph-type-dd above is set to Scatter, this will initially be
                 # automatically filled with a filter-graph-group-scatter.
-                # But on the initial generation of this object, we give it type 'placeholder' to
-                # make it easy to check its value in change_graph_group_type()
+                # But on the initial generation of this object, we give it type
+                # 'placeholder' to make it easy to check its value in
+                # change_graph_group_type()
                 html.Div(id={"type": "placeholder", "index": n_clicks}),
             ],
             id={"type": "divgraph-type-dd", "index": n_clicks},
