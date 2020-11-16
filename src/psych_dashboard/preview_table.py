@@ -9,26 +9,31 @@ logging.getLogger(__name__)
 
 
 @app.callback(
-    Output('table_preview', 'children'),
-    [Input('df-loaded-div', 'children')],
-    prevent_initial_call=True
+    Output("table_preview", "children"),
+    [Input("df-loaded-div", "children")],
+    prevent_initial_call=True,
 )
 def update_preview_table(df_loaded):
-    logging.info(f'update_preview_table')
+    logging.info(f"update_preview_table")
 
-    dff = load('df')
+    dff = load("df")
 
     # Add the indices back in as columns so we can see them in the table preview
     if dff.size > 0:
         for index_level, index in enumerate(indices):
-            dff.insert(loc=index_level, column=index, value=dff.index.get_level_values(index_level))
+            dff.insert(
+                loc=index_level,
+                column=index,
+                value=dff.index.get_level_values(index_level),
+            )
 
-        return html.Div(dash_table.DataTable(
-            id='table',
-            columns=[{"name": i, "id": i} for i in dff.columns],
-            data=dff.head().to_dict('records'),
-            style_table={'overflowX': 'auto'},
-        ),
-                        )
+        return html.Div(
+            dash_table.DataTable(
+                id="table",
+                columns=[{"name": i, "id": i} for i in dff.columns],
+                data=dff.head().to_dict("records"),
+                style_table={"overflowX": "auto"},
+            ),
+        )
 
-    return html.Div(dash_table.DataTable(id='table'))
+    return html.Div(dash_table.DataTable(id="table"))
