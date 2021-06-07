@@ -26,7 +26,9 @@ def update_summary_table(df_loaded, missing_value_cutoff):
     if dff.size == 0:
         return html.Div(), html.Div(), False
 
-    for index_level, index in enumerate(indices):
+    logging.info("DF indexes: %s", dff.index)
+    for index_level, index in enumerate([i for i in indices if i in dff]):
+        logging.info("DF index: %i, %s", index_level, index)
         dff.insert(
             loc=index_level, column=index, value=dff.index.get_level_values(index_level)
         )
@@ -44,7 +46,7 @@ def update_summary_table(df_loaded, missing_value_cutoff):
     )
 
     # Create a filtered version of the DF which doesn't have the index columns.
-    dff_filtered = dff.drop(indices, axis=1)
+    dff_filtered = dff.drop([i for i in indices if i in dff], axis=1)
     # Take out the columns which are filtered out by failing the 'missing values'
     # threshold.
     dropped_columns = []

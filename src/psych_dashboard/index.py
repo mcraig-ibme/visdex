@@ -493,10 +493,12 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
         df = df[variables_of_interest]
 
     df = df.drop(columns="index", errors="ignore")
+    logging.info("df\n: %s" % str(df))
 
     # Reformat SUBJECTKEY if it doesn't have the underscore
     # TODO: remove this when unnecessary
-    df["SUBJECTKEY"] = df["SUBJECTKEY"].apply(standardise_subjectkey)
+    if "SUBJECTKEY" in df:
+        df["SUBJECTKEY"] = df["SUBJECTKEY"].apply(standardise_subjectkey)
 
     # Set certain columns to have more specific types.
     # if 'SEX' in df.columns:
@@ -507,7 +509,9 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
     #         df[column] = df[column].astype('string')
 
     # Set SUBJECTKEY, EVENTNAME as MultiIndex
-    df.set_index(indices, inplace=True, verify_integrity=True, drop=True)
+    df_indices = [i for i in indices if i in df]
+    if df_indices:
+        df.set_index(df_indices, inplace=True, verify_integrity=True, drop=True)
 
     # Store the combined DF, and set df-loaded-div to [True]
     store("df", df)
@@ -530,6 +534,7 @@ def main():
         "flattened_logs",
     ]:
         store(name, None)
+    logging.getLogger().setLevel(logging.DEBUG)
     app.run_server(debug=True)
 
 

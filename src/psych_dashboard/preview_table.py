@@ -20,7 +20,7 @@ def update_preview_table(df_loaded):
 
     # Add the indices back in as columns so we can see them in the table preview
     if dff.size > 0:
-        for index_level, index in enumerate(indices):
+        for index_level, index in enumerate([i for i in indices if i in dff]):
             dff.insert(
                 loc=index_level,
                 column=index,
