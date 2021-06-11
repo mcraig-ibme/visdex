@@ -4,7 +4,7 @@ Functions for loading/saving data frame objects using Feather
 import logging
 import pandas as pd
 import numpy as np
-from psych_dashboard.app import indices, cache, use_redis
+from psych_dashboard.app import known_indices, cache, use_redis
 
 logging.getLogger(__name__)
 
@@ -48,12 +48,13 @@ def load_feather():
 
     logging.debug(f"load_feather:\n{dff}")
     if len(dff) > 0:
-        df_indices = [i for i in indices if i in dff]
-        if df_indices:
-            logging.debug(f"load_feather set_index: {df_indices}")
-            dff.set_index(df_indices, inplace=True)
-        else:
-            dff.set_index("index", inplace=True)
+        dff.set_index("index", inplace=True)
+        # FIXME cut/paste put into helper function
+        for index in known_indices:
+            if all([col in dff for col in index]):
+                dff.set_index(index, inplace=True, verify_integrity=True, drop=False)
+                break
+
     logging.debug(f"load_feather2:\n{dff}")
     return dff
 
@@ -67,12 +68,13 @@ def load_filtered_feather():
 
     logging.debug(f"load_filtered_feather:\n{dff}")
     if len(dff) > 0:
-        df_indices = [i for i in indices if i in dff]
-        if df_indices:
-            logging.debug(f"load_filtered_feather set_index: {df_indices}")
-            dff.set_index(df_indices, inplace=True)
-        else:
-            dff.set_index("index", inplace=True)
+        dff.set_index("index", inplace=True)
+        # FIXME cut/paste put into helper function
+        for index in known_indices:
+            if all([col in dff for col in index]):
+                dff.set_index(index, inplace=True, verify_integrity=True, drop=False)
+                break
+
     logging.debug(f"load_filtered_feather2:\n{dff}")
     return dff
 

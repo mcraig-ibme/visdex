@@ -38,8 +38,12 @@ else:
     cache = None
     logging.info("Using Feather for data caching")
 
-# Index columns. Note this is very data specific we should really discover them dynamically
-indices = ["SUBJECTKEY", "EVENTNAME"]
+# Possible sets of index columns. 
+# This is very data specific so we just try them in order and use the first set
+# that matches the DF
+known_indices = [
+    ["SUBJECTKEY", "EVENTNAME"],
+]
 
 # Standard style for exploratory graph DIVs
 standard_margin_left = "10px"

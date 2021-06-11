@@ -3,7 +3,7 @@ import dash_html_components as html
 import dash_table
 import numpy as np
 from dash.dependencies import Input, Output
-from psych_dashboard.app import app, indices
+from psych_dashboard.app import app
 from psych_dashboard.load_feather import load, store
 from psych_dashboard.timing import timing
 
@@ -26,12 +26,13 @@ def update_summary_table(df_loaded, missing_value_cutoff):
     if dff.size == 0:
         return html.Div(), html.Div(), False
 
-    logging.info("DF indexes: %s", dff.index)
-    for index_level, index in enumerate([i for i in indices if i in dff]):
-        logging.info("DF index: %i, %s", index_level, index)
-        dff.insert(
-            loc=index_level, column=index, value=dff.index.get_level_values(index_level)
-        )
+    # MSC removed as indexes no longer taken out as columns
+    #logging.info("DF indexes: %s", dff.index)
+    #for index_level, index in enumerate([i for i in indices if i in dff]):
+    #    logging.info("DF index: %i, %s", index_level, index)
+    #    dff.insert(
+    #        loc=index_level, column=index, value=dff.index.get_level_values(index_level)
+    #    )
 
     description_df = dff.describe().transpose()
 
@@ -46,7 +47,7 @@ def update_summary_table(df_loaded, missing_value_cutoff):
     )
 
     # Create a filtered version of the DF which doesn't have the index columns.
-    dff_filtered = dff.drop([i for i in indices if i in dff], axis=1)
+    dff_filtered = dff.drop([col for col in dff.index.names if col in dff], axis=1)
     # Take out the columns which are filtered out by failing the 'missing values'
     # threshold.
     dropped_columns = []

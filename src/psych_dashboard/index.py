@@ -23,7 +23,7 @@ from psych_dashboard.summary import (
     summary_manhattan,
     summary_table,
 )
-from psych_dashboard.app import app, indices, standard_margin_left, div_style
+from psych_dashboard.app import app, known_indices, standard_margin_left, div_style
 
 logging.getLogger(__name__)
 
@@ -443,9 +443,10 @@ def parse_input_filter_file(contents, filename, date):
         try:
             variables_of_interest = [str(item) for item in decoded.splitlines()]
             # Add index names if they are not present
-            variables_of_interest.extend(
-                index for index in indices if index not in variables_of_interest
-            )
+            # MSC not sure if useful here
+            #variables_of_interest.extend(
+            #    index for index in indices if index not in variables_of_interest
+            #)
 
         except Exception as e:
             logging.error(f"{e}")
@@ -508,10 +509,13 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
     #     if column in df.columns:
     #         df[column] = df[column].astype('string')
 
-    # Set SUBJECTKEY, EVENTNAME as MultiIndex
-    df_indices = [i for i in indices if i in df]
-    if df_indices:
-        df.set_index(df_indices, inplace=True, verify_integrity=True, drop=True)
+    # Set index. We try all known indices and apply the first
+    # one where all the columns are present. Otherwise just
+    # leave default index
+    for index in known_indices:
+        if all([col in df for col in index]):
+            df.set_index(index, inplace=True, verify_integrity=True, drop=False)
+            break
 
     # Store the combined DF, and set df-loaded-div to [True]
     store("df", df)
@@ -520,22 +524,8 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
 
 
 def main():
-    # Create empty feather files to simplify the handling of them if they don't exist
-    # or contain old data.
-    for name in [
-        "cluster",
-        "parsed",
-        "columns",
-        "df",
-        "filtered",
-        "corr",
-        "pval",
-        "logs",
-        "flattened_logs",
-    ]:
-        store(name, None)
-    logging.getLogger().setLevel(logging.DEBUG)
-    app.run_server(debug=True)
+    logging.getLogger().setLevel(logging.INFO)
+    app.run_server(debug=False)
 
 
 if __name__ == "__main__":
