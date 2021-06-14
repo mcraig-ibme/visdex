@@ -4,3 +4,5 @@
 .idea
 *.feather
 src/*.pdf
+*.pyc
+__pycache__
