@@ -3,12 +3,12 @@ import numpy as np
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output
 import plotly.graph_objects as go
-from psych_dashboard.app import app
-from psych_dashboard.exploratory_graphs.manhattan_graph import (
+from visdex.app import app
+from visdex.exploratory_graphs.manhattan_graph import (
     calculate_transformed_corrected_pval,
 )
-from psych_dashboard.load_feather import load
-from psych_dashboard.timing import timing, start_timer, log_timing, print_timings
+from visdex.load_feather import load
+from visdex.timing import timing, start_timer, log_timing, print_timings
 
 
 # TODO: currently only allows int64 and float64

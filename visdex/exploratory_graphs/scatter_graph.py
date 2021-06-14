@@ -10,9 +10,9 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
-from psych_dashboard.app import app, all_components, default_marker_color
-from psych_dashboard.load_feather import load
-from psych_dashboard.exploratory_graph_groups import update_graph_components
+from visdex.app import app, all_components, default_marker_color
+from visdex.load_feather import load
+from visdex.exploratory_graph_groups import update_graph_components
 
 logging.getLogger(__name__)
 

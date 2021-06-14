@@ -3,9 +3,9 @@ import numpy as np
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-from psych_dashboard.app import app, all_components
-from psych_dashboard.load_feather import load
-from psych_dashboard.exploratory_graph_groups import update_graph_components
+from visdex.app import app, all_components
+from visdex.load_feather import load
+from visdex.exploratory_graph_groups import update_graph_components
 
 logging.getLogger(__name__)
 

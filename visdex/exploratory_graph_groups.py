@@ -4,7 +4,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 from collections import defaultdict
-from psych_dashboard.app import app, all_components, style_dict, div_style
+from visdex.app import app, all_components, style_dict, div_style
 
 logging.getLogger(__name__)
 

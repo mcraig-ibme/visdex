@@ -6,9 +6,9 @@ import scipy.stats as stats
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 from sklearn.cluster import AgglomerativeClustering
-from psych_dashboard.app import app
-from psych_dashboard.load_feather import store, load
-from psych_dashboard.timing import timing, start_timer, log_timing, print_timings
+from visdex.app import app
+from visdex.load_feather import store, load
+from visdex.timing import timing, start_timer, log_timing, print_timings
 
 logging.getLogger(__name__)
 

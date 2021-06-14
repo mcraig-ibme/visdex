@@ -2,7 +2,7 @@ import os
 from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-from psych_dashboard.app import app, all_components
+from visdex.app import app, all_components
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,

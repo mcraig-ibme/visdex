@@ -3,9 +3,9 @@ import dash_html_components as html
 import dash_table
 import numpy as np
 from dash.dependencies import Input, Output
-from psych_dashboard.app import app, indices
-from psych_dashboard.load_feather import load, store
-from psych_dashboard.timing import timing
+from visdex.app import app, indices
+from visdex.load_feather import load, store
+from visdex.timing import timing
 
 
 @app.callback(

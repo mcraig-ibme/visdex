@@ -6,9 +6,9 @@ from dash.dependencies import Input, Output, State
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import scipy.stats as stats
-from psych_dashboard.app import app
-from psych_dashboard.load_feather import load
-from psych_dashboard.timing import timing
+from visdex.app import app
+from visdex.load_feather import load
+from visdex.timing import timing
 
 
 @app.callback(

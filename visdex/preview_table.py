@@ -2,8 +2,8 @@ import logging
 import dash_table
 import dash_html_components as html
 from dash.dependencies import Input, Output
-from psych_dashboard.app import app, indices
-from psych_dashboard.load_feather import load
+from visdex.app import app, indices
+from visdex.load_feather import load
 
 logging.getLogger(__name__)
 

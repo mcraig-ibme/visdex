@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 import numpy as np
-from psych_dashboard.app import indices, cache, use_redis
+from visdex.app import indices, cache, use_redis
 
 logging.getLogger(__name__)
 

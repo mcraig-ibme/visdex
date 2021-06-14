@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-setup(name="psych_dashboard",
+setup(name="visdex",
       version='0.0.1',
       description='A package to run a Plotly Dash dashboard to illustrate data from single data files',
       install_requires=['pandas>=1.0.0',
@@ -17,8 +17,7 @@ setup(name="psych_dashboard",
                         'flask-caching>=1.9.0',
                         ],
       entry_points={
-         'console_scripts': ['run-dashboard=psych_dashboard.index:main'],
+         'console_scripts': ['run-dashboard=visdex.index:main'],
         },
-      packages=find_packages(where='src'),
-      package_dir={"": "src"},
+      packages=find_packages(),
       )
