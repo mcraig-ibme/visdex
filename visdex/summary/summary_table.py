@@ -3,8 +3,7 @@ import dash_html_components as html
 import dash_table
 import numpy as np
 from dash.dependencies import Input, Output
-from visdex.app import app, indices
-from visdex.load_feather import load, store
+from visdex.app import app, cache
 from visdex.timing import timing
 
 
@@ -20,7 +19,7 @@ from visdex.timing import timing
 @timing
 def update_summary_table(df_loaded, missing_value_cutoff):
     logging.info(f"update_summary_table")
-    dff = load("df")
+    dff = cache.load("df")
 
     # If empty, return an empty Div
     if dff.size == 0:
@@ -59,7 +58,7 @@ def update_summary_table(df_loaded, missing_value_cutoff):
 
     # Save the filtered dff to feather file. This is the file that will be used for
     # all further processing.
-    store("filtered", dff_filtered)
+    cache.store("filtered", dff_filtered)
 
     # Add the index back in as a column so we can see it in the table preview
     description_df.insert(loc=0, column="column name", value=description_df.index)

@@ -9,7 +9,6 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
 from visdex import preview_table, exploratory_graph_groups, export
-from visdex.load_feather import store, load
 from visdex.exploratory_graphs import (
     scatter_graph,
     bar_graph,
@@ -23,11 +22,7 @@ from visdex.summary import (
     summary_manhattan,
     summary_table,
 )
-<<<<<<< HEAD:visdex/index.py
-from visdex.app import app, indices, standard_margin_left, div_style
-=======
-from psych_dashboard.app import app, known_indices, standard_margin_left, div_style
->>>>>>> msc:src/psych_dashboard/index.py
+from visdex.app import app, cache, standard_margin_left, div_style
 
 logging.getLogger(__name__)
 
@@ -479,11 +474,11 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
     # Read in main DataFrame
     if data_file_value is None:
         return [False]
-    df = load("parsed")
+    df = cache.load("parsed")
 
     # Read in column DataFrame, or just use all the columns in the DataFrame
     if filter_file_value is not None:
-        variables_of_interest = list(load("columns")["names"])
+        variables_of_interest = list(cache.load("columns")["names"])
 
         # Verify that the variables of interest exist in the dataframe
         missing_vars = [var for var in variables_of_interest if var not in df.columns]

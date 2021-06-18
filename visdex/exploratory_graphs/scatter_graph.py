@@ -10,8 +10,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
-from visdex.app import app, all_components, default_marker_color
-from visdex.load_feather import load
+from visdex.app import app, cache, all_components, default_marker_color
 from visdex.exploratory_graph_groups import update_graph_components
 
 logging.getLogger(__name__)
@@ -32,7 +31,7 @@ logging.getLogger(__name__)
 )
 def update_scatter_components(df_loaded, style_dict, *args):
     logging.info(f"update_scatter_components")
-    dff = load("filtered")
+    dff = cache.load("filtered")
     dd_options = [{"label": col, "value": col} for col in dff.columns]
     return update_graph_components(
         "scatter", all_components["scatter"], dd_options, args
@@ -89,7 +88,7 @@ def make_scatter_figure(*args):
 
     # Convert inputs to a dict called 'args_dict'
     args_dict = dict(zip(keys, args))
-    dff = load("filtered")
+    dff = cache.load("filtered")
 
     facet_row_cats = (
         list(dff[args_dict["facet_row"]].unique())

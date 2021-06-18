@@ -3,11 +3,10 @@ import numpy as np
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output
 import plotly.graph_objects as go
-from visdex.app import app
+from visdex.app import app, cache
 from visdex.exploratory_graphs.manhattan_graph import (
     calculate_transformed_corrected_pval,
 )
-from visdex.load_feather import load
 from visdex.timing import timing, start_timer, log_timing, print_timings
 
 
@@ -74,7 +73,7 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     if pvalue <= 0.0 or pvalue is None:
         raise PreventUpdate
 
-    dff = load("pval")
+    dff = cache.load("pval")
 
     log_timing("plot_manhattan", "plot_manhattan-load_pval")
 
@@ -86,8 +85,8 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
         return go.Figure()
 
     # Load logs and flattened logs from feather file.
-    logs = load("logs")
-    flattened_logs = load("flattened_logs")
+    logs = cache.load("logs")
+    flattened_logs = cache.load("flattened_logs")
 
     log_timing("plot_manhattan", "plot_manhattan-load_both_logs")
 
@@ -107,7 +106,7 @@ def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
     log_timing("plot_manhattan", "plot_manhattan-load_cutoff")
 
     # Load cluster numbers to use for colouring
-    cluster_df = load("cluster")
+    cluster_df = cache.load("cluster")
 
     log_timing("plot_manhattan", "plot_manhattan-load_cluster")
 

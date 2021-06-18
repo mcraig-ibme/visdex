@@ -17,7 +17,7 @@ setup(name="visdex",
                         'flask-caching>=1.9.0',
                         ],
       entry_points={
-         'console_scripts': ['run-dashboard=visdex.index:main'],
+         'console_scripts': ['run-visdex=visdex.index:main'],
         },
       packages=find_packages(),
       )

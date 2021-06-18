@@ -3,8 +3,7 @@ import numpy as np
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-from visdex.app import app, all_components
-from visdex.load_feather import load
+from visdex.app import app, cache, all_components
 from visdex.exploratory_graph_groups import update_graph_components
 
 logging.getLogger(__name__)
@@ -28,7 +27,7 @@ valid_manhattan_dtypes = [np.int64, np.float64]
 )
 def update_manhattan_components(df_loaded, style_dict, *args):
     logging.info("update_manhattan_components")
-    dff = load("df")
+    dff = cache.load("df")
     # Only allow user to select columns that have data type that is valid for correlation
     dd_options = [
         {"label": col, "value": col}
@@ -74,7 +73,7 @@ def make_manhattan_figure(*args):
         raise PreventUpdate
 
     # Load logs of all p-values
-    logs = load("logs")
+    logs = cache.load("logs")
 
     # Select the column and row associated to this variable, and combine the two. Half of the values will be nans,
     # so we keep all the non-nans.

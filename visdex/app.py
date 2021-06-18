@@ -35,7 +35,8 @@ if use_redis:
     cache.init_app(app.server, config=CACHE_CONFIG)
     logging.info("Using Redis for data caching")
 else:
-    cache = None
+    from .feather_cache import FeatherCache
+    cache = FeatherCache()
     logging.info("Using Feather for data caching")
 
 # Possible sets of index columns. 

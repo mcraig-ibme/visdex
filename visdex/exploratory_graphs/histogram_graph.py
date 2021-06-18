@@ -1,8 +1,7 @@
 import logging
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
-from visdex.app import app, all_components
-from visdex.load_feather import load
+from visdex.app import app, cache, all_components
 from visdex.exploratory_graph_groups import update_graph_components
 
 logging.getLogger(__name__)
@@ -23,7 +22,7 @@ logging.getLogger(__name__)
 )
 def update_histogram_components(df_loaded, style_dict, *args):
     logging.info(f"update_histogram_components")
-    dff = load("filtered")
+    dff = cache.load("filtered")
     dd_options = [{"label": col, "value": col} for col in dff.columns]
     return update_graph_components(
         "histogram", all_components["histogram"], dd_options, args
@@ -44,7 +43,7 @@ def make_histogram_figure(*args):
     keys = [component["id"] for component in all_components["histogram"]]
 
     args_dict = dict(zip(keys, args))
-    dff = load("filtered")
+    dff = cache.load("filtered")
 
     # Return empty scatter if not enough options are selected, or the data is empty.
     if dff.columns.size == 0 or args_dict["base_variable"] is None:

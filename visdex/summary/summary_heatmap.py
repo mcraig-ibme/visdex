@@ -6,8 +6,7 @@ import scipy.stats as stats
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 from sklearn.cluster import AgglomerativeClustering
-from visdex.app import app
-from visdex.load_feather import store, load
+from visdex.app import app, cache
 from visdex.timing import timing, start_timer, log_timing, print_timings
 
 logging.getLogger(__name__)
@@ -21,7 +20,7 @@ logging.getLogger(__name__)
 @timing
 def update_heatmap_dropdown(df_loaded):
     logging.info(f"update_heatmap_dropdown {df_loaded}")
-    dff = load("filtered")
+    dff = cache.load("filtered")
 
     options = [
         {"label": col, "value": col}
@@ -246,7 +245,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
         return fig, False, False
 
     # Load main dataframe
-    dff = load("filtered")
+    dff = cache.load("filtered")
 
     # Guard against the dataframe being empty
     if dff.size == 0:
@@ -254,9 +253,9 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
         return fig, False, False
 
     # Load data from previous calculation
-    corr_dff = load("corr")
-    pval_dff = load("pval")
-    logs_dff = load("logs")
+    corr_dff = cache.load("corr")
+    pval_dff = cache.load("pval")
+    logs_dff = cache.load("logs")
 
     # Add the index back in as a column so we can see it in the table preview
     dff.insert(loc=0, column="SUBJECTKEY(INDEX)", value=dff.index)
@@ -288,7 +287,7 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
     # Save cluster number of each column to a DF and then to feather.
     cluster_df = pd.DataFrame(data=clx, index=corr.index, columns=["column_names"])
     logging.debug(f"{cluster_df}")
-    store("cluster", cluster_df)
+    cache.store("cluster", cluster_df)
 
     # TODO: what would be good here would be to rename the clusters based on the
     #  average variance (diags) within each cluster - that would reduce the
@@ -309,12 +308,12 @@ def update_summary_heatmap(dropdown_values, clusters, df_loaded):
     log_timing("update_summary_heatmap", "update_summary_heatmap-reorder")
 
     # Send to feather files
-    store("corr", sorted_corr)
-    store("pval", sorted_pval)
-    store("logs", sorted_logs)
+    cache.store("corr", sorted_corr)
+    cache.store("pval", sorted_pval)
+    cache.store("logs", sorted_logs)
 
     flattened_logs = flattened(logs)
-    store("flattened_logs", flattened_logs)
+    cache.store("flattened_logs", flattened_logs)
 
     log_timing("update_summary_heatmap", "update_summary_heatmap-save")
 

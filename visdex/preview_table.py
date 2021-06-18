@@ -2,8 +2,7 @@ import logging
 import dash_table
 import dash_html_components as html
 from dash.dependencies import Input, Output
-from visdex.app import app, indices
-from visdex.load_feather import load
+from visdex.app import app, cache
 
 logging.getLogger(__name__)
 
@@ -16,7 +15,7 @@ logging.getLogger(__name__)
 def update_preview_table(df_loaded):
     logging.info(f"update_preview_table")
 
-    dff = load("df")
+    dff = cache.load("df")
 
     if dff.size > 0:
         # Add the index back in as columns so we can see them in the table preview

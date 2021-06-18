@@ -6,8 +6,7 @@ from dash.dependencies import Input, Output, State
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import scipy.stats as stats
-from visdex.app import app
-from visdex.load_feather import load
+from visdex.app import app, cache
 from visdex.timing import timing
 
 
@@ -28,7 +27,7 @@ def update_summary_kde(dropdown_values, kde_active, df_loaded):
     if df_loaded is False:
         return go.Figure(go.Scatter())
 
-    dff = load("filtered")
+    dff = cache.load("filtered")
 
     n_variables = len(dropdown_values) if dropdown_values is not None else 0
 
