@@ -1,18 +1,27 @@
+"""
+Dashboard data explorer for CSV trial data
+
+This module defines the overall look of the application
+
+Originally written for ABCD data
+"""
 import os
 import logging
 import dash
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 
+# Create the Dash application
 app = dash.Dash(
     __name__,
     suppress_callback_exceptions=False,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
-server = app.server
 
+# Default logging to stdout
 logging.basicConfig(level=logging.INFO)
 
+# Default to use Feather files for data caching rather than redis
 use_redis = False
 
 if use_redis:
@@ -29,12 +38,18 @@ else:
     cache = None
     logging.info("Using Feather for data caching")
 
-indices = ["SUBJECTKEY", "EVENTNAME"]
+# Possible sets of index columns. 
+# This is very data specific so we just try them in order and use the first set
+# that matches the DF
+known_indices = [
+    ["SUBJECTKEY", "EVENTNAME"],
+]
 
+# Standard style for exploratory graph DIVs
 standard_margin_left = "10px"
 div_style = {"margin-left": standard_margin_left}
 
-
+# Definitions of supported plot types
 # All components should contain 'component_type', 'id', and 'label' as a minimum
 all_components = dict(
     scatter=[
@@ -171,6 +186,7 @@ all_components = dict(
     ],
 )
 
+# Default styling for exploratory components
 default_marker_color = "crimson"
 style_dict = {
     "width": "13%",
