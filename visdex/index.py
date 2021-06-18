@@ -22,7 +22,7 @@ from visdex.summary import (
     summary_manhattan,
     summary_table,
 )
-from visdex.app import app, cache, standard_margin_left, div_style
+from visdex.app import app, cache, known_indices, standard_margin_left, div_style
 
 logging.getLogger(__name__)
 
@@ -411,7 +411,7 @@ def parse_input_data_file(contents, filename, date):
             logging.error(f"{e}")
             return [html.Div(["There was an error processing this file."])]
 
-        store("parsed", df)
+        cache.store("parsed", df)
 
         return [
             f"{filename} loaded, last modified "
@@ -451,7 +451,7 @@ def parse_input_filter_file(contents, filename, date):
             logging.error(f"{e}")
             return html.Div(["There was an error processing this file."])
         df = pd.DataFrame(variables_of_interest, columns=["names"])
-        store("columns", df)
+        cache.store("columns", df)
 
         return [
             f"{filename} loaded, last modified "
@@ -492,7 +492,6 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
         # Keep only the columns listed in the filter file
         df = df[variables_of_interest]
 
-    df = df.drop(columns="index", errors="ignore")
     logging.info("df\n: %s" % str(df))
 
     # Reformat SUBJECTKEY if it doesn't have the underscore
@@ -509,21 +508,20 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
     #         df[column] = df[column].astype('string')
 
     # Set index. We try all known indices and apply the first
-    # one where all the columns are present. Otherwise just
-    # leave default index
+    # one where all the columns are present.
     for index in known_indices:
         if all([col in df for col in index]):
-            df.set_index(index, inplace=True, verify_integrity=True, drop=False)
+            df.set_index(index, inplace=True, verify_integrity=True, drop=True)
             break
 
     # Store the combined DF, and set df-loaded-div to [True]
-    store("df", df)
+    cache.store("df", df)
 
     return [True]
 
 
 def main():
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
     app.run_server(debug=False)
 
 
