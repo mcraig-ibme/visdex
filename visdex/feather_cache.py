@@ -30,7 +30,7 @@ class FeatherCache:
                  frame will be returned.
         """
         fname = self._fname(name)
-        self.log.debug(f"load {name} {fname}")
+        self.log.info(f"load {name} {fname}")
 
         try:
             df = pd.read_feather(fname)
@@ -57,7 +57,7 @@ class FeatherCache:
                    ``load`` for this data will return an empty pd.DataFrame
         """
         fname = self._fname(name)
-        self.log.debug(f"store {name} {fname}")
+        self.log.info(f"store {name} {fname}")
         if df is None:
             # Don't bother storing empty DF - load will just return a empty DF if
             # the file does not exist

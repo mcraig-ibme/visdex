@@ -3,7 +3,7 @@ import pytest
 from dash.testing.application_runners import import_app
 from selenium.webdriver.common.keys import Keys
 
-import visdex.feather_cache
+from visdex.app import cache
 
 # 2. give each testcase a tcid, and pass the fixture
 # as a function argument, less boilerplate
@@ -11,12 +11,10 @@ import visdex.feather_cache
 def test_basic_start(dash_duo):
 
     # 3. import the app inside the test function
-    app = import_app('psych_dashboard.index')
+    app = import_app('visdex.index')
 
     # 4. host the app locally in a thread, all dash server configs could be
     # passed after the first app argument
-    for name in ['cluster', 'parsed', 'columns', 'df', 'filtered', 'corr', 'pval', 'logs', 'flattened_logs']:
-        store(name, None)
     dash_duo.start_server(app)
 
     # 5. use wait_for_* if your target element is the result of a callback,
