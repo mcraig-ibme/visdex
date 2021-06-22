@@ -15,6 +15,8 @@ from visdex.timing import timing
 from visdex.cache import cache
 from visdex.common import div_style
 
+LOG = logging.getLogger(__name__)
+
 def get_layout(app):
     @app.callback(
         Output("kde-figure", "figure"),

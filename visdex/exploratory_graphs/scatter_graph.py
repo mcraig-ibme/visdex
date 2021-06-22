@@ -15,7 +15,7 @@ from visdex.cache import cache
 from visdex.common import all_components, default_marker_color
 from visdex.exploratory_graphs.common import update_graph_components
 
-logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 def define_cbs(app):
     @app.callback(

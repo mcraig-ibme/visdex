@@ -18,6 +18,8 @@ from visdex.exploratory_graphs.manhattan_graph import (
     calculate_transformed_corrected_pval,
 )
 
+LOG = logging.getLogger(__name__)
+
 # TODO: currently only allows int64 and float64
 valid_manhattan_dtypes = [np.int64, np.float64]
 
