@@ -16,29 +16,13 @@ from visdex.cache import cache
 logging.getLogger(__name__)
 
 def get_layout(app):
-    layout = html.Div(children=[
-        html.H2(children="Table Preview", style=div_style),
-        dcc.Loading(
-            id="loading-table-preview",
-            children=[
-                html.Div(
-                    id="table_preview",
-                    style={
-                        "width": TABLE_WIDTH,
-                        "margin-left": "10px",
-                        "margin-right": "10px",
-                    },
-                )
-            ],
-        ),
-    ])
-
+    
     @app.callback(
         Output("table_preview", "children"),
         [Input("df-loaded-div", "children")],
         prevent_initial_call=True,
     )
-    def update_preview_table(df_loaded):
+    def _update_preview_table(df_loaded):
         logging.info(f"update_preview_table")
 
         dff = cache.load("df")
@@ -63,5 +47,22 @@ def get_layout(app):
             )
 
         return html.Div(dash_table.DataTable(id="table"))
+
+    layout = html.Div(children=[
+            html.H2(children="Table Preview", style=div_style),
+            dcc.Loading(
+                id="loading-table-preview",
+                children=[
+                    html.Div(
+                        id="table_preview",
+                        style={
+                            "width": TABLE_WIDTH,
+                            "margin-left": "10px",
+                            "margin-right": "10px",
+                        },
+                    )
+                ],
+            ),
+        ])
 
     return layout

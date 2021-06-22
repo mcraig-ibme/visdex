@@ -3,6 +3,8 @@ from collections import defaultdict
 
 import dash_core_components as dcc
 
+LOG = logging.getLogger(__name__)
+
 def create_arguments_nested_dict(components_list, args):
     # Generate the list of argument names based on the input order, paired by component
     # id and property name
@@ -26,7 +28,7 @@ def update_graph_components(graph_type, component_list, dd_options, args):
     :param args:
     :return:
     """
-    logging.info(f"update_graph_components")
+    LOG.info(f"update_graph_components")
     # Generate the list of argument names based on the input order, paired by component
     # id and property name
     args_dict = create_arguments_nested_dict(component_list, args)

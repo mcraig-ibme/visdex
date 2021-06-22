@@ -24,7 +24,7 @@ def get_layout(app):
     )
     @timing
     def update_summary_kde(dropdown_values, kde_active, df_loaded):
-        logging.info(f"update_summary_kde")
+        LOG.info(f"update_summary_kde")
         if kde_active != ["kde-active"]:
             raise PreventUpdate
 

@@ -21,7 +21,7 @@ from visdex.cache import cache
 from visdex.common import div_style
 from visdex.timing import timing, start_timer, log_timing, print_timings
 
-logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 def get_layout(app):
     @app.callback(
@@ -31,7 +31,7 @@ def get_layout(app):
     )
     @timing
     def update_heatmap_dropdown(df_loaded):
-        logging.info(f"update_heatmap_dropdown {df_loaded}")
+        LOG.info(f"update_heatmap_dropdown {df_loaded}")
         dff = cache.load("filtered")
 
         options = [
@@ -42,7 +42,6 @@ def get_layout(app):
         return options, [
             col for col in dff.columns if dff[col].dtype in [np.int64, np.float64]
         ]
-
 
     def flattened(df):
         """
@@ -82,9 +81,9 @@ def get_layout(app):
         #  then this old correlation data may be used erroneously.
         existing_cols = corr_dff.columns
         overlap = list(set(selected_columns).intersection(set(existing_cols)))
-        logging.debug(f"these are needed and already available: {overlap}")
+        LOG.debug(f"these are needed and already available: {overlap}")
         required_new = list(set(selected_columns).difference(set(existing_cols)))
-        logging.debug(f"these are needed and not already available: {required_new}")
+        LOG.debug(f"these are needed and not already available: {required_new}")
 
         ########
         # Create initial existing vs existing DF
@@ -93,7 +92,7 @@ def get_layout(app):
         # If there is overlap, then create brand new empty dataframes.
         # Otherwise, update the existing dataframes.
         if len(overlap) == 0:
-            logging.debug(f"create new")
+            LOG.debug(f"create new")
             corr = pd.DataFrame()
             pvalues = pd.DataFrame()
             logs = pd.DataFrame()
@@ -152,7 +151,7 @@ def get_layout(app):
             data=new_against_existing_corr, columns=required_new, index=overlap
         )
         corr[required_new] = new_against_existing_corr_df
-        # logging.debug(f'corr {corr}')
+        # LOG.debug(f'corr {corr}')
         new_against_existing_pval_df = pd.DataFrame(
             data=new_against_existing_pval, columns=required_new, index=overlap
         )
@@ -249,7 +248,7 @@ def get_layout(app):
     )
     @timing
     def update_summary_heatmap(dropdown_values, clusters, df_loaded):
-        logging.info(f"update_summary_heatmap {dropdown_values} {clusters}")
+        LOG.info(f"update_summary_heatmap {dropdown_values} {clusters}")
         # Guard against the first argument being an empty list, as happens at first
         # invocation, or df_loaded being False
         if df_loaded is False or len(dropdown_values) <= 1:
@@ -274,7 +273,7 @@ def get_layout(app):
 
         # The columns we want to have calculated
         selected_columns = list(dropdown_values)
-        logging.debug(f"selected_columns {selected_columns}")
+        LOG.debug(f"selected_columns {selected_columns}")
 
         corr, pvalues, logs = recalculate_corr_etc(
             selected_columns, dff, corr_dff, pval_dff, logs_dff
@@ -298,7 +297,7 @@ def get_layout(app):
 
         # Save cluster number of each column to a DF and then to feather.
         cluster_df = pd.DataFrame(data=clx, index=corr.index, columns=["column_names"])
-        logging.debug(f"{cluster_df}")
+        LOG.debug(f"{cluster_df}")
         cache.store("cluster", cluster_df)
 
         # TODO: what would be good here would be to rename the clusters based on the

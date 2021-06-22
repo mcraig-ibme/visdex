@@ -22,6 +22,8 @@ from . import (
 
 from visdex.common import standard_margin_left, div_style, all_components, style_dict
 
+LOG = logging.getLogger(__name__)
+
 def get_layout(app):
 
     @app.callback(
@@ -37,7 +39,7 @@ def get_layout(app):
         """
         Handle click on the 'Explore' expand/collapse button
         """
-        logging.info(f"toggle_collapse_explore {n} {is_open}")
+        LOG.info(f"toggle_collapse_explore {n} {is_open}")
         if n:
             return not is_open, "+" if is_open else "-"
         return is_open, "-"
@@ -51,7 +53,7 @@ def get_layout(app):
     def add_graph_group(n_clicks, children):
         # Add a new graph group each time the button is clicked. The if None guard stops
         # there being an initial graph.
-        logging.info(f"add_graph_group")
+        LOG.info(f"add_graph_group")
         if n_clicks is not None:
             # This dropdown controls what type of graph-group to display next to it.
             new_graph_type_dd = html.Div(
@@ -92,7 +94,7 @@ def get_layout(app):
         ],
     )
     def change_graph_group_type(graph_type, id, children):
-        logging.info(f"change_graph_group_type {graph_type} {id}")
+        LOG.info(f"change_graph_group_type {graph_type} {id}")
         # Generate a new group of the right type.
         if "filter-graph-group-" + str(graph_type) != children[-1]["props"]["id"]["type"]:
             children[-1] = generate_generic_group(id["index"], graph_type)
@@ -155,7 +157,7 @@ def generate_generic_group(n_clicks, group_type):
     :param component_list:
     :return:
     """
-    logging.info(f"generate_generic_group {group_type}")
+    LOG.info(f"generate_generic_group {group_type}")
     children = list()
 
     component_list = all_components[group_type]
@@ -188,7 +190,7 @@ def generate_generic_group(n_clicks, group_type):
             figure=go.Figure(data=go.Scatter()),
         )
     )
-    logging.debug(f"{children}")
+    LOG.debug(f"{children}")
 
     return html.Div(
         id={"type": "filter-graph-group-" + group_type, "index": n_clicks},

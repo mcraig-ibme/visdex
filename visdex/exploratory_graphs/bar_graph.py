@@ -5,7 +5,7 @@ from visdex.cache import cache
 from visdex.common import all_components
 from visdex.exploratory_graphs.common import update_graph_components
 
-logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 def define_cbs(app):
     @app.callback(
@@ -22,7 +22,7 @@ def define_cbs(app):
         ],
     )
     def update_bar_components(df_loaded, style_dict, *args):
-        logging.info(f"update_bar_components")
+        LOG.info(f"update_bar_components")
         dff = cache.load("filtered")
         dd_options = [{"label": col, "value": col} for col in dff.columns]
         return update_graph_components("bar", all_components["bar"], dd_options, args)
@@ -38,7 +38,7 @@ def define_cbs(app):
         ],
     )
     def make_bar_figure(*args):
-        logging.info(f"make_bar_figure")
+        LOG.info(f"make_bar_figure")
         keys = [component["id"] for component in all_components["bar"]]
 
         args_dict = dict(zip(keys, args))

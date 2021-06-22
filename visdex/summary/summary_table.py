@@ -17,46 +17,10 @@ from visdex.common import div_style, GLOBAL_WIDTH, TABLE_WIDTH
 from visdex.cache import cache
 from visdex.timing import timing
 
+LOG = logging.getLogger(__name__)
+
 def get_layout(app):
         
-    layout = html.Div(children=[
-        html.H3(children="Table Summary and Filter", style=div_style),
-        html.Div(
-            "\nFilter out all columns missing at least X percentage of rows:",
-            style=div_style,
-        ),
-        dcc.Input(
-            id="missing-values-input",
-            type="number",
-            min=0,
-            max=100,
-            debounce=True,
-            value=None,
-            style=div_style,
-        ),
-        dcc.Loading(
-            id="loading-table-summary",
-            children=[
-                html.Div(
-                    id="other_summary",
-                    style={
-                        "width": GLOBAL_WIDTH,
-                        "margin-left": "10px",
-                        "margin-right": "10px",
-                    },
-                ),
-                html.Div(
-                    id="table_summary",
-                    style={
-                        "width": TABLE_WIDTH,
-                        "margin-left": "10px",
-                        "margin-right": "10px",
-                    },
-                ),
-            ],
-        ),
-    ])
-
     @app.callback(
         [
             Output("other_summary", "children"),
@@ -68,7 +32,7 @@ def get_layout(app):
     )
     @timing
     def update_summary_table(df_loaded, missing_value_cutoff):
-        logging.info(f"update_summary_table")
+        LOG.info(f"update_summary_table")
         dff = cache.load("df")
 
         # If empty, return an empty Div
@@ -76,9 +40,9 @@ def get_layout(app):
             return html.Div(), html.Div(), False
 
         # MSC removed as indexes no longer taken out as columns
-        #logging.info("DF indexes: %s", dff.index)
+        #LOG.info("DF indexes: %s", dff.index)
         #for index_level, index in enumerate([i for i in indices if i in dff]):
-        #    logging.info("DF index: %i, %s", index_level, index)
+        #    LOG.info("DF index: %i, %s", index_level, index)
         #    dff.insert(
         #        loc=index_level, column=index, value=dff.index.get_level_values(index_level)
         #    )
@@ -184,5 +148,43 @@ def get_layout(app):
             ),
             True,
         )
+
+    layout = html.Div(children=[
+        html.H3(children="Table Summary and Filter", style=div_style),
+        html.Div(
+            "\nFilter out all columns missing at least X percentage of rows:",
+            style=div_style,
+        ),
+        dcc.Input(
+            id="missing-values-input",
+            type="number",
+            min=0,
+            max=100,
+            debounce=True,
+            value=None,
+            style=div_style,
+        ),
+        dcc.Loading(
+            id="loading-table-summary",
+            children=[
+                html.Div(
+                    id="other_summary",
+                    style={
+                        "width": GLOBAL_WIDTH,
+                        "margin-left": "10px",
+                        "margin-right": "10px",
+                    },
+                ),
+                html.Div(
+                    id="table_summary",
+                    style={
+                        "width": TABLE_WIDTH,
+                        "margin-left": "10px",
+                        "margin-right": "10px",
+                    },
+                ),
+            ],
+        ),
+    ])
 
     return layout

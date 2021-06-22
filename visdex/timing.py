@@ -6,9 +6,7 @@ from functools import wraps
 timing_dict = dict()
 timers = dict()
 
-
-logging.getLogger(__name__)
-
+LOG = logging.getLogger(__name__)
 
 def timing(f):
     """
@@ -22,7 +20,7 @@ def timing(f):
         ts = time.time()
         result = f(*args, **kw)
         te = time.time()
-        logging.info(f"#### func:{f.__name__} took: {te-ts:.2f} sec")
+        LOG.info(f"#### func:{f.__name__} took: {te-ts:.2f} sec")
         timing_dict[f.__name__] = te - ts
         return result
 
@@ -55,7 +53,7 @@ def log_timing(i, label, restart=True):
         else:
             del timers[i]
     else:
-        logging.info(
+        LOG.info(
             f"Timer {i} attempted to log value but had not been started previously."
         )
 
@@ -64,4 +62,4 @@ def print_timings():
     """
     Prints timing_dict in a nice format to the logger
     """
-    logging.info(f"{pd.DataFrame(timing_dict.items())}")
+    LOG.info(f"{pd.DataFrame(timing_dict.items())}")

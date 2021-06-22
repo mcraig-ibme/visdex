@@ -5,7 +5,7 @@ from visdex.cache import cache
 from visdex.common import all_components
 from visdex.exploratory_graphs.common import update_graph_components
 
-logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 def define_cbs(app):
     @app.callback(
@@ -22,7 +22,7 @@ def define_cbs(app):
         ],
     )
     def update_histogram_components(df_loaded, style_dict, *args):
-        logging.info(f"update_histogram_components")
+        LOG.info(f"update_histogram_components")
         dff = cache.load("filtered")
         dd_options = [{"label": col, "value": col} for col in dff.columns]
         return update_graph_components(
@@ -40,7 +40,7 @@ def define_cbs(app):
         ],
     )
     def make_histogram_figure(*args):
-        logging.info(f"make_histogram_figure")
+        LOG.info(f"make_histogram_figure")
         keys = [component["id"] for component in all_components["histogram"]]
 
         args_dict = dict(zip(keys, args))

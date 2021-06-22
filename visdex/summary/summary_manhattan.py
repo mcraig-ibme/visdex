@@ -35,7 +35,7 @@ def get_layout(app):
     )
     @timing
     def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
-        logging.info(f"plot_manhattan")
+        LOG.info(f"plot_manhattan")
 
         start_timer("plot_manhattan")
         if manhattan_active != ["manhattan-active"]:
@@ -68,7 +68,7 @@ def get_layout(app):
 
         inf_replacement = 0
         if np.inf in flattened_logs.values:
-            logging.debug(f"Replacing np.inf in flattened logs")
+            LOG.debug(f"Replacing np.inf in flattened logs")
             temp_vals = flattened_logs.replace([np.inf, -np.inf], np.nan).dropna()
             inf_replacement = 1.2 * np.max(np.flip(temp_vals.values))
             flattened_logs = flattened_logs.replace([np.inf, -np.inf], inf_replacement)

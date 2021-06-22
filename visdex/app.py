@@ -27,8 +27,7 @@ from .common import create_header, HEADER_IMAGE, div_style, standard_margin_left
 import visdex.summary
 import visdex.exploratory_graphs
 
-# Default logging to stdout
-logging.basicConfig(level=logging.INFO)
+LOG = logging.getLogger(__name__)
 
 # Possible sets of index columns. 
 # This is very data specific so we just try them in order and use the first set
@@ -122,7 +121,7 @@ def parse_input_data_file(contents, filename, date):
     Parses the contents of the uploaded file into a DataFrame and stores
     it in the cache, updating the appropriate children
     """
-    logging.info(f"parse data")
+    LOG.info(f"parse data")
 
     if contents is not None:
         _content_type, content_string = contents.split(",")
@@ -143,7 +142,7 @@ def parse_input_data_file(contents, filename, date):
             else:
                 raise NotImplementedError
         except Exception as e:
-            logging.error(f"{e}")
+            LOG.error(f"{e}")
             return [html.Div(["There was an error processing this file."])]
 
         cache.store("parsed", df)
@@ -172,7 +171,7 @@ def parse_input_filter_file(contents, filename, date):
     the columns of the main data file, and the filtered data frame is
     also stored in the cache
     """
-    logging.info(f"parse filter")
+    LOG.info(f"parse filter")
 
     if contents is not None:
         _content_type, content_string = contents.split(",")
@@ -187,7 +186,7 @@ def parse_input_filter_file(contents, filename, date):
             #)
 
         except Exception as e:
-            logging.error(f"{e}")
+            LOG.error(f"{e}")
             return html.Div(["There was an error processing this file."])
         df = pd.DataFrame(variables_of_interest, columns=["names"])
         cache.store("columns", df)
@@ -211,7 +210,7 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
     
     The main data file is parsed and filtered and the result stored in the cache
     """
-    logging.info(f"update_df_loaded_div")
+    LOG.info(f"update_df_loaded_div")
     # Read in main DataFrame
     if data_file_value is None:
         return [False]
@@ -233,7 +232,7 @@ def update_df_loaded_div(n_clicks, data_file_value, filter_file_value):
         # Keep only the columns listed in the filter file
         df = df[variables_of_interest]
 
-    logging.info("df\n: %s" % str(df))
+    LOG.info("df\n: %s" % str(df))
 
     # Reformat SUBJECTKEY if it doesn't have the underscore
     # TODO: remove this when unnecessary

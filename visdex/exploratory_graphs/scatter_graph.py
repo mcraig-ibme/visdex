@@ -32,7 +32,7 @@ def define_cbs(app):
         ],
     )
     def update_scatter_components(df_loaded, style_dict, *args):
-        logging.info(f"update_scatter_components")
+        LOG.info(f"update_scatter_components")
         dff = cache.load("filtered")
         dd_options = [{"label": col, "value": col} for col in dff.columns]
         return update_graph_components(
@@ -84,7 +84,7 @@ def define_cbs(app):
         ],
     )
     def make_scatter_figure(*args):
-        logging.info(f"make_scatter_figure")
+        LOG.info(f"make_scatter_figure")
         # Generate the list of argument names based on the input order
         keys = [component["id"] for component in all_components["scatter"]]
 
@@ -217,7 +217,7 @@ def define_cbs(app):
                             reg = model.fit(np.vstack(X), Y)
                             Y_pred = reg.predict(np.vstack(X))
                             r2 = r2_score(np.vstack(Y), Y_pred)
-                            logging.debug(f"r2 is {r2}")
+                            LOG.debug(f"r2 is {r2}")
                             fig.add_trace(
                                 go.Scatter(
                                     name="line of best fit", x=X, y=Y_pred, mode="lines"
@@ -240,7 +240,7 @@ def define_cbs(app):
                                 )
                             )
                         except (TypeError, ValueError) as e:
-                            logging.debug(e)
+                            LOG.debug(e)
                             pass
 
         for annotation in annotations:
