@@ -6,3 +6,5 @@
 src/*.pdf
 *.pyc
 __pycache__
+dist
+_version.py

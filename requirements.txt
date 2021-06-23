@@ -1,0 +1,12 @@
+dash>=1.12.0
+dash-bootstrap-components>=0.10.0
+feather-format>=0.4.0
+flask-caching>=1.9.0
+numpy>=1.16.0
+pandas>=1.0.0
+plotly>=4.8.0
+reportlab>=3.5.50
+scikit-learn>=0.22.0
+scipy>=1.2.0
+selenium>=3.0.0
+xlrd>=1.2.0
