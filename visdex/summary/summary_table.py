@@ -1,7 +1,7 @@
 """
 visdex: Summary table
 
-Displays summary information about the data, e.g. mean values of numerical
+Displays summary statistics about the data, e.g. mean values of numerical
 data, % of missing data items
 """
 import logging
@@ -33,19 +33,12 @@ def get_layout(app):
     @timing
     def update_summary_table(df_loaded, missing_value_cutoff):
         LOG.info(f"update_summary_table")
-        dff = cache.load("df")
+        # Keep index columns in the summary table
+        dff = cache.load("df", keep_index_cols=True)
 
         # If empty, return an empty Div
         if dff.size == 0:
             return html.Div(), html.Div(), False
-
-        # MSC removed as indexes no longer taken out as columns
-        #LOG.info("DF indexes: %s", dff.index)
-        #for index_level, index in enumerate([i for i in indices if i in dff]):
-        #    LOG.info("DF index: %i, %s", index_level, index)
-        #    dff.insert(
-        #        loc=index_level, column=index, value=dff.index.get_level_values(index_level)
-        #    )
 
         description_df = dff.describe().transpose()
 
@@ -61,6 +54,7 @@ def get_layout(app):
 
         # Create a filtered version of the DF which doesn't have the index columns.
         dff_filtered = dff.drop([col for col in dff.index.names if col in dff], axis=1)
+
         # Take out the columns which are filtered out by failing the 'missing values'
         # threshold.
         dropped_columns = []
