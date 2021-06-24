@@ -24,6 +24,7 @@ import plotly.graph_objects as go
 
 from .cache import cache
 from .common import create_header, HEADER_IMAGE, div_style, standard_margin_left
+from ._version import __version__
 import visdex.summary
 import visdex.exploratory_graphs
 
@@ -46,7 +47,7 @@ app = dash.Dash(
 app.layout = html.Div(
     children=[
         html.Img(src=HEADER_IMAGE, height=100),
-        create_header("Visual Data Explorer"),
+        create_header("Visual Data Explorer v%s" % __version__),
         html.H1(children="File selection", style=div_style),
         html.Label(
             children="Data File Selection (initial data read will happen immediately)",
