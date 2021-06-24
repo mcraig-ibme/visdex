@@ -48,15 +48,24 @@ class TestFeatherCache:
     def test_df_default_index(self):
         """ Test DF with default index """
         df = pd.DataFrame(DATA, columns=COLS)
-        print(df.index)
-        self._cache.store("test", df)        
+        self._cache.store("test", df)
         df2 = self._cache.load("test")
         assert isinstance(df2, pd.DataFrame)
         assert len(df2) == len(DATA)
         assert list(df2.columns) == COLS
         for idx, row in df2.iterrows():
             assert(list(row) == DATA[idx])
-        print(df2.index)
+
+    def test_df_default_index_keep(self):
+        """ Test restoring a DF with default index and keep index cols does *not* add the index as a column"""
+        df = pd.DataFrame(DATA, columns=COLS)
+        self._cache.store("test", df)
+        df2 = self._cache.load("test", keep_index_cols=True)
+        assert isinstance(df2, pd.DataFrame)
+        assert len(df2) == len(DATA)
+        assert list(df2.columns) == COLS
+        for idx, row in df2.iterrows():
+            assert(list(row) == DATA[idx])
 
     def test_df_single_index(self):
         """ Test DF with single-column index """
@@ -65,7 +74,7 @@ class TestFeatherCache:
         assert list(df.columns) == COLS[1:]
         assert(list(df.index.names) == ['subjid'])
 
-        self._cache.store("test", df)        
+        self._cache.store("test", df)
         df2 = self._cache.load("test")
 
         assert isinstance(df2, pd.DataFrame)
@@ -77,6 +86,25 @@ class TestFeatherCache:
             assert(subjid) == DATA[idx][0]
             assert(list(rowdata) == DATA[idx][1:])
 
+    def test_df_single_index_keep(self):
+        """ Test loading a DF with single-column index and keeping the index columns """
+        df = pd.DataFrame(DATA, columns=COLS)
+        df.set_index('subjid', drop=True, inplace=True, verify_integrity=False)
+        assert list(df.columns) == COLS[1:]
+        assert(list(df.index.names) == ['subjid'])
+
+        self._cache.store("test", df)
+        df2 = self._cache.load("test", keep_index_cols=True)
+
+        assert isinstance(df2, pd.DataFrame)
+        assert list(df2.columns) == COLS
+        assert(list(df2.index.names) == ['subjid'])
+        assert len(df2) == len(DATA)
+        for idx, row in enumerate(df2.iterrows()):
+            subjid, rowdata = row
+            assert(subjid) == DATA[idx][0]
+            assert(list(rowdata) == DATA[idx])
+
     def test_df_multi_index(self):
         """ Test DF with multi-column index """
         df = pd.DataFrame(DATA, columns=COLS)
@@ -84,7 +112,7 @@ class TestFeatherCache:
         assert list(df.columns) == COLS[2:]
         assert(list(df.index.names) == ['subjid', 'sessid'])
 
-        self._cache.store("test", df)        
+        self._cache.store("test", df)
         df2 = self._cache.load("test")
 
         assert isinstance(df2, pd.DataFrame)
@@ -95,6 +123,25 @@ class TestFeatherCache:
             index, rowdata = row
             assert(list(index)) == DATA[idx][:2]
             assert(list(rowdata) == DATA[idx][2:])
+
+    def test_df_multi_index_keep(self):
+        """ Test restoring DF with multi-column index and keeping the index columns """
+        df = pd.DataFrame(DATA, columns=COLS)
+        df.set_index(['subjid', 'sessid'], drop=True, inplace=True, verify_integrity=False)
+        assert list(df.columns) == COLS[2:]
+        assert(list(df.index.names) == ['subjid', 'sessid'])
+
+        self._cache.store("test", df)
+        df2 = self._cache.load("test", keep_index_cols=True)
+
+        assert isinstance(df2, pd.DataFrame)
+        assert list(df2.columns) == COLS
+        assert(list(df2.index.names) == ['subjid', 'sessid'])
+        assert len(df2) == len(DATA)
+        for idx, row in enumerate(df2.iterrows()):
+            index, rowdata = row
+            assert(list(index)) == DATA[idx][:2]
+            assert(list(rowdata) == DATA[idx])
 
 
 
