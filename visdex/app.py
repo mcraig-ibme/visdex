@@ -26,6 +26,7 @@ from .cache import cache
 from .common import create_header, HEADER_IMAGE, div_style, standard_margin_left
 from ._version import __version__
 import visdex.summary
+import visdex.export
 import visdex.exploratory_graphs
 
 LOG = logging.getLogger(__name__)
@@ -91,7 +92,6 @@ app.layout = html.Div(
             id="output-filter-file-upload", children=["No file loaded"], style=div_style
         ),
         html.Button("Analyse", id="load-files-button", style=div_style),
-        html.Button("Export to PDF", id="export-pdf-button", style=div_style),
 
         # Hidden divs for holding the booleans identifying whether a DF is loaded in
         # each case
@@ -99,7 +99,9 @@ app.layout = html.Div(
         html.Div(id="df-filtered-loaded-div", style={"display": "none"}, children=[]),
         html.Div(id="corr-loaded-div", style={"display": "none"}, children=[]),
         html.Div(id="pval-loaded-div", style={"display": "none"}, children=[]),
-        html.Div(children=[""], id="export-div", style=div_style),
+
+        # Export component
+        visdex.export.get_layout(app),
 
         # Summary section
         visdex.summary.get_layout(app),
