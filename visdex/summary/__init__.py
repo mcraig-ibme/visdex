@@ -64,7 +64,7 @@ def get_layout(app):
         dbc.Collapse(
             id="summary-collapse",
             children=[
-                preview_table.get_layout(app),
+                preview_table.PreviewTable(app),
                 summary_table.get_layout(app),
                 summary_heatmap.get_layout(app),
                 summary_manhattan.get_layout(app),

@@ -1,6 +1,7 @@
 """
 Common layout definitions
 """
+import logging
 
 import dash_html_components as html
 import dash_core_components as dcc
@@ -20,6 +21,22 @@ style_dict = {
 GLOBAL_WIDTH = "100%"
 TABLE_WIDTH = "95%"
 HEADER_IMAGE = "/assets/UoN_Primary_Logo_RGB.png"
+
+class Component(html.Div):
+    """
+    Base class for layout/callback component
+    """
+
+    def __init__(self, app, id_prefix, *args, **kwargs):
+        self.app = app
+        self.id_prefix = id_prefix
+        self.log = logging.getLogger(type(self).__name__)
+        html.Div.__init__(self, *args, **kwargs)
+
+    def register_cb(self, app, name, *args, **kwargs):
+        @app.callback(*args, **kwargs)
+        def _cb(*cb_args, **cb_kwargs):
+            return getattr(self, name)(*cb_args, **cb_kwargs)
 
 # Definitions of supported plot types
 # All components should contain 'component_type', 'id', and 'label' as a minimum

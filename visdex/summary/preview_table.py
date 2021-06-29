@@ -3,50 +3,33 @@ visdex: preview table
 
 Shows a basic summary of the first few rows in the data 
 """
-import logging
-
 import dash_table
 import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Input, Output
 
-from visdex.common import div_style, TABLE_WIDTH
+from visdex.common import Component, div_style, TABLE_WIDTH
 from visdex.cache import cache
 
-LOG = logging.getLogger(__name__)
+class PreviewTable(Component):
+    """
+    Component that displays the first few lines of a data frame
+    """
 
-def get_layout(app):
-    
-    @app.callback(
-        Output("table_preview", "children"),
-        [Input("df-loaded-div", "children")],
-        prevent_initial_call=True,
-    )
-    def _update_preview_table(df_loaded):
-        LOG.info(f"update_preview_table")
-
-        # We want to be able to see the index columns in the preview table
-        dff = cache.load("df", keep_index_cols=True)
-
-        if dff.size > 0:
-            return html.Div(
-                dash_table.DataTable(
-                    id="table",
-                    columns=[{"name": i, "id": i} for i in dff.columns],
-                    data=dff.head().to_dict("records"),
-                    style_table={"overflowX": "auto"},
-                ),
-            )
-
-        return html.Div(dash_table.DataTable(id="table"))
-
-    layout = html.Div(children=[
+    def __init__(self, app, id_prefix="preview-", df_name="df", update_div_id="df-loaded-div"):
+        """
+        :param app: Dash application
+        :param id_prefix: Prefix string for HTML component identifiers
+        :param df_name: Cache name of data frame to preview
+        :param update_div_id: ID of div that signals when to update
+        """
+        Component.__init__(self, app, id_prefix, children=[
             html.H2(children="Table Preview", style=div_style),
             dcc.Loading(
-                id="loading-table-preview",
+                id=id_prefix + "loading",
                 children=[
                     html.Div(
-                        id="table_preview",
+                        id=self.id_prefix + "table",
                         style={
                             "width": TABLE_WIDTH,
                             "margin-left": "10px",
@@ -56,5 +39,28 @@ def get_layout(app):
                 ],
             ),
         ])
+        self.df_name = df_name
 
-    return layout
+        self.register_cb(app, "update",
+            Output(self.id_prefix + "table", "children"),
+            [Input(update_div_id, "children")],
+            prevent_initial_call=True,
+        )
+
+    def update(self, df_loaded):
+        self.log.debug("Update preview table")
+
+        # We want to be able to see the index columns in the preview table
+        dff = cache.load(self.df_name, keep_index_cols=True)
+
+        if dff.size > 0:
+            return html.Div(
+                dash_table.DataTable(
+                    id=self.id_prefix + "data-table",
+                    columns=[{"name": i, "id": i} for i in dff.columns],
+                    data=dff.head().to_dict("records"),
+                    style_table={"overflowX": "auto"},
+                ),
+            )
+        else:
+            return html.Div(dash_table.DataTable(self.id_prefix + "data-table"))
