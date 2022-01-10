@@ -29,7 +29,7 @@ class PreviewTable(Component):
                 id=id_prefix + "loading",
                 children=[
                     html.Div(
-                        id=self.id_prefix + "table",
+                        id=id_prefix + "table",
                         style={
                             "width": TABLE_WIDTH,
                             "margin-left": "10px",
