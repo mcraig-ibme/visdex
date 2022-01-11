@@ -1,16 +1,18 @@
 """
-Common layout definitions
+visdex: Common layout definitions
 """
 import logging
 
-import dash_html_components as html
-import dash_core_components as dcc
+from dash import html, dcc
 
 # Default style constants
 standard_margin_left = "10px"
 default_marker_color = "crimson"
 div_style = {
     "margin-left": standard_margin_left
+}
+hstack = {
+    "display": "inline-block",
 }
 style_dict = {
     "width": "13%",
@@ -24,6 +26,8 @@ TABLE_WIDTH = "95%"
 class Component(html.Div):
     """
     Base class for layout/callback component
+
+    Not sure yet if this is the best way to modularize - currently used only for preview table
     """
 
     def __init__(self, app, id_prefix, *args, **kwargs):
