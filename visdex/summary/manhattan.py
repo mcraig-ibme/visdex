@@ -7,8 +7,7 @@ import numpy as np
 
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import html, dcc
 import plotly.graph_objects as go
 
 from visdex.cache import cache

@@ -3,9 +3,7 @@ visdex: preview table
 
 Shows a basic summary of the first few rows in the data 
 """
-import dash_table
-import dash_html_components as html
-import dash_core_components as dcc
+from dash import html, dcc, dash_table
 from dash.dependencies import Input, Output
 
 from visdex.common import Component, div_style, TABLE_WIDTH

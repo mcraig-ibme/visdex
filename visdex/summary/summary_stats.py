@@ -1,5 +1,5 @@
 """
-visdex: Summary table
+visdex: Summary statistics table
 
 Displays summary statistics about the data, e.g. mean values of numerical
 data, % of missing data items
@@ -8,10 +8,8 @@ import logging
 
 import numpy as np
 
-import dash_html_components as html
-import dash_table
+from dash import html, dcc, dash_table
 from dash.dependencies import Input, Output
-import dash_core_components as dcc
 
 from visdex.common import div_style, GLOBAL_WIDTH, TABLE_WIDTH
 from visdex.cache import cache

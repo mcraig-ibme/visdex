@@ -6,17 +6,17 @@ available by default
 """
 import logging
 
-import dash_html_components as html
+from dash import html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
 from visdex.common import standard_margin_left
 from . import (
     preview_table,
-    summary_table,
-    summary_heatmap,
-    summary_manhattan,
-    summary_kde,
+    summary_stats,
+    heatmap,
+    manhattan,
+    kde,
 )
 
 LOG = logging.getLogger(__name__)
@@ -65,10 +65,10 @@ def get_layout(app):
             id="summary-collapse",
             children=[
                 preview_table.PreviewTable(app),
-                summary_table.get_layout(app),
-                summary_heatmap.get_layout(app),
-                summary_manhattan.get_layout(app),
-                summary_kde.get_layout(app),
+                summary_stats.get_layout(app),
+                heatmap.get_layout(app),
+                manhattan.get_layout(app),
+                kde.get_layout(app),
              ],
              is_open=True,
         ),
