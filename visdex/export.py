@@ -3,7 +3,7 @@ import logging
 
 from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
-import dash_html_components as html
+from dash import html
 
 import plotly.graph_objects as go
 

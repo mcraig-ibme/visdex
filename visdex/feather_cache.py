@@ -6,7 +6,6 @@ import os
 import tempfile
 
 import pandas as pd
-import numpy as np
 
 class FeatherCache:
 
