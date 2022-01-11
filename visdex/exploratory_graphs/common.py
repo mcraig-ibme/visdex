@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 
-import dash_core_components as dcc
+from dash import dcc
 
 LOG = logging.getLogger(__name__)
 
