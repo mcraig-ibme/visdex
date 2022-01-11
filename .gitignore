@@ -7,4 +7,5 @@
 *.pyc
 __pycache__
 dist
+build
 _version.py
