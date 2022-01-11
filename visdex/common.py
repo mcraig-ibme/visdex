@@ -20,7 +20,6 @@ style_dict = {
 }
 GLOBAL_WIDTH = "100%"
 TABLE_WIDTH = "95%"
-HEADER_IMAGE = "/assets/UoN_Primary_Logo_RGB.png"
 
 class Component(html.Div):
     """
@@ -174,48 +173,3 @@ all_components = dict(
         },
     ],
 )
-
-def create_header(title):
-    """
-    Create header for UoN DRS application
-    """
-    return html.Div(
-        id="app-header",
-        children=[
-            html.A(
-                id="drs-link",
-                children=[
-                    html.H1("DRS |"),
-                ],
-                href="https://digitalresearch.nottingham.ac.uk/",
-                style={
-                    "display": "inline-block",
-                    "margin-left": "10px",
-                    "margin-right": "10px",
-                    "text-decoration": "none",
-                    "align": "center",
-                },
-            ),
-            html.H2(
-                title,
-                style={
-                    "display": "inline-block",
-                },
-            ),
-            html.A(
-                id="uni-link",
-                children=[
-                    html.H1("UoN"),
-                ],
-                href="https://www.nottingham.ac.uk/",
-                style={
-                    "display": "inline-block",
-                    "float": "right",
-                    "margin-right": "10px",
-                    "text-decoration": "none",
-                    "color": "#FFFFFF",
-                },
-            ),
-        ],
-        style={"width": "100%", "display": "inline-block", "color": "white"},
-    )
