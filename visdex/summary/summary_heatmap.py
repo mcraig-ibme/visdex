@@ -235,7 +235,6 @@ def get_layout(app):
 
         return corr, pvalues, logs
 
-
     @app.callback(
         [
             Output("heatmap", "figure"),
@@ -267,9 +266,6 @@ def get_layout(app):
         corr_dff = cache.load("corr")
         pval_dff = cache.load("pval")
         logs_dff = cache.load("logs")
-
-        # Add the index back in as a column so we can see it in the table preview
-        dff.insert(loc=0, column="SUBJECTKEY(INDEX)", value=dff.index)
 
         # The columns we want to have calculated
         selected_columns = list(dropdown_values)
