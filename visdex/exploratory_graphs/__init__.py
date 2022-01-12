@@ -108,22 +108,23 @@ def get_layout(app):
     return html.Div(children=[
         html.Div(
             [
-                html.H1(
-                    "Exploratory graphs",
-                    style={
-                        "display": "inline-block",
-                        "margin-top": "10px",
-                        "margin-bottom": "10px",
-                        "margin-left": standard_margin_left,
-                    },
-                ),
                 dbc.Button(
-                    "-",
+                    "+",
                     id="collapse-explore-button",
                     style={
                         "display": "inline-block",
                         "margin-left": "10px",
                         "width": "40px",
+                        "vertical-align" : "middle",
+                    },
+                ),
+                html.H2(
+                    "Exploratory graphs",
+                    style={
+                        "display": "inline-block",
+                        "margin-left": standard_margin_left,
+                        "margin-bottom": "0",
+                        "vertical-align" : "middle",
                     },
                 ),
             ],
@@ -144,7 +145,7 @@ def get_layout(app):
                     },
                 ),
             ],
-            is_open=True,
+            is_open=False,
         ),
     ])
 

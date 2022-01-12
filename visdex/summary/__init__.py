@@ -22,6 +22,44 @@ from . import (
 LOG = logging.getLogger(__name__)
 
 def get_layout(app):
+    layout = html.Div(children=[
+        html.Div(
+            [
+                dbc.Button(
+                    "+",
+                    id="collapse-summary-button",
+                    style={
+                        "display": "inline-block",
+                        "margin-left": "10px",
+                        "width": "40px",
+                        "vertical-align" : "middle",
+                    },
+                ),
+                html.H2(
+                    "Summary",
+                    style={
+                        "display": "inline-block",
+                        "margin-left": standard_margin_left,
+                        "vertical-align" : "middle",
+                        "margin-bottom" : "0",
+                        "padding" : "0",
+                    },
+                ),
+            ],
+        ),
+        dbc.Collapse(
+            id="summary-collapse",
+            children=[
+                preview_table.PreviewTable(app),
+                summary_stats.get_layout(app),
+                heatmap.get_layout(app),
+                manhattan.get_layout(app),
+                kde.get_layout(app),
+             ],
+             is_open=False,
+        ),
+    ])
+
     @app.callback(
         [
             Output("summary-collapse", "is_open"),
@@ -40,36 +78,4 @@ def get_layout(app):
             return not is_open, "+" if is_open else "-"
         return is_open, "-"
 
-    return html.Div(children=[
-        html.Div(
-            [
-                html.H1(
-                    "Summary",
-                    style={
-                        "display": "inline-block",
-                        "margin-left": standard_margin_left,
-                    },
-                ),
-                dbc.Button(
-                    "-",
-                    id="collapse-summary-button",
-                    style={
-                        "display": "inline-block",
-                        "margin-left": "10px",
-                        "width": "40px",
-                    },
-                ),
-            ],
-        ),
-        dbc.Collapse(
-            id="summary-collapse",
-            children=[
-                preview_table.PreviewTable(app),
-                summary_stats.get_layout(app),
-                heatmap.get_layout(app),
-                manhattan.get_layout(app),
-                kde.get_layout(app),
-             ],
-             is_open=True,
-        ),
-    ])
+    return layout

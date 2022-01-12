@@ -384,7 +384,7 @@ def get_layout(app):
         return fig, True, True
 
     return html.Div(children=[
-        html.H2(children="Correlation Heatmap (Pearson's)", style=div_style),
+        html.H3(children="Correlation Heatmap (Pearson's)", style=div_style),
         html.Div(
             id="heatmap-div",
             style=div_style,

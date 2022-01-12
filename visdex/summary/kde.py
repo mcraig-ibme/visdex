@@ -88,7 +88,7 @@ def get_layout(app):
         return fig
 
     return html.Div(children=[
-        html.H2(children="Per-variable Histograms and KDEs", style=div_style),
+        html.H3(children="Per-variable Histograms and KDEs", style=div_style),
         dcc.Checklist(
             "kde-checkbox",
             options=[{"label": " Run KDE analysis", "value": "kde-active"}],

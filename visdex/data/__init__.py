@@ -10,11 +10,10 @@ import datetime
 
 import pandas as pd
 
-import dash_html_components as html
-import dash_core_components as dcc
+from dash import html, dcc
 from dash.dependencies import Input, Output, State
 
-from visdex.common import div_style
+from visdex.common import div_style, hstack
 from visdex.cache import cache
 
 LOG = logging.getLogger(__name__)
@@ -27,6 +26,54 @@ known_indices = [
 ]
 
 def get_layout(app):
+    layout = html.Div(children=[
+        html.H2(children="Data selection", style=div_style),
+        html.Label(
+            children="Data File Selection",
+            style=div_style,
+        ),
+        dcc.Upload(
+            id="data-file-upload",
+            children=html.Div([html.A(id="output-data-file-upload", children="Drag and drop or click to select files")]),
+            style={
+                "height": "60px",
+                "lineHeight" : "60px",
+                "borderWidth" : "1px",
+                "borderStyle" : "dashed",
+                "borderRadius" : "5px",
+                "textAlign" : "center",
+                "margin" : "10px",
+            },
+        ),
+        html.Label(
+            children="Column Filter File Selection",
+            style=div_style,
+        ),
+        dcc.Upload(
+            id="filter-file-upload",
+            children=html.Div([html.A(id="output-filter-file-upload", children="Drag and drop or click to select files")]),
+            style={
+                "height": "60px",
+                "lineHeight": "60px",
+                "borderWidth": "1px",
+                "borderStyle": "dashed",
+                "borderRadius": "5px",
+                "textAlign": "center",
+                "margin": "10px",
+            },
+        ),
+        html.Div(
+            id="data-warning", children=[""], style=div_style
+        ),
+        html.Button("Analyse", id="load-files-button", style=div_style),
+
+        # Hidden divs for holding the booleans identifying whether a DF is loaded in
+        # each case
+        html.Div(id="df-loaded-div", style={"display": "none"}, children=[]),
+        html.Div(id="df-filtered-loaded-div", style={"display": "none"}, children=[]),
+        html.Div(id="corr-loaded-div", style={"display": "none"}, children=[]),
+        html.Div(id="pval-loaded-div", style={"display": "none"}, children=[]),
+    ])
 
     @app.callback(
         [Output("output-data-file-upload", "children")],
@@ -179,61 +226,7 @@ def get_layout(app):
 
         return [True, warning]
 
-    return html.Div(children=[
-        html.H1(children="File selection", style=div_style),
-        html.Label(
-            children="Data File Selection (initial data read will happen immediately)",
-            style=div_style,
-        ),
-        dcc.Upload(
-            id="data-file-upload",
-            children=html.Div(["Drag and Drop or ", html.A("Select Files")]),
-            style={
-                "height": "60px",
-                "lineHeight": "60px",
-                "borderWidth": "1px",
-                "borderStyle": "dashed",
-                "borderRadius": "5px",
-                "textAlign": "center",
-                "margin": "10px",
-            },
-        ),
-        html.Div(
-            id="output-data-file-upload", children=["No file loaded"], style=div_style
-        ),
-        html.Label(
-            children="Column Filter File Selection (initial data read will happen"
-                     " immediately)",
-            style=div_style,
-        ),
-        dcc.Upload(
-            id="filter-file-upload",
-            children=html.Div(["Drag and Drop or ", html.A("Select Files")]),
-            style={
-                "height": "60px",
-                "lineHeight": "60px",
-                "borderWidth": "1px",
-                "borderStyle": "dashed",
-                "borderRadius": "5px",
-                "textAlign": "center",
-                "margin": "10px",
-            },
-        ),
-        html.Div(
-            id="output-filter-file-upload", children=["No file loaded"], style=div_style
-        ),
-        html.Div(
-            id="data-warning", children=[""], style=div_style
-        ),
-        html.Button("Analyse", id="load-files-button", style=div_style),
-
-        # Hidden divs for holding the booleans identifying whether a DF is loaded in
-        # each case
-        html.Div(id="df-loaded-div", style={"display": "none"}, children=[]),
-        html.Div(id="df-filtered-loaded-div", style={"display": "none"}, children=[]),
-        html.Div(id="corr-loaded-div", style={"display": "none"}, children=[]),
-        html.Div(id="pval-loaded-div", style={"display": "none"}, children=[]),
-    ])
+    return layout
 
 def standardise_subjectkey(subjectkey):
     """

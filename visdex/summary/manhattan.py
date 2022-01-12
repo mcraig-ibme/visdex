@@ -181,7 +181,7 @@ def get_layout(app):
         return fig
 
     return html.Div(children=[
-        html.H2("Manhattan Plot", style=div_style),
+        html.H3("Manhattan Plot", style=div_style),
         dcc.Loading(
             id="loading-manhattan-figure",
             children=[

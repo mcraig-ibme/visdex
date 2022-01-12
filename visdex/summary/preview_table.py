@@ -22,7 +22,7 @@ class PreviewTable(Component):
         :param update_div_id: ID of div that signals when to update
         """
         Component.__init__(self, app, id_prefix, children=[
-            html.H2(children="Table Preview", style=div_style),
+            html.H3(children="Table Preview", style=div_style),
             dcc.Loading(
                 id=id_prefix + "loading",
                 children=[
