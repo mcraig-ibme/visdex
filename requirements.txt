@@ -11,3 +11,5 @@ scikit-learn>=0.22.0
 scipy>=1.2.0
 selenium>=3.0.0
 xlrd>=1.2.0
+python-ldap
+
