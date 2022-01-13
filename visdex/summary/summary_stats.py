@@ -11,7 +11,7 @@ import numpy as np
 from dash import html, dcc, dash_table
 from dash.dependencies import Input, Output
 
-from visdex.common import div_style, GLOBAL_WIDTH, TABLE_WIDTH
+from visdex.common import vstack
 from visdex.cache import cache
 from visdex.timing import timing
 
@@ -142,10 +142,10 @@ def get_layout(app):
         )
 
     layout = html.Div(children=[
-        html.H3(children="Table Summary and Filter", style=div_style),
+        html.H3(children="Table Summary and Filter", style=vstack),
         html.Div(
             "\nFilter out all columns missing at least X percentage of rows:",
-            style=div_style,
+            style=vstack,
         ),
         dcc.Input(
             id="missing-values-input",
@@ -154,7 +154,7 @@ def get_layout(app):
             max=100,
             debounce=True,
             value=None,
-            style=div_style,
+            style=vstack,
         ),
         dcc.Loading(
             id="loading-table-summary",
@@ -162,7 +162,7 @@ def get_layout(app):
                 html.Div(
                     id="other_summary",
                     style={
-                        "width": GLOBAL_WIDTH,
+                        "width": "100%",
                         "margin-left": "10px",
                         "margin-right": "10px",
                     },
@@ -170,7 +170,7 @@ def get_layout(app):
                 html.Div(
                     id="table_summary",
                     style={
-                        "width": TABLE_WIDTH,
+                        "width": "95%",
                         "margin-left": "10px",
                         "margin-right": "10px",
                     },

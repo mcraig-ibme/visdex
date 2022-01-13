@@ -19,7 +19,7 @@ from . import (
     violin_graph,
 )
 
-from visdex.common import standard_margin_left, div_style, all_components, style_dict
+from visdex.common import standard_margin_left, vstack, plot_style
 
 LOG = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ def get_layout(app):
                     html.Div(id={"type": "placeholder", "index": n_clicks}),
                 ],
                 id={"type": "divgraph-type-dd", "index": n_clicks},
-                style=div_style,
+                style=vstack,
             )
 
             children.append(new_graph_type_dd)
@@ -180,7 +180,7 @@ def generate_generic_group(n_clicks, group_type):
                     ),
                 ],
                 id={"type": "div-" + group_type + "-" + name, "index": n_clicks},
-                style=style_dict,
+                style=plot_style,
             )
         )
 

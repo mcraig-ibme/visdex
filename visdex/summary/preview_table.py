@@ -6,7 +6,7 @@ Shows a basic summary of the first few rows in the data
 from dash import html, dcc, dash_table
 from dash.dependencies import Input, Output
 
-from visdex.common import Component, div_style, TABLE_WIDTH
+from visdex.common import Component, vstack
 from visdex.cache import cache
 
 class PreviewTable(Component):
@@ -22,14 +22,14 @@ class PreviewTable(Component):
         :param update_div_id: ID of div that signals when to update
         """
         Component.__init__(self, app, id_prefix, children=[
-            html.H3(children="Table Preview", style=div_style),
+            html.H3(children="Table Preview", style=vstack),
             dcc.Loading(
                 id=id_prefix + "loading",
                 children=[
                     html.Div(
                         id=id_prefix + "table",
                         style={
-                            "width": TABLE_WIDTH,
+                            "width": "95%",
                             "margin-left": "10px",
                             "margin-right": "10px",
                         },

@@ -4,8 +4,8 @@ from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from visdex.cache import cache
-from visdex.common import all_components
-from visdex.exploratory_graphs.common import update_graph_components
+
+from .common import all_components, update_graph_components
 
 LOG = logging.getLogger(__name__)
 

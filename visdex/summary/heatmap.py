@@ -17,7 +17,7 @@ from dash import html, dcc
 import plotly.graph_objects as go
 
 from visdex.cache import cache
-from visdex.common import div_style
+from visdex.common import vstack
 from visdex.timing import timing, start_timer, log_timing, print_timings
 
 LOG = logging.getLogger(__name__)
@@ -384,10 +384,10 @@ def get_layout(app):
         return fig, True, True
 
     return html.Div(children=[
-        html.H3(children="Correlation Heatmap (Pearson's)", style=div_style),
+        html.H3(children="Correlation Heatmap (Pearson's)", style=vstack),
         html.Div(
             id="heatmap-div",
-            style=div_style,
+            style=vstack,
             children=[
                 dcc.Input(
                     id="heatmap-clustering-input",

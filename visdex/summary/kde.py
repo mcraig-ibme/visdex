@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 
 from visdex.timing import timing
 from visdex.cache import cache
-from visdex.common import div_style
+from visdex.common import vstack
 
 LOG = logging.getLogger(__name__)
 
@@ -88,12 +88,12 @@ def get_layout(app):
         return fig
 
     return html.Div(children=[
-        html.H3(children="Per-variable Histograms and KDEs", style=div_style),
+        html.H3(children="Per-variable Histograms and KDEs", style=vstack),
         dcc.Checklist(
             "kde-checkbox",
             options=[{"label": " Run KDE analysis", "value": "kde-active"}],
             value=[],
-            style=div_style,
+            style=vstack,
         ),
         dcc.Loading(
             id="loading-kde-figure",

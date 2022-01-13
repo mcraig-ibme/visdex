@@ -12,8 +12,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from visdex.cache import cache
-from visdex.common import all_components, default_marker_color
-from visdex.exploratory_graphs.common import update_graph_components
+from visdex.common import default_marker_color
+
+from .common import all_components, update_graph_components
 
 LOG = logging.getLogger(__name__)
 

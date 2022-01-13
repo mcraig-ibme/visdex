@@ -18,7 +18,8 @@ from reportlab.platypus import (
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch, mm
 
-from visdex.common import all_components, div_style
+from visdex.common import vstack
+from visdex.exploratory_graphs.common import all_components
 
 PAGE_WIDTH, PAGE_HEIGHT = (210 * mm, 297 * mm)
 
@@ -56,8 +57,8 @@ def get_layout(app):
         return ["exported"]
 
     return html.Div(children=[
-        html.Button("Export to PDF", id="export-pdf-button", style=div_style),
-        html.Div(children=[""], id="export-div", style=div_style),
+        html.Button("Export to PDF", id="export-pdf-button", style=vstack),
+        html.Div(children=[""], id="export-div", style=vstack),
     ])
  
 def save_images(figs, output_directory):
