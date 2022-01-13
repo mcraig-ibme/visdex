@@ -13,7 +13,7 @@ import pandas as pd
 from dash import html, dcc
 from dash.dependencies import Input, Output, State
 
-from visdex.common import div_style, hstack
+from visdex.common import vstack, hstack
 from visdex.cache import cache
 
 LOG = logging.getLogger(__name__)
@@ -27,31 +27,46 @@ known_indices = [
 
 def get_layout(app):
     layout = html.Div(children=[
-        html.H2(children="Data selection", style=div_style),
-        html.Label(
-            children="Data File Selection",
-            style=div_style,
+        html.H2(children="Data selection", style=vstack),
+        html.Div(
+            dcc.Dropdown(
+                id="dataset-selection",
+                options=[
+                    {'label': 'Upload a CSV/TSV data set', 'value': 'user'},
+                    {'label': 'ABCD data', 'value': 'abcd'},
+                ],
+                value='user',
+            ),
+            style={"width": "30%", "margin" : "10px"},
         ),
-        dcc.Upload(
-            id="data-file-upload",
-            children=html.Div([html.A(id="output-data-file-upload", children="Drag and drop or click to select files")]),
-            style={
-                "height": "60px",
-                "lineHeight" : "60px",
-                "borderWidth" : "1px",
-                "borderStyle" : "dashed",
-                "borderRadius" : "5px",
-                "textAlign" : "center",
-                "margin" : "10px",
-            },
+        html.Div(
+            id="upload-visible",
+            children=[
+                dcc.Upload(
+                    id="data-file-upload",
+                    children=html.Div([html.A(id="data-file", children="Drag and drop or click to select files")]),
+                    style={
+                        "height": "60px",
+                        "lineHeight" : "60px",
+                        "borderWidth" : "1px",
+                        "borderStyle" : "dashed",
+                        "borderRadius" : "5px",
+                        "textAlign" : "center",
+                        "margin" : "10px",
+                    },
+                ),
+            ],
+            style={"display" : "block"},
         ),
-        html.Label(
-            children="Column Filter File Selection",
-            style=div_style,
+        html.H2(
+            children="Column Filter",
+            style=vstack,
         ),
+        html.Label("Upload an optional file containing columns to select", style=hstack),
+        html.Button("Clear", id="clear-filter-button", style=hstack), 
         dcc.Upload(
             id="filter-file-upload",
-            children=html.Div([html.A(id="output-filter-file-upload", children="Drag and drop or click to select files")]),
+            children=html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")]),
             style={
                 "height": "60px",
                 "lineHeight": "60px",
@@ -62,10 +77,10 @@ def get_layout(app):
                 "margin": "10px",
             },
         ),
+        html.Button("Analyse", id="load-files-button", style=hstack),        
         html.Div(
-            id="data-warning", children=[""], style=div_style
+            id="data-warning", children=[""], style={"color" : "blue", "display" : "inline-block", "margin-left" : "10px"}
         ),
-        html.Button("Analyse", id="load-files-button", style=div_style),
 
         # Hidden divs for holding the booleans identifying whether a DF is loaded in
         # each case
@@ -76,12 +91,23 @@ def get_layout(app):
     ])
 
     @app.callback(
-        [Output("output-data-file-upload", "children")],
+        Output("upload-visible", "style"),
+        [Input("dataset-selection", "value")],
+        prevent_initial_call=True,
+    )
+    def data_selection_changed(selection):
+        if selection == "user":
+            return {"display" : "block"}
+        else:
+            return {"display" : "none"}
+
+    @app.callback(
+        [Output("data-file", "children")],
         [Input("data-file-upload", "contents")],
         [State("data-file-upload", "filename"), State("data-file-upload", "last_modified")],
         prevent_initial_call=True,
     )
-    def _data_file_changed(contents, filename, date):
+    def data_file_changed(contents, filename, date):
         """
         Handle data file upload
         
@@ -122,7 +148,7 @@ def get_layout(app):
         return ["No file loaded", ""]
     
     @app.callback(
-        [Output("output-filter-file-upload", "children")],
+        [Output("filter-file", "children")],
         [Input("filter-file-upload", "contents")],
         [
             State("filter-file-upload", "filename"),
@@ -166,6 +192,14 @@ def get_layout(app):
         return ["No file loaded"]
 
     @app.callback(
+        Output("filter-file-upload", "children"),
+        [Input("clear-filter-button", "n_clicks")],
+        prevent_initial_call=True,
+    )
+    def clear_filter_button_clicked(n_clicks):
+        return html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")]),
+
+    @app.callback(
         [Output("df-loaded-div", "children"), Output("data-warning", "children")],
         [Input("load-files-button", "n_clicks")],
         [State("data-file-upload", "filename"), State("filter-file-upload", "filename")],
@@ -178,7 +212,7 @@ def get_layout(app):
         The main data file is parsed and filtered and the result stored in the cache
         """
         LOG.info(f"update_df_loaded_div")
-        warning = ""
+        warning = "Initial analysis complete"
 
         # Read in main DataFrame
         if data_file_value is None:
@@ -193,11 +227,16 @@ def get_layout(app):
             missing_vars = [var for var in variables_of_interest if var not in df.columns]
             present_vars = [var for var in variables_of_interest if var in df.columns]
 
-            if missing_vars:
-                warning = "Variables found in filter file that are not present in main data"
+            if not variables_of_interest:
+                warning = "No columns found in filter file - ignored"
+            elif missing_vars and not present_vars:
+                warning = "No columns found in filter file are present in main data - filter file ignored"
+            elif missing_vars:
+                warning = "Some columns found in filter file not present in main data - these columns ignored"
 
-            # Keep only the columns listed in the filter file
-            df = df[present_vars]
+            if present_vars:
+                # Keep only the columns listed in the filter file
+                df = df[present_vars]
 
         LOG.info("df\n: %s" % str(df))
 
