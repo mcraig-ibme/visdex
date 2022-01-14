@@ -7,9 +7,10 @@ the main application page.
 Originally written for ABCD data
 """
 import logging
+import os
 
 import flask
-from flask import abort
+from flask import abort, url_for
 from flask_login import login_user, logout_user, current_user
 
 import dash
@@ -35,6 +36,7 @@ visdex.login.init_login(flask_app)
 app = dash.Dash(
     __name__,
     server=flask_app,
+    requests_pathname_prefix='/visdex/',
     suppress_callback_exceptions=False,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
@@ -73,23 +75,27 @@ def display_page(pathname):
     """
     view = None
     url = dash.no_update
-    if pathname == '/login':
+    LOG.info("Choosing page for path %s", pathname)
+    LOG.info("script name = %s", os.environ.get("SCRIPT_NAME", "<none>"))
+    #LOG.info("path prefix = %s", app.requests_pathname_prefix)
+    if pathname == '/visdex/login':
         view = login_layout
-    elif pathname == '/visdex':
+    elif pathname == '/visdex/app':
         if current_user.is_authenticated:
             view = visdex_layout
         else:
             # Not authenticated - redirect to login page
             view = login_layout
-            url = '/login'
-    elif pathname == '/logout':
+            url = '/visdex/login'
+    elif pathname == '/visdex/logout':
         if current_user.is_authenticated:
             logout_user()
         view = login_layout
-        url = '/login'
+        url = '/visdex/login'
     else:
         # Just redirect other pages to the login screen
         view = login_layout
-        url = '/login'
+        url = '/visdex/login'
 
+    LOG.info("Redirecting to %s", url)
     return view, url

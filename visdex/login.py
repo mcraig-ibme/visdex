@@ -5,7 +5,6 @@ from flask_login import LoginManager, UserMixin, login_user, current_user
 from dash import html, dcc
 from dash.dependencies import Input, Output, State
 
-from ldap3 import Server, Connection, ALL
 import ldap
 
 LDAP_SERVER="ldaps://uonauth.nottingham.ac.uk/"
@@ -92,7 +91,7 @@ def get_layout(app):
         user = check_password(userid, password)
         if user:
             login_user(user)
-            return '/visdex'
+            return '/visdex/app'
 
     @app.callback(
         Output('output-state', 'children'),
