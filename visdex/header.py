@@ -9,6 +9,7 @@ from dash import html, dcc
 from dash.dependencies import Input, Output
 
 from ._version import __version__
+from .common import hstack
 
 LOG = logging.getLogger(__name__)
 HEADER_IMAGE = "UoN_Primary_Logo_RGB.png"
@@ -24,17 +25,21 @@ def get_layout(app):
         """
         Display login/logout link at the top of the page
         """
-        if getattr(current_user, 'is_authenticated', False) and url != '/logout':
+        if getattr(current_user, 'is_authenticated', False):
             user_id = current_user.get_id()
-            return [dcc.Link(user_id, href="/profile"), dcc.Link('logout', href='/logout', style={"margin-left": "15px"})], user_id
+            LOG.info(user_id)
+            return [html.Label(f"User: {user_id}", style=hstack), html.A('logout', href=f'{app.config.get("PREFIX", "/")}logout', style=hstack)], user_id
         else:
-            return [], 'logged out'
+            return [], ''
 
     return html.Div(children=[
         dcc.Location(id='url', refresh=False),
         dcc.Location(id='redirect', refresh=True),
         dcc.Store(id='login-status', storage_type='session'),
-        html.Img(src=app.get_asset_url(HEADER_IMAGE), height=100),
+        html.A(
+            children=[html.Img(src=app.get_asset_url(HEADER_IMAGE), height=100)],
+            href="https://www.nottingham.ac.uk/",
+        ),
         html.Div(
             id="app-header",
             children=[
@@ -66,24 +71,9 @@ def get_layout(app):
                          "top" : "0",
                          "right": "0",
                          "margin-right": "10px",
-                         "text-decoration": "none",
-                         "color": "#FFFFFF",
+                         "color": "#505050",
                      },
                 )
-                # html.A(
-                #     id="uni-link",
-                #     children=[
-                #         html.H1("UoN"),
-                #     ],
-                #     href="https://www.nottingham.ac.uk/",
-                #     style={
-                #         "display": "inline-block",
-                #         "float": "right",
-                #         "margin-right": "10px",
-                #         "text-decoration": "none",
-                #         "color": "#FFFFFF",
-                #     },
-                # ),
             ],
             style={"width": "100%", "display": "inline-block", "color": "white"},
         ),
