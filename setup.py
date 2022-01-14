@@ -77,13 +77,14 @@ def get_version(rootdir):
 
     return version
 
-def get_package_data(rootdir):
+def get_package_data(datadir, exts=["png", "svg", "css"]):
     """
     Get extra data files to install into the package, e.g. icons
     """
-    return {
-        MODULE : glob.glob("%s/*.png" % rootdir) + glob.glob("%s/*.svg" % rootdir) + glob.glob("%s/*.nii.gz" % rootdir) + glob.glob("%s/*.css" % rootdir)
-    }
+    package_data = {MODULE : []}
+    for ext in exts:
+        package_data[MODULE].append(f"{datadir}/*.{ext}")
+    return package_data
 
 MODULE_DIR = os.path.abspath(os.path.dirname(__file__))
 KWARGS = {
@@ -97,7 +98,7 @@ KWARGS = {
     'license' : 'Apache 2',
     'install_requires' : get_requirements(MODULE_DIR),
     'packages' : find_packages(),
-    'package_data' : get_package_data(os.path.join(MODULE_DIR, MODULE, "assets")),
+    'package_data' : get_package_data("assets"),
     'entry_points' : {
          'console_scripts': ['run-visdex=visdex.__main__:main'],
     },
