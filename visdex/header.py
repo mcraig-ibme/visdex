@@ -11,7 +11,7 @@ from dash.dependencies import Input, Output
 from ._version import __version__
 
 LOG = logging.getLogger(__name__)
-HEADER_IMAGE = "/assets/UoN_Primary_Logo_RGB.png"
+HEADER_IMAGE = "UoN_Primary_Logo_RGB.png"
 
 def get_layout(app):
         
@@ -34,7 +34,7 @@ def get_layout(app):
         dcc.Location(id='url', refresh=False),
         dcc.Location(id='redirect', refresh=True),
         dcc.Store(id='login-status', storage_type='session'),
-        html.Img(src=HEADER_IMAGE, height=100),
+        html.Img(src=app.get_asset_url(HEADER_IMAGE), height=100),
         html.Div(
             id="app-header",
             children=[
