@@ -91,7 +91,7 @@ def get_layout(app):
         user = check_password(userid, password)
         if user:
             login_user(user)
-            return '/visdex/app'
+            return f'{app.server.config.get("PREFIX", "/")}app'
 
     @app.callback(
         Output('output-state', 'children'),

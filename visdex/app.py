@@ -28,7 +28,18 @@ import visdex.login
 LOG = logging.getLogger(__name__)
 
 flask_app = flask.Flask(__name__)
-flask_app.secret_key = 'visdexsecret'
+config_file = os.environ.get("VISDEX_CONFIG", os.path.join(os.environ["HOME"], ".visdex.conf"))
+if os.path.isfile(config_file):
+    LOG.info(f"Using config file: {config_file}")
+    flask_app.config.from_pyfile(config_file)
+else:
+    LOG.info(f"Config file: {config_file} not found")
+LOG.info(f"Visdex configuration: {flask_app.config}")
+
+# It should be possible to handle URL prefixes transparently but
+# have not managed to get this to work yet - so set this to whatever
+# prefix Apache is using
+PREFIX = flask_app.config.get("PREFIX", "/")
 
 visdex.login.init_login(flask_app)
 
@@ -36,7 +47,7 @@ visdex.login.init_login(flask_app)
 app = dash.Dash(
     __name__,
     server=flask_app,
-    requests_pathname_prefix='/visdex/',
+    requests_pathname_prefix=PREFIX,
     suppress_callback_exceptions=False,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
@@ -78,24 +89,24 @@ def display_page(pathname):
     LOG.info("Choosing page for path %s", pathname)
     LOG.info("script name = %s", os.environ.get("SCRIPT_NAME", "<none>"))
     #LOG.info("path prefix = %s", app.requests_pathname_prefix)
-    if pathname == '/visdex/login':
+    if pathname == f'{PREFIX}login':
         view = login_layout
-    elif pathname == '/visdex/app':
+    elif pathname == f'{PREFIX}app':
         if current_user.is_authenticated:
             view = visdex_layout
         else:
             # Not authenticated - redirect to login page
             view = login_layout
-            url = '/visdex/login'
-    elif pathname == '/visdex/logout':
+            url = f'{PREFIX}login'
+    elif pathname == f'{PREFIX}logout':
         if current_user.is_authenticated:
             logout_user()
         view = login_layout
-        url = '/visdex/login'
+        url = f'{PREFIX}login'
     else:
         # Just redirect other pages to the login screen
         view = login_layout
-        url = '/visdex/login'
+        url = f'{PREFIX}login'
 
     LOG.info("Redirecting to %s", url)
     return view, url
