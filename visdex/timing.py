@@ -1,3 +1,6 @@
+"""
+visdex: Utility functions for timing and profiling performance
+"""
 import time
 import logging
 import pandas as pd
@@ -14,7 +17,6 @@ def timing(f):
     :param f:
     :return:
     """
-
     @wraps(f)
     def wrap(*args, **kw):
         ts = time.time()
@@ -26,13 +28,11 @@ def timing(f):
 
     return wrap
 
-
 def start_timer(i):
     """
     Adds timer i to timing_dict and records start time
     """
     timers[i] = time.time()
-
 
 def log_timing(i, label, restart=True):
     """
@@ -56,7 +56,6 @@ def log_timing(i, label, restart=True):
         LOG.info(
             f"Timer {i} attempted to log value but had not been started previously."
         )
-
 
 def print_timings():
     """

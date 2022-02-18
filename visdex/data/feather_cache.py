@@ -80,6 +80,12 @@ class FeatherCache:
                 index_df = pd.DataFrame(index_cols, columns=["col_name"])
                 index_df.to_feather(self._index_fname(name))
 
+    def store_std(name):
+        """
+        Store 'standard' data, e.g. ABCD, in the cache
+        """
+        raise NotImplementedError()
+
     def _fname(self, name):
         return os.path.join(self._cachedir.name, name + ".feather")
 

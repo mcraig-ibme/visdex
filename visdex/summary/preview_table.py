@@ -7,7 +7,7 @@ from dash import html, dcc, dash_table
 from dash.dependencies import Input, Output
 
 from visdex.common import Component, vstack
-from visdex.cache import cache
+from visdex.data.cache import get_cache
 
 class PreviewTable(Component):
     """
@@ -47,6 +47,7 @@ class PreviewTable(Component):
 
     def update(self, df_loaded):
         self.log.debug("Update preview table")
+        cache = get_cache()
 
         # We want to be able to see the index columns in the preview table
         dff = cache.load(self.df_name, keep_index_cols=True)

@@ -34,7 +34,6 @@ class Component(html.Div):
 
     Not sure yet if this is the best way to modularize - currently used only for preview table
     """
-
     def __init__(self, app, id_prefix, *args, **kwargs):
         self.app = app
         self.id_prefix = id_prefix

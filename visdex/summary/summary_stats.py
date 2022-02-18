@@ -12,7 +12,7 @@ from dash import html, dcc, dash_table
 from dash.dependencies import Input, Output
 
 from visdex.common import vstack
-from visdex.cache import cache
+from visdex.data.cache import get_cache
 from visdex.timing import timing
 
 LOG = logging.getLogger(__name__)
@@ -31,6 +31,7 @@ def get_layout(app):
     @timing
     def update_summary_table(df_loaded, missing_value_cutoff):
         LOG.info(f"update_summary_table")
+        cache = get_cache()
         # Keep index columns in the summary table
         dff = cache.load("df", keep_index_cols=True)
 

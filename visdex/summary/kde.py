@@ -11,7 +11,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
 from visdex.timing import timing
-from visdex.cache import cache
+from visdex.data.cache import get_cache
 from visdex.common import vstack
 
 LOG = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ def get_layout(app):
     @timing
     def update_summary_kde(dropdown_values, kde_active, df_loaded):
         LOG.info(f"update_summary_kde")
+        cache = get_cache()
         if kde_active != ["kde-active"]:
             raise PreventUpdate
 

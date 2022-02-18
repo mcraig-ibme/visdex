@@ -3,7 +3,7 @@ import numpy as np
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-from visdex.cache import cache
+from visdex.data.cache import get_cache
 
 from .common import all_components, update_graph_components
 
@@ -28,6 +28,7 @@ def define_cbs(app):
     )
     def update_manhattan_components(df_loaded, style_dict, *args):
         LOG.info("update_manhattan_components")
+        cache = get_cache()
         dff = cache.load("df")
         # Only allow user to select columns that have data type that is valid for correlation
         dd_options = [
@@ -51,6 +52,7 @@ def define_cbs(app):
     def make_manhattan_figure(*args):
         args_string = [*args]
         LOG.info(f"make_manhattan_figure {args_string}")
+        cache = get_cache()
         # Generate the list of argument names based on the input order
         keys = [component["id"] for component in all_components["manhattan"]]
 

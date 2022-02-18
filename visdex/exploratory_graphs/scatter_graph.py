@@ -11,7 +11,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
-from visdex.cache import cache
+from visdex.data.cache import get_cache
 from visdex.common import default_marker_color
 
 from .common import all_components, update_graph_components
@@ -34,6 +34,7 @@ def define_cbs(app):
     )
     def update_scatter_components(df_loaded, style_dict, *args):
         LOG.info(f"update_scatter_components")
+        cache = get_cache()
         dff = cache.load("filtered")
         dd_options = [{"label": col, "value": col} for col in dff.columns]
         return update_graph_components(
@@ -86,6 +87,7 @@ def define_cbs(app):
     )
     def make_scatter_figure(*args):
         LOG.info(f"make_scatter_figure")
+        cache = get_cache()
         # Generate the list of argument names based on the input order
         keys = [component["id"] for component in all_components["scatter"]]
 

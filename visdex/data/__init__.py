@@ -14,7 +14,7 @@ from dash import html, dcc
 from dash.dependencies import Input, Output, State
 
 from visdex.common import vstack, hstack
-from visdex.cache import cache
+from .cache import get_cache
 
 LOG = logging.getLogger(__name__)
 
@@ -99,6 +99,8 @@ def get_layout(app):
         if selection == "user":
             return {"display" : "block"}
         else:
+            cache = get_cache()
+            cache.store_std(selection)
             return {"display" : "none"}
 
     @app.callback(
@@ -115,6 +117,7 @@ def get_layout(app):
         it in the cache, updating the appropriate children
         """
         LOG.info(f"parse data")
+        cache = get_cache()
 
         if contents is not None:
             _content_type, content_string = contents.split(",")
@@ -165,6 +168,7 @@ def get_layout(app):
         also stored in the cache
         """
         LOG.info(f"parse filter")
+        cache = get_cache()
 
         if contents is not None:
             _content_type, content_string = contents.split(",")
@@ -212,6 +216,8 @@ def get_layout(app):
         The main data file is parsed and filtered and the result stored in the cache
         """
         LOG.info(f"update_df_loaded_div")
+        cache = get_cache()
+
         warning = "Initial analysis complete"
 
         # Read in main DataFrame

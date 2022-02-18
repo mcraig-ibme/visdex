@@ -1,5 +1,10 @@
+"""
+visdex: Login functionality
+"""
 import logging
+import uuid
 
+from flask import session
 from flask_login import LoginManager, UserMixin, login_user, current_user
 
 from dash import html, dcc
@@ -91,6 +96,8 @@ def get_layout(app):
         user = check_password(userid, password)
         if user:
             login_user(user)
+            session['uid'] = uuid.uuid4()
+            print(session)
             return f'{app.server.config.get("PREFIX", "/")}app'
 
     @app.callback(

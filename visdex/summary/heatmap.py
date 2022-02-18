@@ -16,7 +16,7 @@ from dash.dependencies import Input, Output, State
 from dash import html, dcc
 import plotly.graph_objects as go
 
-from visdex.cache import cache
+from visdex.data.cache import get_cache
 from visdex.common import vstack
 from visdex.timing import timing, start_timer, log_timing, print_timings
 
@@ -31,6 +31,7 @@ def get_layout(app):
     @timing
     def update_heatmap_dropdown(df_loaded):
         LOG.info(f"update_heatmap_dropdown {df_loaded}")
+        cache = get_cache()
         dff = cache.load("filtered")
 
         options = [
@@ -247,6 +248,7 @@ def get_layout(app):
     @timing
     def update_summary_heatmap(dropdown_values, clusters, df_loaded):
         LOG.info(f"update_summary_heatmap {dropdown_values} {clusters}")
+        cache = get_cache()
         # Guard against the first argument being an empty list, as happens at first
         # invocation, or df_loaded being False
         if df_loaded is False or len(dropdown_values) <= 1:

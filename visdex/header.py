@@ -1,8 +1,9 @@
 """
-visdex: Main page header with UoN logo, version etc
+visdex: Page header with UoN logo, version etc
 """
 import logging
 
+from flask import session
 from flask_login import current_user
 
 from dash import html, dcc
@@ -27,8 +28,9 @@ def get_layout(app):
         """
         if getattr(current_user, 'is_authenticated', False):
             user_id = current_user.get_id()
-            LOG.info(user_id)
-            return [html.Label(f"User: {user_id}", style=hstack), html.A('logout', href=f'{app.config.get("PREFIX", "/")}logout', style=hstack)], user_id
+            LOG.info(current_user)
+            LOG.info(session)
+            return [html.Label(f"User: {user_id}", style=hstack), html.Label(f"Session:", style=hstack), html.A('logout', href=f'{app.config.get("PREFIX", "/")}logout', style=hstack)], user_id
         else:
             return [], ''
 
