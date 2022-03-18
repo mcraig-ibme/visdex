@@ -11,6 +11,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 
+from .common import all_components
 from . import (
     bar_graph,
     histogram_graph,

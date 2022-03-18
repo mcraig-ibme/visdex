@@ -3,7 +3,8 @@ visdex: Dashboard data explorer for CSV trial data
 
 Originally written for ABCD data
 
-This module defines the basic page layout and Flask/Dash apps
+This module defines the basic application that serves the
+appropriate page in response to requests
 """
 import logging
 import os

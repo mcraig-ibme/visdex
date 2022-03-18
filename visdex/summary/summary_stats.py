@@ -33,7 +33,7 @@ def get_layout(app):
         LOG.info(f"update_summary_table")
         cache = get_cache()
         # Keep index columns in the summary table
-        dff = cache.load("df", keep_index_cols=True)
+        dff = cache.get_main(keep_index_cols=True)
 
         # If empty, return an empty Div
         if dff.size == 0:

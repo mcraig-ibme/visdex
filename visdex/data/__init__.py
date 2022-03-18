@@ -10,20 +10,14 @@ import datetime
 
 import pandas as pd
 
-from dash import html, dcc
+from dash import html, dcc, dash_table
+import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
-from visdex.common import vstack, hstack
-from .cache import get_cache
+from visdex.common import vstack, hstack, standard_margin_left
+from .cache import get_cache, init_cache
 
 LOG = logging.getLogger(__name__)
-
-# Possible sets of index columns. 
-# This is very data specific so we just try them in order and use the first set
-# that matches the DF
-known_indices = [
-    ["SUBJECTKEY", "EVENTNAME"],
-]
 
 def get_layout(app):
     layout = html.Div(children=[
@@ -55,27 +49,87 @@ def get_layout(app):
                         "margin" : "10px",
                     },
                 ),
+                html.H2(
+                    children="Column Filter",
+                    style=vstack,
+                ),
+                html.Label("Upload an optional file containing columns to select", style=hstack),
+                html.Button("Clear", id="clear-filter-button", style=hstack), 
+                dcc.Upload(
+                    id="filter-file-upload",
+                    children=html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")]),
+                    style={
+                        "height": "60px",
+                        "lineHeight": "60px",
+                        "borderWidth": "1px",
+                        "borderStyle": "dashed",
+                        "borderRadius": "5px",
+                        "textAlign": "center",
+                        "margin": "10px",
+                    },
+                ),
             ],
             style={"display" : "block"},
         ),
-        html.H2(
-            children="Column Filter",
-            style=vstack,
-        ),
-        html.Label("Upload an optional file containing columns to select", style=hstack),
-        html.Button("Clear", id="clear-filter-button", style=hstack), 
-        dcc.Upload(
-            id="filter-file-upload",
-            children=html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")]),
-            style={
-                "height": "60px",
-                "lineHeight": "60px",
-                "borderWidth": "1px",
-                "borderStyle": "dashed",
-                "borderRadius": "5px",
-                "textAlign": "center",
-                "margin": "10px",
-            },
+        html.Div(
+            id="std-visible",
+            children=[
+                html.Div(
+                    id="visit-filter-heading",
+                    children=[
+                        dbc.Button(
+                            "+",
+                            id="collapse-visit-filter",
+                            style={
+                                "display": "inline-block",
+                                "margin-left": "10px",
+                                "width": "40px",
+                                "vertical-align" : "middle",
+                            },
+                        ),
+                        html.H3(
+                            "Filter by visit",
+                            style={
+                                "display": "inline-block",
+                                "margin-left": standard_margin_left,
+                                "vertical-align" : "middle",
+                                "margin-bottom" : "0",
+                                "padding" : "0",
+                            },
+                        ),
+                    ],
+                ),
+                 dbc.Collapse(
+                    id="visit-filter",
+                    children=[
+                        html.Label("Selected visits: "),
+                    ],
+                    is_open=False,
+                ),
+                html.Div(
+                    id="std-datasets",
+                    children=[
+                        html.Label("ABCD data sets"),
+                        dash_table.DataTable(id="std-dataset-checklist", columns=[{"name": "Name", "id": "name"}], row_selectable='multi'),
+                    ],
+                    style={
+                        "width": "70%", "height" : "300px", "overflow-y" : "scroll",
+                        "display" : "inline-block",
+                    }
+                ),
+                html.Div(
+                    id="std-fields",
+                    children=[
+                        html.Label("Data set fields"),
+                        dash_table.DataTable(id="std-field-checklist", columns=[{"name": "Field", "id": "ElementName"}], row_selectable='multi'),
+                    ],
+                    style={
+                        "width": "20%", "height" : "300px", "overflow-y" : "scroll",
+                        "display" : "inline-block",
+                    }
+                ),
+            ],
+            style={"display" : "none"},
         ),
         html.Button("Analyse", id="load-files-button", style=hstack),        
         html.Div(
@@ -91,17 +145,36 @@ def get_layout(app):
     ])
 
     @app.callback(
-        Output("upload-visible", "style"),
+        [Output("upload-visible", "style"), Output("std-visible", "style"), Output("std-dataset-checklist", "data")],
         [Input("dataset-selection", "value")],
         prevent_initial_call=True,
     )
     def data_selection_changed(selection):
+        LOG.info(f"Data selection: {selection}")
         if selection == "user":
-            return {"display" : "block"}
+            init_cache()
+            return {"display" : "block"}, {"display" : "none"}, []
         else:
-            cache = get_cache()
-            cache.store_std(selection)
-            return {"display" : "none"}
+            init_cache(selection)
+            dataset_df = get_cache().get_datasets()
+            #datasets = [{
+            #    "label" : "%s: %s" % (r["name"], r["desc"]),
+            #    "value" : r["short_name"]
+            #} for idx, r in dataset_df.iterrows()]
+            #print(datasets)
+            return {"display" : "none"}, {"display" : "block"}, dataset_df.to_dict('records')
+
+    @app.callback(
+        Output("std-field-checklist", "data"),
+        Input("std-dataset-checklist", "derived_virtual_data"),
+        Input("std-dataset-checklist", "derived_virtual_selected_rows")
+    )
+    def dataset_selection_changed(data, selected_rows):
+        selected_datasets = [data[idx]["short_name"] for idx in selected_rows]
+        fields = get_cache().get_fields_in_datasets(selected_datasets)
+        print(fields)
+        #print(fields.to_dict('records'))
+        return fields.to_dict('records')
 
     @app.callback(
         [Output("data-file", "children")],
@@ -141,7 +214,7 @@ def get_layout(app):
                 LOG.error(f"{e}")
                 return ["There was an error processing this file"]
 
-            cache.store("parsed", df)
+            cache.set_main(df)
 
             return [
                 f"{filename} loaded, last modified "
@@ -149,7 +222,7 @@ def get_layout(app):
             ]
 
         return ["No file loaded", ""]
-    
+
     @app.callback(
         [Output("filter-file", "children")],
         [Input("filter-file-upload", "contents")],
@@ -176,17 +249,11 @@ def get_layout(app):
 
             try:
                 variables_of_interest = [str(item) for item in decoded.splitlines()]
-                # Add index names if they are not present
-                # MSC not sure if useful here
-                #variables_of_interest.extend(
-                #    index for index in indices if index not in variables_of_interest
-                #)
-
             except Exception as e:
                 LOG.error(f"{e}")
                 return ["There was an error processing this file"]
-            df = pd.DataFrame(variables_of_interest, columns=["names"])
-            cache.store("columns", df)
+
+            cache.set_columns(variables_of_interest)
 
             return [
                 f"{filename} loaded, last modified "
@@ -201,6 +268,9 @@ def get_layout(app):
         prevent_initial_call=True,
     )
     def clear_filter_button_clicked(n_clicks):
+        LOG.info(f"clear filter")
+        cache = get_cache()
+        cache.set_columns()
         return html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")]),
 
     @app.callback(
@@ -217,71 +287,28 @@ def get_layout(app):
         """
         LOG.info(f"update_df_loaded_div")
         cache = get_cache()
-
-        warning = "Initial analysis complete"
-
-        # Read in main DataFrame
-        if data_file_value is None:
-            return [False, ""]
-        df = cache.load("parsed")
-
-        # Read in column DataFrame, or just use all the columns in the DataFrame
-        if filter_file_value is not None:
-            variables_of_interest = list(cache.load("columns")["names"])
-
-            # Remove variables that don't exist in the dataframe
-            missing_vars = [var for var in variables_of_interest if var not in df.columns]
-            present_vars = [var for var in variables_of_interest if var in df.columns]
-
-            if not variables_of_interest:
-                warning = "No columns found in filter file - ignored"
-            elif missing_vars and not present_vars:
-                warning = "No columns found in filter file are present in main data - filter file ignored"
-            elif missing_vars:
-                warning = "Some columns found in filter file not present in main data - these columns ignored"
-
-            if present_vars:
-                # Keep only the columns listed in the filter file
-                df = df[present_vars]
-
-        LOG.info("df\n: %s" % str(df))
-
-        # Reformat SUBJECTKEY if it doesn't have the underscore
-        # TODO: remove this when unnecessary
-        if "SUBJECTKEY" in df:
-            df["SUBJECTKEY"] = df["SUBJECTKEY"].apply(standardise_subjectkey)
-
-        # Set certain columns to have more specific types.
-        # if 'SEX' in df.columns:
-        #     df['SEX'] = df['SEX'].astype('category')
-        #
-        # for column in ['EVENTNAME', 'SRC_SUBJECT_ID']:
-        #     if column in df.columns:
-        #         df[column] = df[column].astype('string')
-
-        # Set index. We try all known indices and apply the first
-        # one where all the columns are present.
-        for index in known_indices:
-            if all([col in df for col in index]):
-                df.set_index(index, inplace=True, verify_integrity=True, drop=True)
-                break
-
-        # Store the combined DF, and set df-loaded-div to [True]
-        cache.store("df", df)
+        warning = cache.filter()
+        if not warning:
+            warning = "Initial analysis complete"
 
         return [True, warning]
 
+    @app.callback(
+        [
+            Output("visit-filter", "is_open"),
+            Output("collapse-visit-filter", "children"),
+        ],
+        [Input("collapse-visit-filter", "n_clicks")],
+        [State("visit-filter", "is_open")],
+        prevent_initial_call=True,
+    )
+    def _toggle_visit_filter(n_clicks, is_open):
+        """
+        Handle click on the 'visit filter' expand/collapse button
+        """
+        LOG.info(f"toggle_visit filter {n_clicks} {is_open}")
+        if n_clicks:
+            return not is_open, "+" if is_open else "-"
+        return is_open, "-"
+
     return layout
-
-def standardise_subjectkey(subjectkey):
-    """
-    Standardise the subject key
-
-    FIXME does this actually do anything useful? It just looks
-    like it doubles an underscore in a particular position if
-    found
-    """
-    if subjectkey[4] == "_":
-        return subjectkey
-
-    return subjectkey[0:4] + "_" + subjectkey[4:]

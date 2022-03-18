@@ -29,7 +29,7 @@ def define_cbs(app):
     def update_manhattan_components(df_loaded, style_dict, *args):
         LOG.info("update_manhattan_components")
         cache = get_cache()
-        dff = cache.load("df")
+        dff = cache.get_main()
         # Only allow user to select columns that have data type that is valid for correlation
         dd_options = [
             {"label": col, "value": col}

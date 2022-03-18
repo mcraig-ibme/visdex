@@ -1,8 +1,12 @@
+"""
+visdex: Bar graph
+"""
 import logging
+
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
-from visdex.data.cache import get_cache
 
+from visdex.data.cache import get_cache
 from .common import all_components, update_graph_components
 
 LOG = logging.getLogger(__name__)
@@ -27,7 +31,6 @@ def define_cbs(app):
         dff = cache.load("filtered")
         dd_options = [{"label": col, "value": col} for col in dff.columns]
         return update_graph_components("bar", all_components["bar"], dd_options, args)
-
 
     @app.callback(
         Output({"type": "gen-bar-graph", "index": MATCH}, "figure"),

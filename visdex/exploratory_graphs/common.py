@@ -1,9 +1,51 @@
 import logging
 from collections import defaultdict
 
+from dash.dependencies import Input, Output, State, MATCH
 from dash import dcc
 
+from visdex.data.cache import get_cache
+
 LOG = logging.getLogger(__name__)
+
+def common_define_cbs(app, ctype, make_fig):
+    @app.callback(
+        [
+            Output({"type": f"div-{ctype}-{component['id']}", "index": MATCH}, "children")
+            for component in all_components[ctype]
+        ],
+        [Input("df-loaded-div", "children")],
+        [State({"type": f"div-{ctype}-x", "index": MATCH}, "style")]
+        + [
+            State({"type": f"{ctype}-{component['id']}", "index": MATCH}, prop)
+            for component in all_components[ctype]
+            for prop in component
+        ],
+    )
+    def update_components(df_loaded, style_dict, *args):
+        LOG.info(f"update_{ctype}_components")
+        cache = get_cache()
+        dff = cache.load("filtered")
+        dd_options = [{"label": col, "value": col} for col in dff.columns]
+        return update_graph_components(ctype, all_components[ctype], dd_options, args)
+
+    @app.callback(
+        Output({"type": f"gen-{ctype}-graph", "index": MATCH}, "figure"),
+        [
+            *(
+                Input({"type": f"{ctype}-{component['id']}", "index": MATCH}, "value")
+                for component in all_components[ctype]
+            )
+        ],
+    )
+    def make_figure(*args):
+        LOG.info(f"make_{ctype}_figure")
+        cache = get_cache()
+        keys = [component["id"] for component in all_components[ctype]]
+
+        args_dict = dict(zip(keys, args))
+        dff = cache.load("filtered")
+        return make_fig(dff, args_dict)
 
 # Definitions of supported plot types
 # All components should contain 'component_type', 'id', and 'label' as a minimum

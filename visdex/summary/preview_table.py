@@ -14,11 +14,10 @@ class PreviewTable(Component):
     Component that displays the first few lines of a data frame
     """
 
-    def __init__(self, app, id_prefix="preview-", df_name="df", update_div_id="df-loaded-div"):
+    def __init__(self, app, id_prefix="preview-", update_div_id="df-loaded-div"):
         """
         :param app: Dash application
         :param id_prefix: Prefix string for HTML component identifiers
-        :param df_name: Cache name of data frame to preview
         :param update_div_id: ID of div that signals when to update
         """
         Component.__init__(self, app, id_prefix, children=[
@@ -37,7 +36,6 @@ class PreviewTable(Component):
                 ],
             ),
         ])
-        self.df_name = df_name
 
         self.register_cb(app, "update",
             Output(self.id_prefix + "table", "children"),
@@ -50,7 +48,7 @@ class PreviewTable(Component):
         cache = get_cache()
 
         # We want to be able to see the index columns in the preview table
-        dff = cache.load(self.df_name, keep_index_cols=True)
+        dff = cache.get_main(keep_index_cols=True)
 
         if dff.size > 0:
             return html.Div(

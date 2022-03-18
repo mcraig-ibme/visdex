@@ -1,9 +1,10 @@
 """
-Cache for parsed/processed data using Apache Feather files
+Storage backend using Feather files in a temporary directory
 """
 import logging
 import os
 import tempfile
+import shutil
 
 import pandas as pd
 
@@ -18,11 +19,11 @@ class FeatherCache:
             self._cachedir = cachedir
         else:
             self._cachedir = tempfile.TemporaryDirectory(prefix="visdex")
-        self.log.info("cache at {}".format(self._cachedir.name))
+        self.log.info("Feather cache at {}".format(self._cachedir.name))
 
     def load(self, name, keep_index_cols=False):
         """
-        Load data from the cache
+        Load custom data from the cache
 
         :param name: Name of data
         :param keep_index_cols: If True, index columns will remain as columns in the returned data frame
@@ -54,7 +55,7 @@ class FeatherCache:
 
     def store(self, name, df):
         """
-        Store data in the cache
+        Store custom data in the cache
 
         :param name: Name of data
         :param df: pd.DataFrame containing data. May be empty or None if there
@@ -80,11 +81,9 @@ class FeatherCache:
                 index_df = pd.DataFrame(index_cols, columns=["col_name"])
                 index_df.to_feather(self._index_fname(name))
 
-    def store_std(name):
-        """
-        Store 'standard' data, e.g. ABCD, in the cache
-        """
-        raise NotImplementedError()
+    def free(self):
+        pass
+        #shutil.rmtree(self._cachedir)
 
     def _fname(self, name):
         return os.path.join(self._cachedir.name, name + ".feather")
