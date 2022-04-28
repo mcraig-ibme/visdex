@@ -6,6 +6,7 @@ These components handle the loading of the main data and filter files
 import logging
 import io
 import base64
+import csv
 import datetime
 
 import pandas as pd
@@ -15,7 +16,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
 from visdex.common import vstack, hstack, standard_margin_left
-from .cache import get_cache, init_cache
+from visdex.data import data_store
 
 LOG = logging.getLogger(__name__)
 
@@ -68,143 +69,147 @@ def get_layout(app):
                         "margin": "10px",
                     },
                 ),
+                html.Div(
+                    id="data-warning", children=[""], style={"color" : "blue", "display" : "inline-block", "margin-left" : "10px"}
+                ),
             ],
             style={"display" : "block"},
         ),
         html.Div(
             id="std-visible",
             children=[
+                #html.Div(
+                #    id="visit-filter-heading",
+                #    children=[
+                #        dbc.Button(
+                #            "+",
+                #            id="collapse-visit-filter",
+                #            style={
+                #                "display": "inline-block",
+                #                "margin-left": "10px",
+                #                "width": "40px",
+                #                "vertical-align" : "middle",
+                #            },
+                #        ),
+                #        html.H3(
+                #            "Filter by visit",
+                #            style={
+                #                "display": "inline-block",
+                #                "margin-left": standard_margin_left,
+                #                "vertical-align" : "middle",
+                #                "margin-bottom" : "0",
+                #                "padding" : "0",
+                #            },
+                #        ),
+                #    ],
+                #),
+                #dbc.Collapse(
+                #    id="visit-filter",
+                #    children=[
+                #        html.Label("Selected visits: "),
+                #    ],
+                #    is_open=False,
+                #),
                 html.Div(
-                    id="visit-filter-heading",
+                    id="std-dataset-select",
                     children=[
-                        dbc.Button(
-                            "+",
-                            id="collapse-visit-filter",
+                        html.H3("ABCD data sets"),
+                        html.Div(
+                            id="std-datasets",
+                            children=[
+                                dash_table.DataTable(id="std-dataset-checklist", columns=[{"name": "Name", "id": "name"}], row_selectable='multi', style_cell={'textAlign': 'left'}),
+                            ],
                             style={
-                                "display": "inline-block",
-                                "margin-left": "10px",
-                                "width": "40px",
-                                "vertical-align" : "middle",
-                            },
+                                "width": "100%", "height" : "300px", "overflow-y" : "scroll",
+                            }
                         ),
-                        html.H3(
-                            "Filter by visit",
+                        html.Div(
+                            id="std-dataset-desc", children=[""], style={"color" : "blue", "display" : "inline-block", "margin-left" : "10px"}
+                        ),
+                    ],
+                    style={"width": "55%", "display" : "inline-block"},
+                ),
+                
+                html.Div(
+                    id="std-field-select",
+                    children=[
+                        html.H3("Data set fields"), 
+                        html.Div(
+                            id="std-fields",
+                            children=[
+                                dash_table.DataTable(id="std-field-checklist", columns=[{"name": "Field", "id": "ElementName"}], row_selectable='multi', style_cell={'textAlign': 'left'}),
+                            ],
                             style={
-                                "display": "inline-block",
-                                "margin-left": standard_margin_left,
-                                "vertical-align" : "middle",
-                                "margin-bottom" : "0",
-                                "padding" : "0",
-                            },
+                                "width": "100%", "height" : "300px", "overflow-y" : "scroll",
+                            }
+                        ),
+                        html.Div(
+                            id="std-field-desc", children=[""], style={"color" : "blue", "display" : "inline-block", "margin-left" : "10px"}
                         ),
                     ],
+                    style={"width": "40%", "display" : "inline-block"},
                 ),
-                 dbc.Collapse(
-                    id="visit-filter",
-                    children=[
-                        html.Label("Selected visits: "),
-                    ],
-                    is_open=False,
-                ),
-                html.Div(
-                    id="std-datasets",
-                    children=[
-                        html.Label("ABCD data sets"),
-                        dash_table.DataTable(id="std-dataset-checklist", columns=[{"name": "Name", "id": "name"}], row_selectable='multi'),
-                    ],
-                    style={
-                        "width": "70%", "height" : "300px", "overflow-y" : "scroll",
-                        "display" : "inline-block",
-                    }
-                ),
-                html.Div(
-                    id="std-fields",
-                    children=[
-                        html.Label("Data set fields"),
-                        dash_table.DataTable(id="std-field-checklist", columns=[{"name": "Field", "id": "ElementName"}], row_selectable='multi'),
-                    ],
-                    style={
-                        "width": "20%", "height" : "300px", "overflow-y" : "scroll",
-                        "display" : "inline-block",
-                    }
-                ),
+                html.Button("Load Data", id="std-load-button"),
             ],
             style={"display" : "none"},
-        ),
-        html.Button("Analyse", id="load-files-button", style=hstack),        
-        html.Div(
-            id="data-warning", children=[""], style={"color" : "blue", "display" : "inline-block", "margin-left" : "10px"}
         ),
 
         # Hidden divs for holding the booleans identifying whether a DF is loaded in
         # each case
+        html.Div(id="std-df-loaded-div", style={"display": "none"}, children=[]),
+        html.Div(id="user-df-loaded-div", style={"display": "none"}, children=[]),
         html.Div(id="df-loaded-div", style={"display": "none"}, children=[]),
-        html.Div(id="df-filtered-loaded-div", style={"display": "none"}, children=[]),
-        html.Div(id="corr-loaded-div", style={"display": "none"}, children=[]),
-        html.Div(id="pval-loaded-div", style={"display": "none"}, children=[]),
     ])
 
+    @app.callback(
+        Output("df-loaded-div", "children"),
+        Input("std-df-loaded-div", "children"),
+        Input("user-df-loaded-div", "children"),
+        prevent_initial_call=True,
+    )
+    def df_loaded(std, user):
+        return std or user
+        
     @app.callback(
         [Output("upload-visible", "style"), Output("std-visible", "style"), Output("std-dataset-checklist", "data")],
         [Input("dataset-selection", "value")],
         prevent_initial_call=True,
     )
     def data_selection_changed(selection):
+        """
+        Change to source of data selection, user or standard data
+        """
         LOG.info(f"Data selection: {selection}")
         if selection == "user":
-            init_cache()
+            data_store.init()
             return {"display" : "block"}, {"display" : "none"}, []
         else:
-            init_cache(selection)
-            dataset_df = get_cache().get_datasets()
-            #datasets = [{
-            #    "label" : "%s: %s" % (r["name"], r["desc"]),
-            #    "value" : r["short_name"]
-            #} for idx, r in dataset_df.iterrows()]
-            #print(datasets)
+            data_store.init(selection)
+            dataset_df = data_store.get().get_all_datasets()
             return {"display" : "none"}, {"display" : "block"}, dataset_df.to_dict('records')
 
     @app.callback(
-        Output("std-field-checklist", "data"),
-        Input("std-dataset-checklist", "derived_virtual_data"),
-        Input("std-dataset-checklist", "derived_virtual_selected_rows")
-    )
-    def dataset_selection_changed(data, selected_rows):
-        selected_datasets = [data[idx]["short_name"] for idx in selected_rows]
-        fields = get_cache().get_fields_in_datasets(selected_datasets)
-        print(fields)
-        #print(fields.to_dict('records'))
-        return fields.to_dict('records')
-
-    @app.callback(
-        [Output("data-file", "children")],
+        [Output("data-file", "children"), Output("user-df-loaded-div", "children")],
         [Input("data-file-upload", "contents")],
         [State("data-file-upload", "filename"), State("data-file-upload", "last_modified")],
         prevent_initial_call=True,
     )
-    def data_file_changed(contents, filename, date):
+    def user_data_file_changed(contents, filename, date):
         """
-        Handle data file upload
-        
-        Parses the contents of the uploaded file into a DataFrame and stores
-        it in the cache, updating the appropriate children
+        When using a user data source, the upload file has been changed
         """
-        LOG.info(f"parse data")
-        cache = get_cache()
+        LOG.info(f"data_file_changed")
+        ds = data_store.get()
 
         if contents is not None:
             _content_type, content_string = contents.split(",")
             decoded = base64.b64decode(content_string)
 
             try:
-                if filename.endswith("csv"):
-                    # Assume that the user uploaded a CSV file
-                    df = pd.read_csv(io.StringIO(decoded.decode("utf-8")))
-                elif filename.endswith("txt"):
-                    # Assume that the user uploaded a whitespace-delimited CSV file
-                    df = pd.read_csv(
-                        io.StringIO(decoded.decode("utf-8")), delim_whitespace=True
-                    )
+                if filename.endswith("csv") or filename.endswith("txt"):
+                    # Assume that the user uploaded a delimited file
+                    dialect = csv.Sniffer().sniff(decoded.decode("utf-8")[:1024])
+                    df = pd.read_csv(io.StringIO(decoded.decode("utf-8")), sep=dialect.delimiter, quotechar=dialect.quotechar, low_memory=False)
                 elif filename.endswith("xlsx"):
                     # Assume that the user uploaded an excel file
                     df = pd.read_excel(io.BytesIO(decoded))
@@ -212,19 +217,18 @@ def get_layout(app):
                     raise NotImplementedError
             except Exception as e:
                 LOG.error(f"{e}")
-                return ["There was an error processing this file"]
+                return ["There was an error processing this file", False]
 
-            cache.set_main(df)
-
+            ds.store(data_store.MAIN_DATA, df)
             return [
-                f"{filename} loaded, last modified "
-                f"{datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}"
+                f"{filename} loaded, last modified {datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}",
+                True
             ]
 
-        return ["No file loaded", ""]
+        return ["No file loaded", False]
 
     @app.callback(
-        [Output("filter-file", "children")],
+        [Output("filter-file", "children"), Output("data-warning", "children")],
         [Input("filter-file-upload", "contents")],
         [
             State("filter-file-upload", "filename"),
@@ -232,16 +236,12 @@ def get_layout(app):
         ],
         prevent_initial_call=True,
     )
-    def _filter_file_changed(contents, filename, date):
+    def user_filter_file_changed(contents, filename, date):
         """
-        Handle upload of column filter file
-
-        The file is parsed and stored in the cache. It is used to filter
-        the columns of the main data file, and the filtered data frame is
-        also stored in the cache
+        When using user data source, the column filter file has changed
         """
-        LOG.info(f"parse filter")
-        cache = get_cache()
+        LOG.info(f"filter_file_changed")
+        ds = data_store.get()
 
         if contents is not None:
             _content_type, content_string = contents.split(",")
@@ -253,45 +253,74 @@ def get_layout(app):
                 LOG.error(f"{e}")
                 return ["There was an error processing this file"]
 
-            cache.set_columns(variables_of_interest)
+            warning = ds.set_column_filter(variables_of_interest)
 
             return [
                 f"{filename} loaded, last modified "
-                f"{datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}"
+                f"{datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}",
+                warning
             ]
 
-        return ["No file loaded"]
+        return ["No file loaded", ""]
 
     @app.callback(
-        Output("filter-file-upload", "children"),
+        [Output("filter-file-upload", "children")],
         [Input("clear-filter-button", "n_clicks")],
         prevent_initial_call=True,
     )
-    def clear_filter_button_clicked(n_clicks):
+    def user_filter_clear_button_clicked(n_clicks):
+        """
+        When using user data source, the column filter file has been cleared
+        """
         LOG.info(f"clear filter")
-        cache = get_cache()
-        cache.set_columns()
-        return html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")]),
+        data_store.get().set_column_filter()
+        return html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")])
 
     @app.callback(
-        [Output("df-loaded-div", "children"), Output("data-warning", "children")],
-        [Input("load-files-button", "n_clicks")],
-        [State("data-file-upload", "filename"), State("filter-file-upload", "filename")],
-        prevent_initial_call=True,
+        Output("std-field-checklist", "data"),
+        Output("std-field-checklist", "selected_rows"),
+        Input("std-dataset-checklist", "derived_virtual_data"),
+        Input("std-dataset-checklist", "derived_virtual_selected_rows"),
+        State("std-field-checklist", "derived_virtual_data"),
+        State("std-field-checklist", "derived_virtual_selected_rows")
     )
-    def _analyse_button_clicked(n_clicks, data_file_value, filter_file_value):
+    def std_dataset_selection_changed(data, selected_rows, field_data, selected_field_rows):
         """
-        Handle click on the 'Analyse' button
-        
-        The main data file is parsed and filtered and the result stored in the cache
+        When using a standard data source, the set of selected data sets have been changed
         """
-        LOG.info(f"update_df_loaded_div")
-        cache = get_cache()
-        warning = cache.filter()
-        if not warning:
-            warning = "Initial analysis complete"
+        selected_datasets = [data[idx]["short_name"] for idx in selected_rows]
+        data_store.get().select_datasets(selected_datasets)
+        fields = data_store.get().get_all_fields().to_dict('records')
 
-        return [True, warning]
+        # Change the set of selected field rows so they match the same fields before the change
+        selected_fields_cur = [field_data[idx]["ElementName"] for idx in selected_field_rows]
+        selected_fields_new = [idx for idx, record in enumerate(fields) if record["ElementName"] in selected_fields_cur]
+
+        return fields, selected_fields_new
+
+    @app.callback(
+        Output("std-dataset-desc", "children"),
+        Input("std-dataset-checklist", "derived_virtual_data"),
+        Input("std-dataset-checklist", "active_cell"),
+    )
+    def std_dataset_active_changed(data, active_cell):
+        """
+        When using a standard data source, the active (clicked on) selected data set has been changed
+        """
+        return data[active_cell["row"]]["desc"]
+
+    @app.callback(
+        Output("std-field-desc", "children"),
+        Input("std-field-checklist", "derived_virtual_data"),
+        Input("std-field-checklist", "active_cell"),
+    )
+    def std_dataset_active_changed(data, active_cell):
+        """
+        When using a standard data source, the active (clicked on) selected field has been changed
+        """
+        if active_cell is not None and active_cell["row"] is not None:
+            print(data[active_cell["row"]])
+            return data[active_cell["row"]]["ElementDescription"]
 
     @app.callback(
         [
@@ -302,13 +331,29 @@ def get_layout(app):
         [State("visit-filter", "is_open")],
         prevent_initial_call=True,
     )
-    def _toggle_visit_filter(n_clicks, is_open):
+    def std_toggle_visit_filter(n_clicks, is_open):
         """
-        Handle click on the 'visit filter' expand/collapse button
+        Handle click on the 'visit filter' expand/collapse button for standard data sets
         """
         LOG.info(f"toggle_visit filter {n_clicks} {is_open}")
         if n_clicks:
             return not is_open, "+" if is_open else "-"
         return is_open, "-"
+
+    @app.callback(
+        Output("std-df-loaded-div", "children"),
+        Input("std-load-button", "n_clicks"),
+        State("std-field-checklist", "derived_virtual_data"),
+        State("std-field-checklist", "derived_virtual_selected_rows"),
+        prevent_initial_call=True,
+    )
+    def load_std_button_clicked(n_clicks, fields, selected_rows):
+        """
+        When using standard data, the load button is clicked
+        """
+        LOG.info(f"Load standard data")
+        selected_fields = [fields[idx] for idx in selected_rows]
+        data_store.get().select_fields(selected_fields)
+        return True
 
     return layout

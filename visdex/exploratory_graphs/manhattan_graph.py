@@ -3,7 +3,7 @@ import numpy as np
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-from visdex.data.cache import get_cache
+from visdex.data import data_store
 
 from .common import all_components, update_graph_components
 
@@ -18,7 +18,7 @@ def define_cbs(app):
             Output({"type": "div-manhattan-" + component["id"], "index": MATCH}, "children")
             for component in all_components["manhattan"]
         ],
-        [Input("df-loaded-div", "children")],
+        [Input("filtered-loaded-div", "children")],
         [State({"type": "div-manhattan-base_variable", "index": MATCH}, "style")]
         + [
             State({"type": "manhattan-" + component["id"], "index": MATCH}, prop)
@@ -28,8 +28,8 @@ def define_cbs(app):
     )
     def update_manhattan_components(df_loaded, style_dict, *args):
         LOG.info("update_manhattan_components")
-        cache = get_cache()
-        dff = cache.get_main()
+        ds = data_store.get()
+        dff = ds.load(data_store.MAIN_DATA)
         # Only allow user to select columns that have data type that is valid for correlation
         dd_options = [
             {"label": col, "value": col}
@@ -52,7 +52,7 @@ def define_cbs(app):
     def make_manhattan_figure(*args):
         args_string = [*args]
         LOG.info(f"make_manhattan_figure {args_string}")
-        cache = get_cache()
+        ds = data_store.get()
         # Generate the list of argument names based on the input order
         keys = [component["id"] for component in all_components["manhattan"]]
 
@@ -67,7 +67,7 @@ def define_cbs(app):
             raise PreventUpdate
 
         # Load logs of all p-values
-        logs = cache.load("logs")
+        logs = ds.load("logs")
 
         # Select the column and row associated to this variable, and combine the two. Half of the values will be nans,
         # so we keep all the non-nans.

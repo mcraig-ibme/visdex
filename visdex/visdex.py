@@ -1,8 +1,7 @@
 """
 visdex: Dashboard data explorer for CSV trial data
 
-This module defines the overall layout of 
-the main application page.
+This module defines the layout of the data explorer application
 """
 import logging
 

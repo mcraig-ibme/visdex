@@ -3,7 +3,7 @@ visdex: Dashboard data explorer for CSV trial data
 
 Originally written for ABCD data
 
-This module defines the basic application that serves the
+This module defines the basic Dash application that serves the
 appropriate page in response to requests
 """
 import logging
@@ -17,9 +17,9 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 from dash import html
 
-import visdex.header
-import visdex.main_app
-import visdex.login
+import visdex.common.header as header
+import visdex.visdex as visdex
+import visdex.login as login
 
 LOG = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ LOG.info(f"Visdex configuration: {flask_app.config}")
 # prefix Apache is using
 PREFIX = flask_app.config.get("PREFIX", "/")
 
-visdex.login.init_login(flask_app)
+login.init_login(flask_app)
 
 # Create the Dash application
 app = dash.Dash(
@@ -51,12 +51,12 @@ app = dash.Dash(
 
 # Main layout - all pages have header
 app.layout = html.Div([
-    visdex.header.get_layout(app),
+    header.get_layout(app),
     html.Div(id='page-content'),
 ])
 
-visdex_layout = visdex.main_app.get_layout(app)
-login_layout =  visdex.login.get_layout(app),
+visdex_layout = visdex.get_layout(app)
+login_layout =  login.get_layout(app),
 
 @app.callback(
     Output('page-content', 'children'), 
@@ -77,7 +77,7 @@ def display_page(pathname):
             logout_user()
         url = f'{PREFIX}login'
     elif pathname == f'{PREFIX}app':
-        if current_user.is_authenticated:
+        if current_user.is_authenticated and "uid" in flask.session:
             view = visdex_layout
         else:
             # Not authenticated - redirect to login page

@@ -10,8 +10,8 @@ from dash import html, dcc
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
-from visdex.timing import timing
-from visdex.data.cache import get_cache
+from visdex.common.timing import timing
+from visdex.data import data_store
 from visdex.common import vstack
 
 LOG = logging.getLogger(__name__)
@@ -20,13 +20,13 @@ def get_layout(app):
     @app.callback(
         Output("kde-figure", "figure"),
         [Input("heatmap-dropdown", "value"), Input("kde-checkbox", "value")],
-        [State("df-loaded-div", "children")],
+        [State("filtered-loaded-div", "children")],
         prevent_initial_call=True,
     )
     @timing
     def update_summary_kde(dropdown_values, kde_active, df_loaded):
         LOG.info(f"update_summary_kde")
-        cache = get_cache()
+        ds = data_store.get()
         if kde_active != ["kde-active"]:
             raise PreventUpdate
 
@@ -35,7 +35,7 @@ def get_layout(app):
         if df_loaded is False:
             return go.Figure(go.Scatter())
 
-        dff = cache.load("filtered")
+        dff = ds.load(data_store.FILTERED)
 
         n_variables = len(dropdown_values) if dropdown_values is not None else 0
 

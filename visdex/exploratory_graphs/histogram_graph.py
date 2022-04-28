@@ -5,7 +5,7 @@ import logging
 
 import plotly.graph_objects as go
 
-from visdex.data.cache import get_cache
+from visdex.data import data_store
 from .common import common_define_cbs
 
 LOG = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
-from visdex.data.cache import get_cache
+from visdex.data import data_store
 from visdex.common import default_marker_color
 
 from .common import all_components, update_graph_components
@@ -24,7 +24,7 @@ def define_cbs(app):
             Output({"type": "div-scatter-" + component["id"], "index": MATCH}, "children")
             for component in all_components["scatter"]
         ],
-        [Input("df-loaded-div", "children")],
+        [Input("filtered-loaded-div", "children")],
         [State({"type": "div-scatter-x", "index": MATCH}, "style")]
         + [
             State({"type": "scatter-" + component["id"], "index": MATCH}, prop)
@@ -34,8 +34,8 @@ def define_cbs(app):
     )
     def update_scatter_components(df_loaded, style_dict, *args):
         LOG.info(f"update_scatter_components")
-        cache = get_cache()
-        dff = cache.load("filtered")
+        ds = data_store.get()
+        dff = ds.load(data_store.FILTERED)
         dd_options = [{"label": col, "value": col} for col in dff.columns]
         return update_graph_components(
             "scatter", all_components["scatter"], dd_options, args
@@ -87,13 +87,13 @@ def define_cbs(app):
     )
     def make_scatter_figure(*args):
         LOG.info(f"make_scatter_figure")
-        cache = get_cache()
+        ds = data_store.get()
         # Generate the list of argument names based on the input order
         keys = [component["id"] for component in all_components["scatter"]]
 
         # Convert inputs to a dict called 'args_dict'
         args_dict = dict(zip(keys, args))
-        dff = cache.load("filtered")
+        dff = ds.load(data_store.FILTERED)
 
         facet_row_cats = (
             list(dff[args_dict["facet_row"]].unique())

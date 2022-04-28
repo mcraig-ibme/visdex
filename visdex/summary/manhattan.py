@@ -10,9 +10,9 @@ from dash.dependencies import Input, Output
 from dash import html, dcc
 import plotly.graph_objects as go
 
-from visdex.data.cache import get_cache
+from visdex.data import data_store
 from visdex.common import vstack
-from visdex.timing import timing, start_timer, log_timing, print_timings
+from visdex.common.timing import timing, start_timer, log_timing, print_timings
 from visdex.exploratory_graphs.manhattan_graph import (
     calculate_transformed_corrected_pval,
 )
@@ -28,7 +28,7 @@ def get_layout(app):
         [
             Input("manhattan-pval-input", "value"),
             Input("manhattan-logscale-check", "value"),
-            Input("df-filtered-loaded-div", "children"),
+            Input("filtered-loaded-div", "children"),
             Input("pval-loaded-div", "children"),
             Input("manhattan-active-check", "value"),
         ],
@@ -37,7 +37,7 @@ def get_layout(app):
     @timing
     def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
         LOG.info(f"plot_manhattan")
-        cache = get_cache()
+        ds = data_store.get()
 
         start_timer("plot_manhattan")
         if manhattan_active != ["manhattan-active"]:
@@ -45,7 +45,7 @@ def get_layout(app):
         if pvalue <= 0.0 or pvalue is None:
             raise PreventUpdate
 
-        dff = cache.load("pval")
+        dff = ds.load("pval")
 
         log_timing("plot_manhattan", "plot_manhattan-load_pval")
 
@@ -57,8 +57,8 @@ def get_layout(app):
             return go.Figure()
 
         # Load logs and flattened logs from feather file.
-        logs = cache.load("logs")
-        flattened_logs = cache.load("flattened_logs")
+        logs = ds.load("logs")
+        flattened_logs = ds.load("flattened_logs")
 
         log_timing("plot_manhattan", "plot_manhattan-load_both_logs")
 
@@ -78,7 +78,7 @@ def get_layout(app):
         log_timing("plot_manhattan", "plot_manhattan-load_cutoff")
 
         # Load cluster numbers to use for colouring
-        cluster_df = cache.load("cluster")
+        cluster_df = ds.load("cluster")
 
         log_timing("plot_manhattan", "plot_manhattan-load_cluster")
 

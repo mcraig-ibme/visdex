@@ -9,11 +9,11 @@ import logging
 import numpy as np
 
 from dash import html, dcc, dash_table
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 
-from visdex.common import vstack
-from visdex.data.cache import get_cache
-from visdex.timing import timing
+from visdex.common import vstack, hstack, standard_margin_left
+from visdex.data import data_store
+from visdex.common.timing import timing
 
 LOG = logging.getLogger(__name__)
 
@@ -21,19 +21,22 @@ def get_layout(app):
         
     @app.callback(
         [
-            Output("other_summary", "children"),
-            Output("table_summary", "children"),
-            Output("df-filtered-loaded-div", "children"),
+            Output("other-summary", "children"),
+            Output("table-summary", "children"),
+            Output("filtered-loaded-div", "children"),
         ],
-        [Input("df-loaded-div", "children"), Input("missing-values-input", "value")],
+        [
+            Input("df-loaded-div", "children"),
+            Input("missing-values-input", "value")
+        ],
         prevent_initial_call=True,
     )
     @timing
     def update_summary_table(df_loaded, missing_value_cutoff):
         LOG.info(f"update_summary_table")
-        cache = get_cache()
+        ds = data_store.get()
         # Keep index columns in the summary table
-        dff = cache.get_main(keep_index_cols=True)
+        dff = ds.load(data_store.MAIN_DATA, keep_index_cols=True)
 
         # If empty, return an empty Div
         if dff.size == 0:
@@ -65,7 +68,7 @@ def get_layout(app):
 
         # Save the filtered dff to feather file. This is the file that will be used for
         # all further processing.
-        cache.store("filtered", dff_filtered)
+        ds.store(data_store.FILTERED, dff_filtered)
 
         # Add the index back in as a column so we can see it in the table preview
         description_df.insert(loc=0, column="column name", value=description_df.index)
@@ -86,92 +89,134 @@ def get_layout(app):
             ]
         )
         specifiers = ["s", "d", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f"]
-        return (
-            html.Div(
-                [
-                    html.Div("#rows: " + str(dff.shape[0])),
-                    html.Div("#columns: " + str(dff.shape[1])),
-                ]
-            ),
-            html.Div(
-                dash_table.DataTable(
-                    id="table",
-                    columns=[
-                        {
-                            "name": description_df.columns[0].upper(),
-                            "id": description_df.columns[0],
-                            "type": "text",
-                            "format": {"specifier": "s"},
-                        }
-                    ]
-                    + [
-                        {
-                            "name": i.upper(),
-                            "id": i,
-                            "type": "numeric",
-                            "format": {"specifier": j},
-                        }
-                        for i, j in zip(description_df.columns[1:], specifiers[1:])
-                    ],
-                    data=description_df.to_dict("records"),
-                    page_size=20,
-                    # style_table={'height': '300px'},
-                    # Highlight any columns that do not have a complete set of records,
-                    # by comparing count against the length of the DF.
-                    style_data_conditional=[
-                        {
-                            "if": {
-                                "filter_query": "{{count}} < {}".format(dff.shape[0]),
-                                "column_id": "count",
-                            },
-                            "backgroundColor": "FireBrick",
-                            "color": "white",
-                        }
-                    ]
-                    + [
-                        {
-                            "if": {"filter_query": "{{column name}} = {}".format(i)},
-                            "backgroundColor": "Grey",
-                            "color": "white",
-                        }
-                        for i in dropped_columns
-                    ],
-                ),
-                # style={'width': '90%'}
-            ),
-            True,
+
+        other_summary_layout = html.Div(
+            [
+                html.Div("#rows: " + str(dff_filtered.shape[0])),
+                html.Div("#columns: " + str(dff_filtered.shape[1])),
+            ]
         )
+
+        table_summary_layout = html.Div(
+            dash_table.DataTable(
+                id="table",
+                columns=[
+                    {
+                        "name": description_df.columns[0].upper(),
+                        "id": description_df.columns[0],
+                        "type": "text",
+                        "format": {"specifier": "s"},
+                    }
+                ]
+                + [
+                    {
+                        "name": i.upper(),
+                        "id": i,
+                        "type": "numeric",
+                        "format": {"specifier": j},
+                    }
+                    for i, j in zip(description_df.columns[1:], specifiers[1:])
+                ],
+                data=description_df.to_dict("records"),
+                page_size=20,
+                # Highlight any columns that do not have a complete set of records,
+                # by comparing count against the length of the DF.
+                style_data_conditional=[
+                    {
+                        "if": {
+                            "filter_query": "{{count}} < {}".format(dff.shape[0]),
+                            "column_id": "count",
+                        },
+                        "backgroundColor": "FireBrick",
+                        "color": "white",
+                    }
+                ]
+                + [
+                    {
+                        "if": {"filter_query": "{{column name}} = {}".format(i)},
+                        "backgroundColor": "Grey",
+                        "color": "white",
+                    }
+                    for i in dropped_columns
+                ],
+            ),
+        )
+
+        return other_summary_layout, table_summary_layout, True
+
+    @app.callback(
+        Output("predicate-filter", "children"),
+        [Input("add-row-predicate-button", "n_clicks")],
+        [State("predicate-filter", "children")],
+        prevent_initial_call=True,
+    )
+    def add_row_predicate(n_clicks, children):
+        # Add a new graph group each time the button is clicked. The if None guard stops
+        # there being an initial graph.
+        LOG.info(f"add_row_predicate")
+        if n_clicks is not None:
+            new_predicate = html.Div(
+                id={"type": "predicate-filter", "index": n_clicks},
+                children=[
+                    html.Label("Row filter predicate", style=hstack),
+                    dcc.Input(
+                        id="predicate-filter-input",
+                        value=None,
+                        style=hstack,
+                    ),
+                ],
+            ),     
+
+            children.insert(len(children)-1, new_predicate)
+
+        return children
 
     layout = html.Div(children=[
         html.H3(children="Table Summary and Filter", style=vstack),
         html.Div(
-            "\nFilter out all columns missing at least X percentage of rows:",
-            style=vstack,
+            id="missing-values-filter",
+            children=[
+                html.Label("Filter out all columns missing at least X percentage of rows:", style=hstack),
+                dcc.Input(
+                    id="missing-values-input",
+                    type="number",
+                    min=0,
+                    max=100,
+                    debounce=True,
+                    value=None,
+                    style=hstack,
+                ),
+            ],
         ),
-        dcc.Input(
-            id="missing-values-input",
-            type="number",
-            min=0,
-            max=100,
-            debounce=True,
-            value=None,
-            style=vstack,
-        ),
+        html.Div(
+            id="predicate-filter",
+            children=[
+                html.Button(
+                    "Add row condition",
+                    id="add-row-predicate-button",
+                    style={
+                        "margin-top": "10px",
+                        "margin-left": standard_margin_left,
+                        "margin-bottom": "40px",
+                    },
+                ),
+            ],
+        ),   
         dcc.Loading(
             id="loading-table-summary",
             children=[
                 html.Div(
-                    id="other_summary",
+                    id="table-summary",
                     style={
-                        "width": "100%",
+                        "width": "95%",
                         "margin-left": "10px",
                         "margin-right": "10px",
                     },
                 ),
                 html.Div(
-                    id="table_summary",
+                    id="other-summary",
                     style={
-                        "width": "95%",
+                        "width": "100%",
                         "margin-left": "10px",
                         "margin-right": "10px",
                     },

@@ -58,6 +58,9 @@ def get_layout(app):
              ],
              is_open=False,
         ),
+        html.Div(id="filtered-loaded-div", style={"display": "none"}, children=[]),
+        html.Div(id="corr-loaded-div", style={"display": "none"}, children=[]),
+        html.Div(id="pval-loaded-div", style={"display": "none"}, children=[]),
     ])
 
     @app.callback(

@@ -9,8 +9,8 @@ from flask_login import current_user
 from dash import html, dcc
 from dash.dependencies import Input, Output
 
-from ._version import __version__
-from .common import hstack
+from visdex._version import __version__
+from . import hstack
 
 LOG = logging.getLogger(__name__)
 HEADER_IMAGE = "UoN_Primary_Logo_RGB.png"

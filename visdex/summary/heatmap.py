@@ -16,23 +16,23 @@ from dash.dependencies import Input, Output, State
 from dash import html, dcc
 import plotly.graph_objects as go
 
-from visdex.data.cache import get_cache
+from visdex.data import data_store
 from visdex.common import vstack
-from visdex.timing import timing, start_timer, log_timing, print_timings
+from visdex.common.timing import timing, start_timer, log_timing, print_timings
 
 LOG = logging.getLogger(__name__)
 
 def get_layout(app):
     @app.callback(
         [Output("heatmap-dropdown", "options"), Output("heatmap-dropdown", "value")],
-        [Input("df-filtered-loaded-div", "children")],
+        [Input("filtered-loaded-div", "children")],
         prevent_initial_call=True,
     )
     @timing
     def update_heatmap_dropdown(df_loaded):
         LOG.info(f"update_heatmap_dropdown {df_loaded}")
-        cache = get_cache()
-        dff = cache.load("filtered")
+        ds = data_store.get()
+        dff = ds.load(data_store.FILTERED)
 
         options = [
             {"label": col, "value": col}
@@ -242,13 +242,13 @@ def get_layout(app):
             Output("pval-loaded-div", "children"),
         ],
         [Input("heatmap-dropdown", "value"), Input("heatmap-clustering-input", "value")],
-        [State("df-loaded-div", "children")],
+        [State("filtered-loaded-div", "children")],
         prevent_initial_call=True,
     )
     @timing
     def update_summary_heatmap(dropdown_values, clusters, df_loaded):
         LOG.info(f"update_summary_heatmap {dropdown_values} {clusters}")
-        cache = get_cache()
+        ds = data_store.get()
         # Guard against the first argument being an empty list, as happens at first
         # invocation, or df_loaded being False
         if df_loaded is False or len(dropdown_values) <= 1:
@@ -256,7 +256,7 @@ def get_layout(app):
             return fig, False, False
 
         # Load main dataframe
-        dff = cache.load("filtered")
+        dff = ds.load(data_store.FILTERED)
 
         # Guard against the dataframe being empty
         if dff.size == 0:
@@ -264,9 +264,9 @@ def get_layout(app):
             return fig, False, False
 
         # Load data from previous calculation
-        corr_dff = cache.load("corr")
-        pval_dff = cache.load("pval")
-        logs_dff = cache.load("logs")
+        corr_dff = ds.load("corr")
+        pval_dff = ds.load("pval")
+        logs_dff = ds.load("logs")
 
         # The columns we want to have calculated
         selected_columns = list(dropdown_values)
@@ -295,7 +295,7 @@ def get_layout(app):
         # Save cluster number of each column to a DF and then to feather.
         cluster_df = pd.DataFrame(data=clx, index=corr.index, columns=["column_names"])
         LOG.debug(f"{cluster_df}")
-        cache.store("cluster", cluster_df)
+        ds.store("cluster", cluster_df)
 
         # TODO: what would be good here would be to rename the clusters based on the
         #  average variance (diags) within each cluster - that would reduce the
@@ -316,12 +316,12 @@ def get_layout(app):
         log_timing("update_summary_heatmap", "update_summary_heatmap-reorder")
 
         # Send to feather files
-        cache.store("corr", sorted_corr)
-        cache.store("pval", sorted_pval)
-        cache.store("logs", sorted_logs)
+        ds.store("corr", sorted_corr)
+        ds.store("pval", sorted_pval)
+        ds.store("logs", sorted_logs)
 
         flattened_logs = flattened(logs)
-        cache.store("flattened_logs", flattened_logs)
+        ds.store("flattened_logs", flattened_logs)
 
         log_timing("update_summary_heatmap", "update_summary_heatmap-save")
 

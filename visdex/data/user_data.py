@@ -1,10 +1,6 @@
 """
-Cache for parsed/processed data using Apache Feather files
+Manages access to user-uploaded data sets
 """
-import logging
-import os
-import tempfile
-import shutil
 
 import pandas as pd
 
@@ -18,51 +14,38 @@ KNOWN_INDICES = [
     ["SUBJECTKEY", "EVENTNAME"],
 ]
 
-class UserData:
+class UserData(DataStore):
 
     def __init__(self):
-        """
-        :param cachedir: Name of dir to use for cache - will create temporary dir if not specified
-        """
         DataStore.__init__(self, FeatherCache())
 
-    def get_main(self, keep_index_cols=False):
-        return self.load("parsed", keep_index_cols)
+    def set_source_data(self, df):
+        """
+        Set the main data source
 
-    def set_main(self, df):
+        After calling this method, the main data will be available
         """
-        Set the main data source in the cache
-        """
-        self.store("parsed", df)
+        self.store("src", df)
         self.set_columns()
 
-    def get_columns(self):
-        return self.load("columns")
-
-    def set_columns(self, cols=None):
+    def set_column_filter(self, cols=None):
         """
         Set the column filter which defines what main data columns 
         the user is interested in
-        """
-        if cols is None:
-            cols = self.load("parsed").columns
-        df = pd.DataFrame(cols, columns=["names"])
-        self.store("columns", df)
-        return self._filter_cols()
-    
-    def get_filtered(self, keep_index_cols=False):
-        raise NotImplementedError()
 
-    def _filter_cols(self):
+        :return: String warning if any problems were found
         """
-        Apply the column filter
-        """
-        df = self.load("parsed")
+        df = self.load("src")
+        if cols is None:
+            cols = df.columns
+        col_df = pd.DataFrame(cols, columns=["names"])
+        self.store("columns", col_df)
+        
         warning =""
 
         # Read in column DataFrame, or just use all the columns in the DataFrame
         if len(df) > 0:
-            variables_of_interest = list(self.load("columns")["names"])
+            variables_of_interest = list(cols)
 
             # Remove variables that don't exist in the dataframe
             missing_vars = [var for var in variables_of_interest if var not in df.columns]

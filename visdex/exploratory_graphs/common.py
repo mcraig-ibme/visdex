@@ -4,7 +4,7 @@ from collections import defaultdict
 from dash.dependencies import Input, Output, State, MATCH
 from dash import dcc
 
-from visdex.data.cache import get_cache
+from visdex.data import data_store
 
 LOG = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ def common_define_cbs(app, ctype, make_fig):
             Output({"type": f"div-{ctype}-{component['id']}", "index": MATCH}, "children")
             for component in all_components[ctype]
         ],
-        [Input("df-loaded-div", "children")],
+        [Input("filtered-loaded-div", "children")],
         [State({"type": f"div-{ctype}-x", "index": MATCH}, "style")]
         + [
             State({"type": f"{ctype}-{component['id']}", "index": MATCH}, prop)
@@ -24,8 +24,8 @@ def common_define_cbs(app, ctype, make_fig):
     )
     def update_components(df_loaded, style_dict, *args):
         LOG.info(f"update_{ctype}_components")
-        cache = get_cache()
-        dff = cache.load("filtered")
+        ds = data_store.get()
+        dff = ds.load(data_store.FILTERED)
         dd_options = [{"label": col, "value": col} for col in dff.columns]
         return update_graph_components(ctype, all_components[ctype], dd_options, args)
 
@@ -40,11 +40,11 @@ def common_define_cbs(app, ctype, make_fig):
     )
     def make_figure(*args):
         LOG.info(f"make_{ctype}_figure")
-        cache = get_cache()
+        ds = data_store.get()
         keys = [component["id"] for component in all_components[ctype]]
 
         args_dict = dict(zip(keys, args))
-        dff = cache.load("filtered")
+        dff = ds.load(data_store.FILTERED)
         return make_fig(dff, args_dict)
 
 # Definitions of supported plot types
