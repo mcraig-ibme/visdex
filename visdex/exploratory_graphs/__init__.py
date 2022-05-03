@@ -110,7 +110,7 @@ def get_layout(app):
         html.Div(
             [
                 dbc.Button(
-                    "+",
+                    "-",
                     id="collapse-explore-button",
                     style={
                         "display": "inline-block",
@@ -146,7 +146,7 @@ def get_layout(app):
                     },
                 ),
             ],
-            is_open=False,
+            is_open=True,
         ),
     ])
 

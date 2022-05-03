@@ -27,14 +27,6 @@ class AbcdData(DataStore):
         """
         return self._all_datasets
 
-    def select_datasets(self, datasets):
-        """
-        Select data sets of interest
-
-        :param datasets: Sequence of data set short names
-        """
-        self._datasets = datasets
-
     def get_all_fields(self):
         """
         :return: DataFrame containing all fields in selected data sets
@@ -51,7 +43,7 @@ class AbcdData(DataStore):
         else:
             return pd.concat(dfs, axis=0)
 
-    def select_fields(self, fields):
+    def update(self):
         """
         Set the chosen fields
 
@@ -59,9 +51,8 @@ class AbcdData(DataStore):
         
         :param fields: Dictionary of dataset short name : sequence of field names
         """
-        self._fields = [f["ElementName"] for f in fields]
-        self.log.info(self._fields)
 
+        # Build a data frame containing the selected fields from the corresponding datasets
         total_df = None
         for short_name in self._datasets:
             dict_fname = os.path.join(DICTDIR, "%s.csv" % short_name)
@@ -78,22 +69,26 @@ class AbcdData(DataStore):
         self.store(MAIN_DATA, df)
 
     def _get_dataset(self, short_name):
+        """
+        Retrieve a dataset as a data frame
+        """
         self.log.info(f"_get_dataset {short_name}")
         data_fname = os.path.join(DATADIR, "%s.txt" % short_name)
         df = pd.read_csv(data_fname, sep="\t", quotechar='"', skiprows=[1])
-        print(df)
+        #print("_get_dataset")
+        #print(df)
         #print(df.columns)
-        df.set_index('subjectkey')
+        df.set_index('subjectkey', inplace=True)
         if not df.index.is_unique:
             self.log.info(f"Dataset {short_name} is not subjectkey only")
-            df.reset_index()
+            df.reset_index(inplace=True)
             if 'eventname' in df.columns:
-                df.set_index(['subjectkey', 'eventname'])
+                df.set_index(['subjectkey', 'eventname'], inplace=True)
             else:
-                df.set_index(['subjectkey', 'visit'])
+                df.set_index(['subjectkey', 'visit'], inplace=True)
             if not df.index.is_unique:
                 self.log.warn(f"Dataset {short_name} still doesn't have a unique index")
         else:
             self.log.info(f"Dataset {short_name} is indexed by subjectkey")
-        print(df)
+        #print(df)
         return df

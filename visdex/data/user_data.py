@@ -1,6 +1,9 @@
 """
 Manages access to user-uploaded data sets
 """
+import base64
+import csv
+import io
 
 import pandas as pd
 
@@ -19,48 +22,52 @@ class UserData(DataStore):
     def __init__(self):
         DataStore.__init__(self, FeatherCache())
 
-    def set_source_data(self, df):
-        """
-        Set the main data source
+    def update(self):
+        if len(self._datasets) == 0:
+            return
+        elif len(self._datasets) > 1:
+            raise ValueError("User data can only have a single source data set")
 
-        After calling this method, the main data will be available
-        """
-        self.store("src", df)
-        self.set_columns()
+        contents, filename, date = self._datasets[0]
+        if contents is None:
+            return
 
-    def set_column_filter(self, cols=None):
-        """
-        Set the column filter which defines what main data columns 
-        the user is interested in
+        # Load the main data
+        _content_type, content_string = contents.split(",")
+        decoded = base64.b64decode(content_string)
 
-        :return: String warning if any problems were found
-        """
-        df = self.load("src")
-        if cols is None:
-            cols = df.columns
-        col_df = pd.DataFrame(cols, columns=["names"])
-        self.store("columns", col_df)
-        
-        warning =""
+        try:
+            if filename.endswith("csv") or filename.endswith("txt"):
+                # Assume that the user uploaded a delimited file
+                dialect = csv.Sniffer().sniff(decoded.decode("utf-8")[:1024])
+                df = pd.read_csv(io.StringIO(decoded.decode("utf-8")), sep=dialect.delimiter, quotechar=dialect.quotechar, low_memory=False)
+            elif filename.endswith("xlsx"):
+                # Assume that the user uploaded an excel file
+                df = pd.read_excel(io.BytesIO(decoded))
+            else:
+                raise NotImplementedError
+        except Exception as e:
+            raise ValueError(f"Error loading {filename}: {e}")
+            
+        # Filter the columns
+        if self._fields:
+            # Remove fields that don't exist in the source data
+            missing_vars = [var for var in self._fields if var not in df.columns]
+            present_vars = [var for var in self._fields if var in df.columns]
 
-        # Read in column DataFrame, or just use all the columns in the DataFrame
-        if len(df) > 0:
-            variables_of_interest = list(cols)
-
-            # Remove variables that don't exist in the dataframe
-            missing_vars = [var for var in variables_of_interest if var not in df.columns]
-            present_vars = [var for var in variables_of_interest if var in df.columns]
-
-            if not variables_of_interest:
-                warning = "No columns found in filter file - ignored"
-            elif missing_vars and not present_vars:
-                warning = "No columns found in filter file are present in main data - filter file ignored"
+            if missing_vars and not present_vars:
+                self.log.warn("No columns found in filter file are present in main data - filter file ignored")
+                self._fields = []
             elif missing_vars:
-                warning = "Some columns found in filter file not present in main data - these columns ignored"
+                self.log.warn("Some columns found in filter file not present in main data - these columns ignored")
+                self._fields = present_vars
 
-            # Keep only the columns listed in the filter file
-            if present_vars:
-                df = df[present_vars]
+        if self._fields:
+            df = df[self._fields]
+
+        # Filter the rows
+        if self._predicates:
+            pass
 
         self.log.info("df\n: %s" % str(df))
 
@@ -85,5 +92,4 @@ class UserData(DataStore):
                 break
 
         # Store the combined DF, and set df-loaded-div to [True]
-        self.store("df", df)
-        return warning
+        self.store(MAIN_DATA, df)

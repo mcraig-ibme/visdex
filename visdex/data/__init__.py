@@ -200,32 +200,13 @@ def get_layout(app):
         """
         LOG.info(f"data_file_changed")
         ds = data_store.get()
-
-        if contents is not None:
-            _content_type, content_string = contents.split(",")
-            decoded = base64.b64decode(content_string)
-
-            try:
-                if filename.endswith("csv") or filename.endswith("txt"):
-                    # Assume that the user uploaded a delimited file
-                    dialect = csv.Sniffer().sniff(decoded.decode("utf-8")[:1024])
-                    df = pd.read_csv(io.StringIO(decoded.decode("utf-8")), sep=dialect.delimiter, quotechar=dialect.quotechar, low_memory=False)
-                elif filename.endswith("xlsx"):
-                    # Assume that the user uploaded an excel file
-                    df = pd.read_excel(io.BytesIO(decoded))
-                else:
-                    raise NotImplementedError
-            except Exception as e:
-                LOG.error(f"{e}")
-                return ["There was an error processing this file", False]
-
-            ds.store(data_store.MAIN_DATA, df)
-            return [
-                f"{filename} loaded, last modified {datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}",
-                True
-            ]
-
-        return ["No file loaded", False]
+        try:
+            ds.datasets = [(contents, filename, date)]
+            # FIXME loaded with warning
+            return f"{filename} loaded, last modified {datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}"
+        except Exception as e:
+            LOG.error(f"{e}")
+            return "File not loaded: " + str(e), False
 
     @app.callback(
         [Output("filter-file", "children"), Output("data-warning", "children")],
@@ -243,25 +224,21 @@ def get_layout(app):
         LOG.info(f"filter_file_changed")
         ds = data_store.get()
 
-        if contents is not None:
+        if contents is None:
+            return "File not loaded", ""
+        
+        try:
             _content_type, content_string = contents.split(",")
             decoded = base64.b64decode(content_string).decode()
-
-            try:
-                variables_of_interest = [str(item) for item in decoded.splitlines()]
-            except Exception as e:
-                LOG.error(f"{e}")
-                return ["There was an error processing this file"]
-
-            warning = ds.set_column_filter(variables_of_interest)
-
-            return [
-                f"{filename} loaded, last modified "
-                f"{datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}",
-                warning
-            ]
-
-        return ["No file loaded", ""]
+            variables_of_interest = [str(item) for item in decoded.splitlines()]
+            ds.fields = variables_of_interest
+            return (
+                f"{filename} loaded, last modified {datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}",
+                ""
+            )
+        except Exception as e:
+            LOG.error(f"{e}")
+            return "File not loaded: " + str(e), ""
 
     @app.callback(
         [Output("filter-file-upload", "children")],
@@ -273,7 +250,7 @@ def get_layout(app):
         When using user data source, the column filter file has been cleared
         """
         LOG.info(f"clear filter")
-        data_store.get().set_column_filter()
+        data_store.get().fields = []
         return html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")])
 
     @app.callback(
@@ -282,45 +259,61 @@ def get_layout(app):
         Input("std-dataset-checklist", "derived_virtual_data"),
         Input("std-dataset-checklist", "derived_virtual_selected_rows"),
         State("std-field-checklist", "derived_virtual_data"),
-        State("std-field-checklist", "derived_virtual_selected_rows")
+        State("std-field-checklist", "derived_virtual_selected_rows"),
+        State("dataset-selection", "value"),
+        prevent_initial_call=True,
     )
-    def std_dataset_selection_changed(data, selected_rows, field_data, selected_field_rows):
+    def std_dataset_selection_changed(data, selected_rows, field_data, selected_field_rows, data_type):
         """
         When using a standard data source, the set of selected data sets have been changed
         """
-        selected_datasets = [data[idx]["short_name"] for idx in selected_rows]
-        data_store.get().select_datasets(selected_datasets)
-        fields = data_store.get().get_all_fields().to_dict('records')
+        # Not sure why this is needed when we have prevent_initial_call=True?
+        if data_type == "user":
+            return [], []
 
-        # Change the set of selected field rows so they match the same fields before the change
-        selected_fields_cur = [field_data[idx]["ElementName"] for idx in selected_field_rows]
-        selected_fields_new = [idx for idx, record in enumerate(fields) if record["ElementName"] in selected_fields_cur]
+        try:
+            selected_datasets = [data[idx]["short_name"] for idx in selected_rows]
+            data_store.get().datasets = selected_datasets
+            fields = data_store.get().get_all_fields().to_dict('records')
 
-        return fields, selected_fields_new
+            # Change the set of selected field rows so they match the same fields before the change
+            selected_fields_cur = [field_data[idx]["ElementName"] for idx in selected_field_rows]
+            selected_fields_new = [idx for idx, record in enumerate(fields) if record["ElementName"] in selected_fields_cur]
+
+            return fields, selected_fields_new
+        except Exception as e:
+            LOG.error(f"{e}")
+            return [], []
 
     @app.callback(
         Output("std-dataset-desc", "children"),
         Input("std-dataset-checklist", "derived_virtual_data"),
         Input("std-dataset-checklist", "active_cell"),
+        prevent_initial_call=True,
     )
     def std_dataset_active_changed(data, active_cell):
         """
         When using a standard data source, the active (clicked on) selected data set has been changed
         """
-        return data[active_cell["row"]]["desc"]
+        try:
+            return data[active_cell["row"]]["desc"]
+        except (TypeError, IndexError):
+            return ""
 
     @app.callback(
         Output("std-field-desc", "children"),
         Input("std-field-checklist", "derived_virtual_data"),
         Input("std-field-checklist", "active_cell"),
+        prevent_initial_call=True,
     )
-    def std_dataset_active_changed(data, active_cell):
+    def std_field_active_changed(data, active_cell):
         """
         When using a standard data source, the active (clicked on) selected field has been changed
         """
-        if active_cell is not None and active_cell["row"] is not None:
-            print(data[active_cell["row"]])
+        try:
             return data[active_cell["row"]]["ElementDescription"]
+        except (TypeError, IndexError):
+            return ""
 
     @app.callback(
         [
@@ -352,8 +345,12 @@ def get_layout(app):
         When using standard data, the load button is clicked
         """
         LOG.info(f"Load standard data")
-        selected_fields = [fields[idx] for idx in selected_rows]
-        data_store.get().select_fields(selected_fields)
-        return True
+        selected_fields = [fields[idx]["ElementName"] for idx in selected_rows]
+        try:
+            data_store.get().fields = selected_fields
+            return True
+        except Exception as e:
+            LOG.error(f"{e}")
+            return False
 
     return layout

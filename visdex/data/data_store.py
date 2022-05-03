@@ -4,6 +4,9 @@ retrieving per-session instances
 """
 import logging
 
+import numpy as np
+from pandas.api.types import is_string_dtype
+
 from flask import session
 
 LOG = logging.getLogger(__name__)
@@ -32,14 +35,14 @@ def get():
         init()
     return DATA_STORES[uid]
 
-MAIN_DATA = "df"
-FILTERED = "filtered"
-
 def remove():
     uid = session["uid"].hex
     if uid in DATA_STORES:
         LOG.info("Removing data store for session: %s" % uid)
         del DATA_STORES[uid]
+
+MAIN_DATA = "df"
+FILTERED = "filtered"
 
 class DataStore:
     """
@@ -52,6 +55,128 @@ class DataStore:
     def __init__(self, backend):
         self.log = logging.getLogger(__name__)
         self.backend = backend
+        self._datasets = []
+        self._fields = []
+        self._missing_values_threshold = 101
+        self._predicates = []
+
+    @property
+    def datasets(self):
+        return self._datasets
+
+    @datasets.setter
+    def datasets(self, value):
+        self.log.info("Set datasets: %s", value)
+        if value != self._datasets:
+            self._datasets = value
+            self.update()
+            self.filter()
+
+    @property
+    def fields(self):
+        return self._fields
+
+    @fields.setter
+    def fields(self, value):
+        self.log.info("Set fields: %s", value)
+        if value != self._fields:
+            self._fields = value
+            self.update()
+            self.filter()
+
+    @property
+    def missing_values_threshold(self):
+        return self._missing_values_threshold
+
+    @datasets.setter
+    def missing_values_threshold(self, value):
+        if value is None:
+            value = 101
+        self.log.info("Set missing_values_threshold: %s", value)
+        if value != self._missing_values_threshold:
+            self._missing_values_threshold = value
+            self.filter()
+
+    @property
+    def predicates(self):
+        return self._predicates
+
+    @predicates.setter
+    def predicates(self, value):
+        if value is None:
+            value = []
+        self.log.info("Set predicates: %s", value)
+        if value != self._predicates:
+            self._predicates = value
+            self.filter()
+
+    def filter(self):
+        df = self.load(MAIN_DATA)
+        self.log.info("Filter: pre-filter %s", df.shape)
+
+        # Apply row filters
+        for column, operator, value in self._predicates:
+            if column not in df:
+                self.log.warn("%s not found in data - ignoring row filter", column)
+            elif operator not in ('==', '>', '<', '<-', '>='):
+                self.log.warn("%s not a supported operator - ignoring row filter", operator)
+            elif not value.strip():
+                self.log.warn("No value given - ignoring row filter", operator)
+            else:
+                if is_string_dtype(df[column]):
+                    query = f'`{column}` {operator} "{value}"'
+                    self.log.info("Filtering string col: %s", query)
+                else:
+                    query = f'`{column}` {operator} {value}'
+                    self.log.info("Filtering numeric col: %s", query)
+                df = df.query(query)
+
+        # Apply missing values threshold
+        if self._missing_values_threshold > 0:
+            percent_missing = df.isnull().sum() * 100 / len(df)
+            keep_cols = [col for col, missing in zip(list(df.columns), percent_missing) if missing <= self._missing_values_threshold]
+            self.log.info("Filter: keep cols %s", keep_cols)
+            df = df[keep_cols]
+
+        self.log.info("Filter: post-filter %s", df.shape)
+        self.store(FILTERED, df)
+
+    @property
+    def description(self):
+        df = self.load(MAIN_DATA)
+        description_df = df.describe().transpose()
+
+        # Add largely empty rows to the summary table for non-numeric columns.
+        for col in df.columns:
+            if col not in description_df.index:
+                description_df.loc[col] = [df.count()[col]] + [np.nan] * 7
+
+        # Calculate percentage of missing values
+        description_df["% missing values"] = 100 * (1 - description_df["count"] / len(df.index))
+
+        # Add the index back in as a column so we can see it in the table preview
+        description_df.insert(loc=0, column="column name", value=description_df.index)
+
+        # Reorder the columns so that 50% centile is next to 'mean'
+        description_df = description_df.reindex(
+            columns=[
+                "column name",
+                "count",
+                "mean",
+                "50%",
+                "std",
+                "min",
+                "25%",
+                "75%",
+                "max",
+                "% missing values",
+            ]
+        )
+
+        return description_df
+
+    def update(self):
+        raise NotImplementedError()
 
     def store(self, name, df):
         """

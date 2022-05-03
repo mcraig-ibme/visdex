@@ -14,14 +14,16 @@ class PreviewTable(Component):
     Component that displays the first few lines of a data frame
     """
 
-    def __init__(self, app, id_prefix="preview-", update_div_id="df-loaded-div"):
+    def __init__(self, app, title, id_prefix="preview-", update_div_id="df-loaded-div", data_id=data_store.MAIN_DATA):
         """
         :param app: Dash application
         :param id_prefix: Prefix string for HTML component identifiers
         :param update_div_id: ID of div that signals when to update
         """
+        self.data_id = data_id
+
         Component.__init__(self, app, id_prefix, children=[
-            html.H3(children="Table Preview", style=vstack),
+            html.H3(children=title, style=vstack),
             dcc.Loading(
                 id=id_prefix + "loading",
                 children=[
@@ -48,16 +50,20 @@ class PreviewTable(Component):
         ds = data_store.get()
 
         # We want to be able to see the index columns in the preview table
-        dff = ds.load(data_store.MAIN_DATA, keep_index_cols=True)
+        dff = ds.load(self.data_id, keep_index_cols=True)
 
         if dff.size > 0:
-            return html.Div(
+            return html.Div(children=[
                 dash_table.DataTable(
                     id=self.id_prefix + "data-table",
                     columns=[{"name": i, "id": i} for i in dff.columns],
                     data=dff.head().to_dict("records"),
                     style_table={"overflowX": "auto"},
                 ),
-            )
+                html.Div([
+                    html.Div("Rows: " + str(dff.shape[0])),
+                    html.Div("Columns: " + str(dff.shape[1])),
+                ])
+            ])
         else:
             return html.Div(dash_table.DataTable(self.id_prefix + "data-table"))
