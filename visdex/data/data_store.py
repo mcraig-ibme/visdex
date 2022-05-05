@@ -22,9 +22,9 @@ def init(std_data=None):
     if std_data is None:
         from .user_data import UserData
         DATA_STORES[uid] = UserData()
-    elif std_data == "abcd":
-        from .abcd_data import AbcdData
-        DATA_STORES[uid] = AbcdData()
+    elif std_data in ("abcd", "earlypsychosis", "hcpageing"):
+        from .nda_data import NdaData
+        DATA_STORES[uid] = NdaData(std_data)
     else:
         raise RuntimeError(f"Unknown standard data type: '{std_data}'")
 
@@ -116,20 +116,24 @@ class DataStore:
 
         # Apply row filters
         for column, operator, value in self._predicates:
-            if column not in df:
+            if operator == "random":
+                self.log.info("Doing random sample of %s", value)
+                df = df.sample(value)
+            elif column not in df:
                 self.log.warn("%s not found in data - ignoring row filter", column)
-            elif operator not in ('==', '>', '<', '<-', '>='):
+            elif operator not in ('==', '>', '<', '<-', '>=', "Not empty"):
                 self.log.warn("%s not a supported operator - ignoring row filter", operator)
-            elif not value.strip():
-                self.log.warn("No value given - ignoring row filter", operator)
             else:
-                if is_string_dtype(df[column]):
-                    query = f'`{column}` {operator} "{value}"'
-                    self.log.info("Filtering string col: %s", query)
+                if operator == "Not empty":
+                    df = df[df[column].notna()]
                 else:
-                    query = f'`{column}` {operator} {value}'
-                    self.log.info("Filtering numeric col: %s", query)
-                df = df.query(query)
+                    if not value.strip():
+                        self.log.warn("No value given - ignoring row filter")
+                    else:
+                        if is_string_dtype(df[column]):
+                            value = f'"{value}"'
+                        query = f'`{column}` {operator} {value}'
+                        df = df.query(query)
 
         # Apply missing values threshold
         if self._missing_values_threshold > 0:

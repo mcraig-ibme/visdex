@@ -28,7 +28,9 @@ def get_layout(app):
                 id="dataset-selection",
                 options=[
                     {'label': 'Upload a CSV/TSV data set', 'value': 'user'},
-                    {'label': 'ABCD data', 'value': 'abcd'},
+                    {'label': 'ABCD release 4.0', 'value': 'abcd'},
+                    {'label': 'Early psychosis study', 'value': 'earlypsychosis'},
+                    {'label': 'HCP Ageing', 'value': 'hcpageing'},
                 ],
                 value='user',
             ),
@@ -113,11 +115,11 @@ def get_layout(app):
                 html.Div(
                     id="std-dataset-select",
                     children=[
-                        html.H3("ABCD data sets"),
+                        html.H3("Data sets"),
                         html.Div(
                             id="std-datasets",
                             children=[
-                                dash_table.DataTable(id="std-dataset-checklist", columns=[{"name": "Name", "id": "name"}], row_selectable='multi', style_cell={'textAlign': 'left'}),
+                                dash_table.DataTable(id="std-dataset-checklist", columns=[{"name": "Name", "id": "title"}], row_selectable='multi', style_cell={'textAlign': 'left'}),
                             ],
                             style={
                                 "width": "100%", "height" : "300px", "overflow-y" : "scroll",
@@ -272,7 +274,7 @@ def get_layout(app):
             return [], []
 
         try:
-            selected_datasets = [data[idx]["short_name"] for idx in selected_rows]
+            selected_datasets = [data[idx]["shortname"] for idx in selected_rows]
             data_store.get().datasets = selected_datasets
             fields = data_store.get().get_all_fields().to_dict('records')
 
@@ -297,7 +299,7 @@ def get_layout(app):
         """
         try:
             return data[active_cell["row"]]["desc"]
-        except (TypeError, IndexError):
+        except (TypeError, KeyError, IndexError):
             return ""
 
     @app.callback(

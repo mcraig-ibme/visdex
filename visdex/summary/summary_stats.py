@@ -28,12 +28,13 @@ def get_layout(app):
             Input({"type": "predicate-filter-column", "index": ALL}, "value"),
             Input({"type": "predicate-filter-op", "index": ALL}, "value"),
             Input({"type": "predicate-filter-value", "index": ALL}, "value"),
+            Input("random-sample-input", "value"),
             Input("predicate-filter-container", "children"),
         ],
         prevent_initial_call=True,
     )
     @timing
-    def update_summary_table(df_loaded, missing_value_cutoff, pred_cols, pred_ops, pred_values, _pred_children):
+    def update_summary_table(df_loaded, missing_value_cutoff, pred_cols, pred_ops, pred_values, random_sample, _pred_children):
         LOG.info(f"update_summary_table")
         ds = data_store.get()
 
@@ -84,7 +85,14 @@ def get_layout(app):
         )
 
         ds.missing_values_threshold = missing_value_cutoff
-        ds.predicates= list(zip(pred_cols, pred_ops, pred_values))
+        predicates = list(zip(pred_cols, pred_ops, pred_values))
+        try:
+            random_sample_size = int(random_sample)
+            LOG.info("Random sample size: %i", random_sample_size)
+            predicates.append((None, "random", random_sample_size))
+        except:
+            pass
+        ds.predicates = predicates
 
         return table_summary_layout, True
 
@@ -111,11 +119,11 @@ def get_layout(app):
                 ]
                 op_options = [
                     {'label': c, 'value': c}
-                    for c in ["==", ">", ">=", "<", "<=" "!="]
+                    for c in ["==", ">", ">=", "<", "<=" "!=", "Not empty"]
                 ]
                 new_predicate = html.Div(
                     [
-                        html.Label("Row filter", style={"display" : "inline-block", "verticalAlign" : "middle"}),
+                        html.Label("Column: ", style={"display" : "inline-block", "verticalAlign" : "middle"}),
                         dcc.Dropdown(
                             id={"type" : "predicate-filter-column", "index" : n_clicks},
                             options=col_options, value=None,
@@ -124,11 +132,11 @@ def get_layout(app):
                         dcc.Dropdown(
                             id={"type" : "predicate-filter-op", "index" : n_clicks},
                             options=op_options, value="=",
-                            style={"width" : "50px", "display" : "inline-block", "verticalAlign" : "middle"},
+                            style={"width" : "200px", "display" : "inline-block", "verticalAlign" : "middle"},
                         ),
                         dcc.Input(
                             id={"type" : "predicate-filter-value", "index" : n_clicks},
-                            style={"width" : "20%", "display" : "inline-block", "verticalAlign" : "middle"},
+                            style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"},
                         ),
                     ],
                     id="predicate-filter-%i" % n_clicks,
@@ -153,7 +161,7 @@ def get_layout(app):
                 ),
             ],
         ),
-        html.H3(children="Row/column filter", style=vstack),
+        html.H3(children="Column filter", style=vstack),
         html.Div(
             id="missing-values-filter",
             children=[
@@ -169,9 +177,14 @@ def get_layout(app):
                 ),
             ],
         ),        
+        html.H3(children="Row filter", style=vstack),
         html.Div(
             id="predicate-filters",
             children=[
+                html.Div(id="random-sample", children=[
+                    html.Label("Return random sample of: ", style={"display" : "inline-block", "verticalAlign" : "middle"}),
+                    dcc.Input(id="random-sample-input", style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"}),
+                ]),                
                 html.Div(id="predicate-filter-container", children=[]),
                 html.Button(
                     "Add row condition",

@@ -2,24 +2,31 @@
 Code to access ABCD data sets
 """
 import os
-import logging
 
 import pandas as pd
 
 from .data_store import DataStore, MAIN_DATA
 from .feather_cache import FeatherCache
  
-DATADIR = "/home/martin/nda/abcd"
-DICTDIR = os.path.join(DATADIR, "abcd-4.0-data-dictionaries")
+GLOBAL_DATADIR = "/home/martin/nda/"
+GLOBAL_DICTDIR = os.path.join(GLOBAL_DATADIR, "dictionary")
 STD_FIELDS = ["subjectkey", "src_subject_id", "interview_date", "interview_age", "sex", "eventname"]
 
-class AbcdData(DataStore):
-    def __init__(self):
+class NdaData(DataStore):
+    def __init__(self, study_name):
         DataStore.__init__(self, FeatherCache())
-        self._all_datasets = pd.read_csv(os.path.join(DATADIR, "datasets.tsv"), sep="\t", quotechar='"')
+        self._study_name = study_name
+        self._datadir = os.path.join(GLOBAL_DATADIR, study_name)
+        self._dataset_names = [fname.split(".")[0] for fname in os.listdir(self._datadir) if fname.endswith(".txt")]
+        self.log.info(self._dataset_names)
+        df = pd.read_csv(os.path.join(GLOBAL_DATADIR, "datasets.tsv"), sep="\t", quotechar='"')
+        self.log.info(df)
+        self._all_datasets = df[df['shortname'].isin(self._dataset_names)]
         self._fields = {}
         self._datasets = []
-        print(self._datasets)
+        self.log.info("NDA data source for study %s", self._study_name)
+        self.log.info("Found %i data sets", len(self._all_datasets))
+        self.log.info(self._all_datasets)
 
     def get_all_datasets(self):
         """
@@ -33,7 +40,7 @@ class AbcdData(DataStore):
         """
         dfs = []
         for short_name in self._datasets:
-            dict_fname = os.path.join(DICTDIR, "%s.csv" % short_name)
+            dict_fname = os.path.join(GLOBAL_DICTDIR, "%s.csv" % short_name)
             df = pd.read_csv(dict_fname, sep=",", quotechar='"')
             df.drop(df[df.ElementName.isin(STD_FIELDS)].index, inplace=True)
             dfs.append(df)
@@ -55,7 +62,7 @@ class AbcdData(DataStore):
         # Build a data frame containing the selected fields from the corresponding datasets
         total_df = None
         for short_name in self._datasets:
-            dict_fname = os.path.join(DICTDIR, "%s.csv" % short_name)
+            dict_fname = os.path.join(GLOBAL_DICTDIR, "%s.csv" % short_name)
             df = pd.read_csv(dict_fname, sep=",", quotechar='"')
             df_fields = df["ElementName"]
             self.log.info(f"Dataset {short_name} has fields {df_fields}")
@@ -73,7 +80,7 @@ class AbcdData(DataStore):
         Retrieve a dataset as a data frame
         """
         self.log.info(f"_get_dataset {short_name}")
-        data_fname = os.path.join(DATADIR, "%s.txt" % short_name)
+        data_fname = os.path.join(self._datadir, "%s.txt" % short_name)
         df = pd.read_csv(data_fname, sep="\t", quotechar='"', skiprows=[1])
         #print("_get_dataset")
         print(df)
