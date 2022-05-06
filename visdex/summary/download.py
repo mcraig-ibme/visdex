@@ -29,8 +29,14 @@ class Download(Component):
                     id=id_prefix + "ids-button",
                     style=hstack,
                 ),
+            html.Button(
+                    "Download data links",
+                    id=id_prefix + "links-button",
+                    style=hstack,
+                ),
             dcc.Download(id=id_prefix + "download-data"),
             dcc.Download(id=id_prefix + "download-ids"),
+            dcc.Download(id=id_prefix + "download-links"),
         ])
 
         self.register_cb(app, "download_data",
@@ -45,6 +51,12 @@ class Download(Component):
             prevent_initial_call=True,
         )
 
+        self.register_cb(app, "download_links",
+            Output(id_prefix + "download-links", "data"),
+            Input(id_prefix + "links-button", "n_clicks"),
+            prevent_initial_call=True,
+        )
+
     def download_data(self, n_clicks):
         self.log.debug("Download data")
         df = data_store.get().load(data_store.FILTERED)
@@ -54,3 +66,15 @@ class Download(Component):
         self.log.debug("Download IDs")
         df = pd.DataFrame(index=data_store.get().load(data_store.FILTERED).index)
         return dcc.send_data_frame(df.to_csv, "visdex_ids.csv")
+
+    def download_links(self, n_clicks):
+        self.log.debug("Download links")
+        df = data_store.get().load(data_store.FILTERED)
+        s3_links = []
+        for col in df.columns:
+            col_data = df[col]
+            if col_data.str.contains('s3://').any():
+                links = col_data[col_data.str.contains('s3://')]
+                s3_links += list(col_data)
+    
+        return dict(content="\n".join(s3_links), filename="visdex_links.txt")
