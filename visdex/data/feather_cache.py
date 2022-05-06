@@ -43,7 +43,7 @@ class FeatherCache:
                 self.log.debug(f"Restoring index cols: {index_cols}")
                 if index_cols == ["index"]:
                     keep_index_cols = False
-                df.set_index(index_cols, inplace=True, verify_integrity=True, drop=not keep_index_cols)
+                df.set_index(index_cols, inplace=True, drop=not keep_index_cols)
                 self.log.debug(f"df (index restored): {df}")
             except FileNotFoundError:
                 self.log.warning(f"No index found")

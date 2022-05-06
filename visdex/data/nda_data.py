@@ -82,20 +82,19 @@ class NdaData(DataStore):
         self.log.info(f"_get_dataset {short_name}")
         data_fname = os.path.join(self._datadir, "%s.txt" % short_name)
         df = pd.read_csv(data_fname, sep="\t", quotechar='"', skiprows=[1])
-        #print("_get_dataset")
-        print(df)
-        #print(df.columns)
         df.set_index('subjectkey', inplace=True)
         if not df.index.is_unique:
             self.log.info(f"Dataset {short_name} is not subjectkey only")
             df.reset_index(inplace=True)
             if 'eventname' in df.columns:
                 df.set_index(['subjectkey', 'eventname'], inplace=True)
-            else:
+            elif 'visit' in df.columns:
                 df.set_index(['subjectkey', 'visit'], inplace=True)
+            else:
+                df.set_index('subjectkey', inplace=True)
+
             if not df.index.is_unique:
                 self.log.warn(f"Dataset {short_name} still doesn't have a unique index")
         else:
             self.log.info(f"Dataset {short_name} is indexed by subjectkey")
-        print(df)
         return df
