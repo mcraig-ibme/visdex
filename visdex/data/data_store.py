@@ -111,6 +111,9 @@ class DataStore:
             self.filter()
 
     def filter(self):
+        """
+        Do row/column filtering on main data
+        """
         df = self.load(MAIN_DATA)
         self.log.info("Filter: pre-filter %s", df.shape)
 
@@ -121,7 +124,7 @@ class DataStore:
                 df = df.sample(value)
             elif column not in df:
                 self.log.warn("%s not found in data - ignoring row filter", column)
-            elif operator not in ('==', '>', '<', '<-', '>=', "Not empty"):
+            elif operator not in ('==', '>', '<', '<-', '>=', "Not empty", "contains"):
                 self.log.warn("%s not a supported operator - ignoring row filter", operator)
             else:
                 if operator == "Not empty":
@@ -132,10 +135,13 @@ class DataStore:
                     else:
                         if is_string_dtype(df[column]):
                             value = f'"{value}"'
-                        query = f'`{column}` {operator} {value}'
-                        df = df.query(query)
+                        if operator == "contains":
+                            query = f'`{column}`.str.contains({value})'
+                        else:
+                            query = f'`{column}` {operator} {value}'
+                        df = df.query(query, engine="python")
 
-        # Apply missing values threshold
+        # Apply missing values threshold to remove columns with too many missing values
         if self._missing_values_threshold > 0:
             percent_missing = df.isnull().sum() * 100 / len(df)
             keep_cols = [col for col, missing in zip(list(df.columns), percent_missing) if missing <= self._missing_values_threshold]
@@ -147,6 +153,10 @@ class DataStore:
 
     @property
     def description(self):
+        """
+        :return: DataFrame containing description of the selected data. There is a row for
+                 each field with count, basic summary stats and % of missing values
+        """
         df = self.load(MAIN_DATA)
         description_df = df.describe().transpose()
 

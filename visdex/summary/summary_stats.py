@@ -119,7 +119,7 @@ def get_layout(app):
                 ]
                 op_options = [
                     {'label': c, 'value': c}
-                    for c in ["==", ">", ">=", "<", "<=" "!=", "Not empty"]
+                    for c in ["==", ">", ">=", "<", "<=", "!=", "contains", "Not empty"]
                 ]
                 new_predicate = html.Div(
                     [
