@@ -89,7 +89,7 @@ def get_layout(app):
         # Create initial existing vs existing DF
         ########
 
-        # If there is overlap, then create brand new empty dataframes.
+        # If there is no overlap, then create brand new empty dataframes.
         # Otherwise, update the existing dataframes.
         if len(overlap) == 0:
             LOG.debug(f"create new")
@@ -197,7 +197,10 @@ def get_layout(app):
                     # Mask out any pairs that contain nans (this is done pairwise rather
                     # than using .dropna on the full dataframe)
                     mask = ~np.isnan(np_req[:, v1_idx]) & ~np.isnan(np_req[:, v2_idx])
-                    c, p = stats.pearsonr(np_req[mask, v1_idx], np_req[mask, v2_idx])
+                    if np.count_nonzero(mask) == 0:
+                        c, p = 0, 0
+                    else:
+                        c, p = stats.pearsonr(np_req[mask, v1_idx], np_req[mask, v2_idx])
                     new_against_new_corr[v1_idx, v2_idx] = c
                     new_against_new_corr[v2_idx, v1_idx] = c
                     new_against_new_pval[v1_idx, v2_idx] = p
