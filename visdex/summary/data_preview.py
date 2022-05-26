@@ -1,5 +1,5 @@
 """
-visdex: preview table
+visdex: data preview table
 
 Shows a basic summary of the first few rows in the data 
 """
@@ -9,7 +9,7 @@ from dash.dependencies import Input, Output
 from visdex.common import Component, vstack
 from visdex.data import data_store
 
-class PreviewTable(Component):
+class DataPreview(Component):
     """
     Component that displays the first few lines of a data frame
     """

@@ -180,11 +180,7 @@ def get_layout(app):
         html.H3(children="Row filter", style=vstack),
         html.Div(
             id="predicate-filters",
-            children=[
-                html.Div(id="random-sample", children=[
-                    html.Label("Return random sample of: ", style={"display" : "inline-block", "verticalAlign" : "middle"}),
-                    dcc.Input(id="random-sample-input", style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"}),
-                ]),                
+            children=[           
                 html.Div(id="predicate-filter-container", children=[]),
                 html.Button(
                     "Add row condition",
@@ -195,6 +191,10 @@ def get_layout(app):
                         "margin-bottom": "40px",
                     },
                 ),
+                html.Div(id="random-sample", children=[
+                    html.Label("Return random sample of: ", style={"display" : "inline-block", "verticalAlign" : "middle"}),
+                    dcc.Input(id="random-sample-input", style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"}),
+                ]),
             ],
         ),
     ])
