@@ -284,7 +284,7 @@ def get_layout(app):
 
             return fields, selected_fields_new
         except Exception as e:
-            LOG.error(f"{e}")
+            LOG.exception('Error changing std dataset')
             return [], []
 
     @app.callback(
@@ -352,7 +352,7 @@ def get_layout(app):
             data_store.get().fields = selected_fields
             return True
         except Exception as e:
-            LOG.error(f"{e}")
+            LOG.exception('Error loading std dataset')
             return False
 
     return layout
