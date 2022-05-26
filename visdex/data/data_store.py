@@ -110,6 +110,13 @@ class DataStore:
             self._predicates = value
             self.filter()
 
+    @property
+    def imaging_types(self):
+        """
+        :return: Sequence of imaging data types available for subjects (if any)
+        """
+        return []
+
     def filter(self):
         """
         Do row/column filtering on main data
@@ -190,6 +197,9 @@ class DataStore:
         return description_df
 
     def update(self):
+        """
+        Called to update the main data selection after datasets/fields changed
+        """
         raise NotImplementedError()
 
     def store(self, name, df):
