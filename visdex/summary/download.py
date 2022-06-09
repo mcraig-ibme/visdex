@@ -75,6 +75,7 @@ class Download(Component):
             [
                 Output(id_prefix + "links-modal", "is_open"),
                 Output(id_prefix + "links-modal-table", "data"),
+                Output(id_prefix + "download-links", "data"),
             ],
             [
                 Input(id_prefix + "links-button", "n_clicks"),
@@ -83,16 +84,10 @@ class Download(Component):
             ],
             [
                 State(id_prefix + "links-modal", "is_open"),
+                State(id_prefix + "links-modal-table", "derived_virtual_data"),
+                State(id_prefix + "links-modal-table", "derived_virtual_selected_rows"),
             ],
             #Output(id_prefix + "download-links", "data"),
-            prevent_initial_call=True,
-        )
-
-        self.register_cb(app, "download_links",
-            Output(id_prefix + "download-links", "data"),
-            Input(id_prefix + "links-modal-ok", "n_clicks"),
-            State(id_prefix + "links-modal-table", "derived_virtual_data"),
-            State(id_prefix + "links-modal-table", "derived_virtual_selected_rows"),
             prevent_initial_call=True,
         )
 
@@ -106,28 +101,29 @@ class Download(Component):
         df = pd.DataFrame(index=data_store.get().load(data_store.FILTERED).index)
         return dcc.send_data_frame(df.to_csv, "visdex_ids.csv")
 
-    def show_links_modal(self, show_n_clicks, ok_n_clicks, cancel_n_clicks, is_open):
+    def show_links_modal(self, show_n_clicks, ok_n_clicks, cancel_n_clicks, is_open, imaging_types, selected_rows):
         """
         Show modal for downloading imaging data links
         """
         triggered_ids = [c["prop_id"] for c in ctx.triggered]
-        print(triggered_ids)
         if triggered_ids[0] == self.id_prefix + "links-button.n_clicks":
+            # Initial show of modal dialog
             ds = data_store.get()
             imaging_types = [{"desc" : v} for v in ds.imaging_types]
-            return True, imaging_types
+            return True, imaging_types, None
         elif triggered_ids[0] == self.id_prefix + "links-modal-ok.n_clicks":
-            # do download
-            return False, []
+            # Ok clicked
+            return False, [], self.download_links(imaging_types, selected_rows)
         else:
             # Cancel clicked
-            return False, []
+            return False, [], None
 
-    def download_links(self, n_clicks, data, selected_rows):
-        self.log.debug("Download links")
-        print(data)
-        print(selected_rows)
-        #df = data_store.get().load(data_store.FILTERED)
+    def download_links(self, imaging_types, selected_rows):
+        self.log.debug("Download imaging links")
+        self.log.debug(str(imaging_types))
+        self.log.debug(str(selected_rows))
+        df = data_store.get().load(data_store.FILTERED)
+        return dcc.send_data_frame(df.to_csv, "visdex_data.csv")
         #s3_links = []
         #for col in df.columns:
         #    col_data = df[col]
