@@ -52,6 +52,7 @@ class Download(Component):
                 ),
             ],
             id=id_prefix + "links-modal",
+            size="xl",
         ),
             dcc.Download(id=id_prefix + "download-data"),
             dcc.Download(id=id_prefix + "download-ids"),
@@ -105,7 +106,7 @@ class Download(Component):
         df = pd.DataFrame(index=data_store.get().load(data_store.FILTERED).index)
         return dcc.send_data_frame(df.to_csv, "visdex_ids.csv")
 
-    def show_links_modal(self, show_n_clicks, ok_n_clicks, cancel_n_clicks, is_open): #-> bool
+    def show_links_modal(self, show_n_clicks, ok_n_clicks, cancel_n_clicks, is_open):
         """
         Show modal for downloading imaging data links
         """
