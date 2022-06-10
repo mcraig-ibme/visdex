@@ -32,9 +32,7 @@ class NdaData(DataStore):
         self._study_name = study_name
         self._datadir = os.path.join(GLOBAL_DATADIR, study_name)
         self._dataset_names = [fname.split(".")[0] for fname in os.listdir(self._datadir) if fname.endswith(".txt")]
-        self.log.info(self._dataset_names)
         df = pd.read_csv(os.path.join(GLOBAL_DATADIR, "datasets.tsv"), sep="\t", quotechar='"')
-        self.log.info(df)
         self._all_datasets = df[df['shortname'].isin(self._dataset_names)]
         self._fields = {}
         self._datasets = []
@@ -110,20 +108,22 @@ class NdaData(DataStore):
 
     def update(self):
         # Build a data frame containing the selected fields from the corresponding datasets
-        total_df = None
+        main_df = None
         for short_name in self._datasets:
             dict_fname = os.path.join(GLOBAL_DICTDIR, "%s.csv" % short_name)
-            df = pd.read_csv(dict_fname, sep=",", quotechar='"')
-            df_fields = df["ElementName"]
-            self.log.info(f"Dataset {short_name} has fields {df_fields}")
+            dict_df = pd.read_csv(dict_fname, sep=",", quotechar='"')
+            df_fields = dict_df["ElementName"]
+            self.log.info(f"Dataset {short_name} has fields:")
+            self.log.info(df_fields.tolist())
             fields_in_dataset = [f for f in self._fields if df_fields.str.contains(f).any()]
             if fields_in_dataset:
                 self.log.info(f"Found fields {fields_in_dataset} in {short_name}")
-                df = self._get_dataset(short_name)
+                main_df = self._get_dataset(short_name)
                 fields_of_interest = fields_in_dataset
-                df = df[fields_of_interest]
+                main_df = main_df[fields_of_interest]
  
-        self.store(MAIN_DATA, df)
+        if main_df is not None:
+            self.store(MAIN_DATA, main_df)
 
     def _get_dataset(self, short_name):
         """

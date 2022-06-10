@@ -38,9 +38,11 @@ def get_layout(app):
         LOG.info(f"update_summary_table")
         ds = data_store.get()
 
-        description_df = ds.description
         df = ds.load(data_store.MAIN_DATA)
+        if df.empty:
+            return [], False
 
+        description_df = ds.description
         specifiers = ["s", "d", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f"]
         table_summary_layout = html.Div(
             dash_table.DataTable(

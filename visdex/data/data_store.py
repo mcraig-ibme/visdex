@@ -5,6 +5,7 @@ retrieving per-session instances
 import logging
 
 import numpy as np
+import pandas as pd
 from pandas.api.types import is_string_dtype
 
 from flask import session
@@ -165,6 +166,9 @@ class DataStore:
                  each field with count, basic summary stats and % of missing values
         """
         df = self.load(MAIN_DATA)
+        if df.empty:
+            return pd.DataFrame()
+
         description_df = df.describe().transpose()
 
         # Add largely empty rows to the summary table for non-numeric columns.
