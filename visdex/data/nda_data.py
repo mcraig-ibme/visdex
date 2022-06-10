@@ -67,10 +67,14 @@ class NdaData(DataStore):
 
     @property
     def imaging_types(self):
+        """
+        :return: DataFrame containing imaging types - as a minimum should contain the 'text' column
+        """
         def format(r):
-            return "%s (%s) (%.1f %.1f %.1f %.1fmm)" % (r.scan_type, r.image_description, r.image_resolution1, r.image_resolution2, r.image_resolution3, r.image_resolution4)
+            return "%s (%s)" % (r.scan_type, r.image_description)
+            #return "%s (%s) %.1f %.1f %.1f %.1fmm" % (r.scan_type, r.image_description, r.image_resolution1, r.image_resolution2, r.image_resolution3, r.image_resolution4)
 
-        if not self._imaging_types:
+        if self._imaging_types is not None:
             df = self._get_dataset("image03")
             df.reset_index(drop=True, inplace=True)
             df = df[IMG_FIELDS]
@@ -79,9 +83,30 @@ class NdaData(DataStore):
                 df[f] = df[f].round(dps)
             df.drop_duplicates(inplace=True)
             df['text'] = df.apply(format, axis=1)
-            self._imaging_types = df.text.tolist()
+            self._imaging_types = df[['image_description', 'text']]
 
         return self._imaging_types
+
+    def imaging_links(self, ids, types):
+        """
+        :param ids: Data frame containing subject IDs
+        :param types: Data frame containing selected imaging data types
+        """
+        ids.reset_index(drop=False, inplace=True)
+
+        images = self._get_dataset("image03")
+        images.reset_index(drop=False, inplace=True)
+
+        selected_types = types.set_index("image_description").index
+        image_types = images.set_index('image_description').index
+        images = images[image_types.isin(selected_types)]
+
+        # FIXME ids may include visit
+        ids = ids.set_index('subjectkey').index
+        image_ids = images.set_index('subjectkey').index
+        images = images[image_ids.isin(ids)]
+
+        return images[["subjectkey", "visit", "image_file"]]
 
     def update(self):
         # Build a data frame containing the selected fields from the corresponding datasets

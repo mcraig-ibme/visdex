@@ -41,7 +41,7 @@ class Download(Component):
                 dbc.ModalBody(
                     [
                         dbc.Label("Imaging data available:"),
-                        dash_table.DataTable(id=id_prefix + "links-modal-table", columns=[{"name": "Description", "id": "desc"}], row_selectable='multi', style_cell={'textAlign': 'left'}),
+                        dash_table.DataTable(id=id_prefix + "links-modal-table", columns=[{"name": "Description", "id": "text"}], row_selectable='multi', style_cell={'textAlign': 'left'}),
                     ]
                 ),
                 dbc.ModalFooter(
@@ -109,26 +109,18 @@ class Download(Component):
         if triggered_ids[0] == self.id_prefix + "links-button.n_clicks":
             # Initial show of modal dialog
             ds = data_store.get()
-            imaging_types = [{"desc" : v} for v in ds.imaging_types]
+            imaging_types = ds.imaging_types.to_dict('records')
             return True, imaging_types, None
         elif triggered_ids[0] == self.id_prefix + "links-modal-ok.n_clicks":
             # Ok clicked
-            return False, [], self.download_links(imaging_types, selected_rows)
+            return False, [], self.download_links(data_store.get().imaging_types, selected_rows)
         else:
             # Cancel clicked
             return False, [], None
 
     def download_links(self, imaging_types, selected_rows):
         self.log.debug("Download imaging links")
-        self.log.debug(str(imaging_types))
-        self.log.debug(str(selected_rows))
-        df = data_store.get().load(data_store.FILTERED)
-        return dcc.send_data_frame(df.to_csv, "visdex_data.csv")
-        #s3_links = []
-        #for col in df.columns:
-        #    col_data = df[col]
-        #    if col_data.str.contains('s3://').any():
-        #        links = col_data[col_data.str.contains('s3://')]
-        #        s3_links += list(col_data)
-        #
-        #return dict(content="\n".join(s3_links), filename="visdex_links.txt")
+        imaging_types = imaging_types.iloc[selected_rows]
+        ids = pd.DataFrame(index=data_store.get().load(data_store.FILTERED).index)
+        df = data_store.get().imaging_links(ids, imaging_types)
+        return dcc.send_data_frame(df.to_csv, "visdex_imaging_links.csv")
