@@ -123,6 +123,10 @@ class DataStore:
         Do row/column filtering on main data
         """
         df = self.load(MAIN_DATA)
+        if df.empty:
+            self.log.info("No data to filter")
+            return
+
         self.log.info("Filter: pre-filter %s", df.shape)
 
         # Apply row filters
