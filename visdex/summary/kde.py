@@ -1,4 +1,6 @@
-import logging
+"""
+visdex: Display summary KDEs
+"""
 import math
 
 import numpy as np
@@ -12,20 +14,44 @@ import plotly.graph_objects as go
 
 from visdex.common.timing import timing
 from visdex.data import data_store
-from visdex.common import vstack
+from visdex.common import vstack, Component
 
-LOG = logging.getLogger(__name__)
+class SummaryKdes(Component):
+    """
+    """
+    def __init__(self, app, id_prefix="kde-"):
+        """
+        :param app: Dash application
+        """
+        Component.__init__(self, app, id_prefix, children=[
+            html.H3(children="Per-variable Histograms and KDEs", style=vstack),
+            dcc.Checklist(
+                id_prefix+"checkbox",
+                options=[{"label": " Run KDE analysis", "value": "kde-active"}],
+                value=[],
+                style=vstack,
+            ),
+            dcc.Loading(
+                id=id_prefix+"loading",
+                children=[dcc.Graph(id=id_prefix+"figure", figure=go.Figure())],
+            ),
+        ])
 
-def get_layout(app):
-    @app.callback(
-        Output("kde-figure", "figure"),
-        [Input("heatmap-dropdown", "value"), Input("kde-checkbox", "value")],
-        [State("filtered-loaded-div", "children")],
-        prevent_initial_call=True,
-    )
+        self.register_cb(app, "update_figure",
+            Output(id_prefix+"figure", "figure"),
+            [
+                Input("heatmap-dropdown", "value"), 
+                Input(id_prefix+"checkbox", "value")
+            ],
+            [
+                State("filtered-loaded-div", "children")
+            ],
+            prevent_initial_call=True,
+        )
+
     @timing
-    def update_summary_kde(dropdown_values, kde_active, df_loaded):
-        LOG.info(f"update_summary_kde")
+    def update_figure(self, dropdown_values, kde_active, df_loaded):
+        self.log.info(f"update_figure")
         ds = data_store.get()
         if kde_active != ["kde-active"]:
             raise PreventUpdate
@@ -87,17 +113,3 @@ def get_layout(app):
                     )
         fig.update_layout(height=200 * n_rows, showlegend=False)
         return fig
-
-    return html.Div(children=[
-        html.H3(children="Per-variable Histograms and KDEs", style=vstack),
-        dcc.Checklist(
-            "kde-checkbox",
-            options=[{"label": " Run KDE analysis", "value": "kde-active"}],
-            value=[],
-            style=vstack,
-        ),
-        dcc.Loading(
-            id="loading-kde-figure",
-            children=[dcc.Graph(id="kde-figure", figure=go.Figure())],
-        ),
-    ])                

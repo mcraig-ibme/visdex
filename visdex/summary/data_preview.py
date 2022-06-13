@@ -46,7 +46,7 @@ class DataPreview(Component):
         )
 
     def update(self, df_loaded):
-        self.log.debug("Update preview table")
+        self.log.info("Update preview table")
         ds = data_store.get()
 
         # We want to be able to see the index columns in the preview table

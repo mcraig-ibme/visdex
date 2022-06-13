@@ -5,7 +5,6 @@ Shows a simple correlation heatmap between numerical fields in the
 loaded and filtered data file
 """
 import itertools
-import logging
 
 import numpy as np
 import pandas as pd
@@ -17,20 +16,79 @@ from dash import html, dcc
 import plotly.graph_objects as go
 
 from visdex.data import data_store
-from visdex.common import vstack
+from visdex.common import vstack, Component
 from visdex.common.timing import timing, start_timer, log_timing, print_timings
 
-LOG = logging.getLogger(__name__)
+class SummaryHeatmap(Component):
+    """
+    """
+    def __init__(self, app, id_prefix="heatmap-"):
+        """
+        :param app: Dash application
+        """
+        Component.__init__(self, app, id_prefix, children=[
+            html.H3(children="Correlation Heatmap (Pearson's)", style=vstack),
+            html.Div(
+                id=id_prefix+"div",
+                style=vstack,
+                children=[
+                    dcc.Input(
+                        id=id_prefix+"clustering-input",
+                        type="number",
+                        min=1,
+                        debounce=True,
+                        value=2,
+                    ),
+                    # TODO label the cluster input selection
+                    html.Div(
+                        [
+                            "Select (numerical) variables to display:",
+                            dcc.Dropdown(
+                                id=id_prefix+"dropdown",
+                                options=([]),
+                                multi=True,
+                                # style={'height': '100px', 'overflowY': 'auto'}
+                            ),
+                        ]
+                    ),
+                ],
+            ),
+            dcc.Loading(
+                id=id_prefix+"loading",
+                children=[dcc.Graph(id=id_prefix+"plot", figure=go.Figure())],
+            ),
+        ])
 
-def get_layout(app):
-    @app.callback(
-        [Output("heatmap-dropdown", "options"), Output("heatmap-dropdown", "value")],
-        [Input("filtered-loaded-div", "children")],
-        prevent_initial_call=True,
-    )
+        self.register_cb(app, "update_dropdown", 
+            [
+                Output(id_prefix+"dropdown", "options"), 
+                Output(id_prefix+"dropdown", "value")
+            ],
+            [
+                Input("filtered-loaded-div", "children")
+            ],
+            prevent_initial_call=True,
+        )
+
+        self.register_cb(app, "update_figure", 
+            [
+                Output(id_prefix+"plot", "figure"),
+                Output("corr-loaded-div", "children"),
+                Output("pval-loaded-div", "children"),
+            ],
+            [
+                Input(id_prefix+"dropdown", "value"), 
+                Input(id_prefix+"clustering-input", "value")
+            ],
+            [
+                State("filtered-loaded-div", "children")
+            ],
+            prevent_initial_call=True,
+        )
+
     @timing
-    def update_heatmap_dropdown(df_loaded):
-        LOG.info(f"update_heatmap_dropdown {df_loaded}")
+    def update_dropdown(self, df_loaded):
+        self.log.info(f"update_dropdown {df_loaded}")
         ds = data_store.get()
         dff = ds.load(data_store.FILTERED)
 
@@ -43,7 +101,147 @@ def get_layout(app):
             col for col in dff.columns if dff[col].dtype in [np.int64, np.float64]
         ]
 
-    def flattened(df):
+    @timing
+    def update_figure(self, dropdown_values, clusters, df_loaded):
+        self.log.info(f"update_figure {dropdown_values} {clusters}")
+        ds = data_store.get()
+        # Guard against the first argument being an empty list, as happens at first
+        # invocation, or df_loaded being False
+        if df_loaded is False or len(dropdown_values) <= 1:
+            fig = go.Figure()
+            return fig, False, False
+
+        # Load main dataframe
+        dff = ds.load(data_store.FILTERED)
+
+        # Guard against the dataframe being empty
+        if dff.size == 0:
+            fig = go.Figure()
+            return fig, False, False
+
+        # Load data from previous calculation
+        corr_dff = ds.load("corr")
+        pval_dff = ds.load("pval")
+        logs_dff = ds.load("logs")
+
+        # The columns we want to have calculated
+        selected_columns = list(dropdown_values)
+        self.log.debug(f"selected_columns {selected_columns}")
+
+        corr, pvalues, logs = self.recalculate_corr_etc(
+            selected_columns, dff, corr_dff, pval_dff, logs_dff
+        )
+        start_timer("update_summary_heatmap")
+
+        corr.fillna(0, inplace=True)
+
+        try:
+            cluster = AgglomerativeClustering(
+                n_clusters=min(clusters, len(selected_columns)),
+                affinity="euclidean",
+                linkage="ward",
+            )
+            cluster.fit_predict(corr)
+            clx = cluster.labels_
+        except ValueError:
+            clx = [0] * len(selected_columns)
+
+        log_timing("update_summary_heatmap", "update_summary_heatmap-cluster")
+
+        # Save cluster number of each column to a DF and then to feather.
+        cluster_df = pd.DataFrame(data=clx, index=corr.index, columns=["column_names"])
+        self.log.debug(f"{cluster_df}")
+        ds.store("cluster", cluster_df)
+
+        # TODO: what would be good here would be to rename the clusters based on the
+        #  average variance (diags) within each cluster - that would reduce the
+        #  undesirable behaviour whereby currently the clusters can jump about when
+        #  re-calculating the clustering. Sort DFs' columns/rows into order based on
+        #  clustering
+        sorted_column_order = [x for _, x in sorted(zip(clx, corr.index))]
+
+        sorted_corr = self.reorder_df(corr, sorted_column_order)
+        sorted_corr = sorted_corr[sorted_corr.columns].apply(pd.to_numeric, errors="coerce")
+
+        sorted_pval = self.reorder_df(pvalues, sorted_column_order)
+        sorted_pval = sorted_pval[sorted_pval.columns].apply(pd.to_numeric, errors="coerce")
+
+        sorted_logs = self.reorder_df(logs, sorted_column_order)
+        sorted_logs = sorted_logs[sorted_logs.columns].apply(pd.to_numeric, errors="coerce")
+
+        log_timing("update_summary_heatmap", "update_summary_heatmap-reorder")
+
+        # Send to feather files
+        ds.store("corr", sorted_corr)
+        ds.store("pval", sorted_pval)
+        ds.store("logs", sorted_logs)
+
+        flattened_logs = self.flattened(logs)
+        ds.store("flattened_logs", flattened_logs)
+
+        log_timing("update_summary_heatmap", "update_summary_heatmap-save")
+
+        # Remove the upper triangle and diagonal
+        triangular = sorted_corr.to_numpy()
+        triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
+        triangular_pval = sorted_pval.to_numpy()
+        triangular_pval[np.tril_indices(triangular_pval.shape[0], 0)] = np.nan
+
+        log_timing(
+            "update_summary_heatmap",
+            "update_summary_heatmap-triangular",
+            restart=False,
+        )
+
+        fig = go.Figure(
+            go.Heatmap(
+                z=np.fliplr(triangular),
+                x=sorted_corr.columns[-1::-1],
+                y=sorted_corr.columns[:-1],
+                zmin=-1,
+                zmax=1,
+                colorscale="RdBu",
+                customdata=np.fliplr(triangular_pval),
+                hovertemplate=(
+                    "%{x}<br>"
+                    "vs.<br>"
+                    "%{y}<br>"
+                    "      r: %{z:.2g}<br>"
+                    " pval: %{customdata:.2g}<extra></extra>"
+                ),
+                colorbar_title_text="r",
+                hoverongaps=False,
+            ),
+        )
+
+        fig.update_layout(
+            xaxis_showgrid=False, yaxis_showgrid=False, plot_bgcolor="rgba(0,0,0,0)"
+        )
+
+        # Find the indices where the sorted classes from the clustering change.
+        # Use these indices to plot vertical lines on the heatmap to demarcate the different
+        # categories visually
+        category_edges = np.concatenate((np.array([0]), np.diff(sorted(clx))))
+        fig.update_layout(
+            shapes=[
+                dict(
+                    type="line",
+                    yref="y",
+                    y0=-0.5,
+                    y1=len(sorted_corr.columns) - 1.5,
+                    xref="x",
+                    x0=len(sorted_corr.columns) - float(i) - 0.5,
+                    x1=len(sorted_corr.columns) - float(i) - 0.5,
+                )
+                for i in np.where(category_edges)[0]
+            ]
+        )
+
+        print_timings()
+
+        return fig, True, True
+
+    def flattened(self, df):
         """
         Convert a DF into a Series, where the MultiIndex of each element is a combination
         of the index/col from the original DF
@@ -66,24 +264,22 @@ def get_layout(app):
 
         return s
 
-
-    def reorder_df(df, order):
+    def reorder_df(self, df, order):
         """
         Change the row and column order of df to that given in order
         """
         return df.reindex(order)[order]
 
-
-    def recalculate_corr_etc(selected_columns, dff, corr_dff, pval_dff, logs_dff):
+    def recalculate_corr_etc(self, selected_columns, dff, corr_dff, pval_dff, logs_dff):
         start_timer("recalculate_corr_etc")
         # Work out which columns/rows are needed anew, and which are already populated
         # TODO: note that if we load in a new file with some of the same column names,
         #  then this old correlation data may be used erroneously.
         existing_cols = corr_dff.columns
         overlap = list(set(selected_columns).intersection(set(existing_cols)))
-        LOG.debug(f"these are needed and already available: {overlap}")
+        self.log.debug(f"these are needed and already available: {overlap}")
         required_new = list(set(selected_columns).difference(set(existing_cols)))
-        LOG.debug(f"these are needed and not already available: {required_new}")
+        self.log.debug(f"these are needed and not already available: {required_new}")
 
         ########
         # Create initial existing vs existing DF
@@ -92,7 +288,7 @@ def get_layout(app):
         # If there is no overlap, then create brand new empty dataframes.
         # Otherwise, update the existing dataframes.
         if len(overlap) == 0:
-            LOG.debug(f"create new")
+            self.log.debug(f"create new")
             corr = pd.DataFrame()
             pvalues = pd.DataFrame()
             logs = pd.DataFrame()
@@ -151,7 +347,7 @@ def get_layout(app):
             data=new_against_existing_corr, columns=required_new, index=overlap
         )
         corr[required_new] = new_against_existing_corr_df
-        # LOG.debug(f'corr {corr}')
+        # self.log.debug(f'corr {corr}')
         new_against_existing_pval_df = pd.DataFrame(
             data=new_against_existing_pval, columns=required_new, index=overlap
         )
@@ -237,186 +433,3 @@ def get_layout(app):
         log_timing("recalculate_corr_etc", "update_summary_heatmap-corr", restart=False)
 
         return corr, pvalues, logs
-
-    @app.callback(
-        [
-            Output("heatmap", "figure"),
-            Output("corr-loaded-div", "children"),
-            Output("pval-loaded-div", "children"),
-        ],
-        [Input("heatmap-dropdown", "value"), Input("heatmap-clustering-input", "value")],
-        [State("filtered-loaded-div", "children")],
-        prevent_initial_call=True,
-    )
-    @timing
-    def update_summary_heatmap(dropdown_values, clusters, df_loaded):
-        LOG.info(f"update_summary_heatmap {dropdown_values} {clusters}")
-        ds = data_store.get()
-        # Guard against the first argument being an empty list, as happens at first
-        # invocation, or df_loaded being False
-        if df_loaded is False or len(dropdown_values) <= 1:
-            fig = go.Figure()
-            return fig, False, False
-
-        # Load main dataframe
-        dff = ds.load(data_store.FILTERED)
-
-        # Guard against the dataframe being empty
-        if dff.size == 0:
-            fig = go.Figure()
-            return fig, False, False
-
-        # Load data from previous calculation
-        corr_dff = ds.load("corr")
-        pval_dff = ds.load("pval")
-        logs_dff = ds.load("logs")
-
-        # The columns we want to have calculated
-        selected_columns = list(dropdown_values)
-        LOG.debug(f"selected_columns {selected_columns}")
-
-        corr, pvalues, logs = recalculate_corr_etc(
-            selected_columns, dff, corr_dff, pval_dff, logs_dff
-        )
-        start_timer("update_summary_heatmap")
-
-        corr.fillna(0, inplace=True)
-
-        try:
-            cluster = AgglomerativeClustering(
-                n_clusters=min(clusters, len(selected_columns)),
-                affinity="euclidean",
-                linkage="ward",
-            )
-            cluster.fit_predict(corr)
-            clx = cluster.labels_
-        except ValueError:
-            clx = [0] * len(selected_columns)
-
-        log_timing("update_summary_heatmap", "update_summary_heatmap-cluster")
-
-        # Save cluster number of each column to a DF and then to feather.
-        cluster_df = pd.DataFrame(data=clx, index=corr.index, columns=["column_names"])
-        LOG.debug(f"{cluster_df}")
-        ds.store("cluster", cluster_df)
-
-        # TODO: what would be good here would be to rename the clusters based on the
-        #  average variance (diags) within each cluster - that would reduce the
-        #  undesirable behaviour whereby currently the clusters can jump about when
-        #  re-calculating the clustering. Sort DFs' columns/rows into order based on
-        #  clustering
-        sorted_column_order = [x for _, x in sorted(zip(clx, corr.index))]
-
-        sorted_corr = reorder_df(corr, sorted_column_order)
-        sorted_corr = sorted_corr[sorted_corr.columns].apply(pd.to_numeric, errors="coerce")
-
-        sorted_pval = reorder_df(pvalues, sorted_column_order)
-        sorted_pval = sorted_pval[sorted_pval.columns].apply(pd.to_numeric, errors="coerce")
-
-        sorted_logs = reorder_df(logs, sorted_column_order)
-        sorted_logs = sorted_logs[sorted_logs.columns].apply(pd.to_numeric, errors="coerce")
-
-        log_timing("update_summary_heatmap", "update_summary_heatmap-reorder")
-
-        # Send to feather files
-        ds.store("corr", sorted_corr)
-        ds.store("pval", sorted_pval)
-        ds.store("logs", sorted_logs)
-
-        flattened_logs = flattened(logs)
-        ds.store("flattened_logs", flattened_logs)
-
-        log_timing("update_summary_heatmap", "update_summary_heatmap-save")
-
-        # Remove the upper triangle and diagonal
-        triangular = sorted_corr.to_numpy()
-        triangular[np.tril_indices(triangular.shape[0], 0)] = np.nan
-        triangular_pval = sorted_pval.to_numpy()
-        triangular_pval[np.tril_indices(triangular_pval.shape[0], 0)] = np.nan
-
-        log_timing(
-            "update_summary_heatmap",
-            "update_summary_heatmap-triangular",
-            restart=False,
-        )
-
-        fig = go.Figure(
-            go.Heatmap(
-                z=np.fliplr(triangular),
-                x=sorted_corr.columns[-1::-1],
-                y=sorted_corr.columns[:-1],
-                zmin=-1,
-                zmax=1,
-                colorscale="RdBu",
-                customdata=np.fliplr(triangular_pval),
-                hovertemplate=(
-                    "%{x}<br>"
-                    "vs.<br>"
-                    "%{y}<br>"
-                    "      r: %{z:.2g}<br>"
-                    " pval: %{customdata:.2g}<extra></extra>"
-                ),
-                colorbar_title_text="r",
-                hoverongaps=False,
-            ),
-        )
-
-        fig.update_layout(
-            xaxis_showgrid=False, yaxis_showgrid=False, plot_bgcolor="rgba(0,0,0,0)"
-        )
-
-        # Find the indices where the sorted classes from the clustering change.
-        # Use these indices to plot vertical lines on the heatmap to demarcate the different
-        # categories visually
-        category_edges = np.concatenate((np.array([0]), np.diff(sorted(clx))))
-        fig.update_layout(
-            shapes=[
-                dict(
-                    type="line",
-                    yref="y",
-                    y0=-0.5,
-                    y1=len(sorted_corr.columns) - 1.5,
-                    xref="x",
-                    x0=len(sorted_corr.columns) - float(i) - 0.5,
-                    x1=len(sorted_corr.columns) - float(i) - 0.5,
-                )
-                for i in np.where(category_edges)[0]
-            ]
-        )
-
-        print_timings()
-
-        return fig, True, True
-
-    return html.Div(children=[
-        html.H3(children="Correlation Heatmap (Pearson's)", style=vstack),
-        html.Div(
-            id="heatmap-div",
-            style=vstack,
-            children=[
-                dcc.Input(
-                    id="heatmap-clustering-input",
-                    type="number",
-                    min=1,
-                    debounce=True,
-                    value=2,
-                ),
-                # TODO label the cluster input selection
-                html.Div(
-                    [
-                        "Select (numerical) variables to display:",
-                        dcc.Dropdown(
-                            id="heatmap-dropdown",
-                            options=([]),
-                            multi=True,
-                            # style={'height': '100px', 'overflowY': 'auto'}
-                        ),
-                    ]
-                ),
-            ],
-        ),
-        dcc.Loading(
-            id="loading-heatmap",
-            children=[dcc.Graph(id="heatmap", figure=go.Figure())],
-        ),
-    ])

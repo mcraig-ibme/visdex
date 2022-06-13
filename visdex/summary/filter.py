@@ -1,41 +1,107 @@
 """
-visdex: Summary statistics table
-
-Displays summary statistics about the data, e.g. mean values of numerical
-data, % of missing data items
+visdex: Row filtering component
 """
-import logging
-
 from dash import html, dcc, dash_table, callback_context
 from dash.dependencies import Input, Output, State, ALL
 
-from visdex.common import vstack, hstack, standard_margin_left
+from visdex.common import vstack, hstack, standard_margin_left, Component
 from visdex.data import data_store
 from visdex.common.timing import timing
 
-LOG = logging.getLogger(__name__)
+class RowFilter(Component):
+    """
+    Component that filters the rows of the data
+    """
+    def __init__(self, app, id_prefix="filter-"):
+        """
+        :param app: Dash application
+        """
+        Component.__init__(self, app, id_prefix, children=[
+            html.H3(children="Column Summary", style=vstack),
+            dcc.Loading(
+                id=id_prefix+"loading-fields",
+                children=[
+                    html.Div(
+                        id=id_prefix+"fields",
+                        style={
+                            "width": "95%",
+                            "margin-left": "10px",
+                            "margin-right": "10px",
+                        },
+                    ),
+                ],
+            ),
+            html.H3(children="Column filter", style=vstack),
+            html.Div(
+                id=id_prefix+"missing-values-filter",
+                children=[
+                    html.Label("Filter out all columns missing at least X percentage of rows:", style=hstack),
+                    dcc.Input(
+                        id=id_prefix+"missing-values-input",
+                        type="number",
+                        min=0,
+                        max=100,
+                        debounce=True,
+                        value=None,
+                        style=hstack,
+                    ),
+                ],
+            ),        
+            html.H3(children="Row filter", style=vstack),
+            html.Div(
+                id=id_prefix+"predicate-filters",
+                children=[           
+                    html.Div(id=id_prefix+"predicate-filter-container", children=[]),
+                    html.Button(
+                        "Add row condition",
+                        id=id_prefix+"add-row-predicate-button",
+                        style={
+                            "margin-top": "10px",
+                            "margin-left": standard_margin_left,
+                            "margin-bottom": "40px",
+                        },
+                    ),
+                    html.Div(id=id_prefix+"random-sample", children=[
+                        html.Label("Return random sample of: ", style={"display" : "inline-block", "verticalAlign" : "middle"}),
+                        dcc.Input(id=id_prefix+"random-sample-input", style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"}),
+                    ]),
+                ],
+            ),
+        ])
 
-def get_layout(app):
-        
-    @app.callback(
-        [
-            Output("table-summary", "children"),
-            Output("filtered-loaded-div", "children"),
-        ],
-        [
-            Input("df-loaded-div", "children"),
-            Input("missing-values-input", "value"),
-            Input({"type": "predicate-filter-column", "index": ALL}, "value"),
-            Input({"type": "predicate-filter-op", "index": ALL}, "value"),
-            Input({"type": "predicate-filter-value", "index": ALL}, "value"),
-            Input("random-sample-input", "value"),
-            Input("predicate-filter-container", "children"),
-        ],
-        prevent_initial_call=True,
-    )
+        self.register_cb(app, "update_fields_table",
+            [
+                Output(id_prefix+"fields", "children"),
+                Output("filtered-loaded-div", "children"),
+            ],
+            [
+                Input("df-loaded-div", "children"),
+                Input(id_prefix+"missing-values-input", "value"),
+                Input({"type": id_prefix+"predicate-filter-column", "index": ALL}, "value"),
+                Input({"type": id_prefix+"predicate-filter-op", "index": ALL}, "value"),
+                Input({"type": id_prefix+"predicate-filter-value", "index": ALL}, "value"),
+                Input(id_prefix+"random-sample-input", "value"),
+                Input(id_prefix+"predicate-filter-container", "children"),
+            ],
+            prevent_initial_call=True,
+        )
+
+        self.register_cb(app, "add_row_predicate",
+            Output(id_prefix+"predicate-filter-container", "children"),
+            [
+                Input("df-loaded-div", "children"),
+                Input(id_prefix+"add-row-predicate-button", "n_clicks"),
+            ],
+            State(id_prefix+"predicate-filter-container", "children"),
+            prevent_initial_call=True,
+        )
+
+    def update(self, df_loaded):
+        self.log.info("Update filter wibble")
+
     @timing
-    def update_summary_table(df_loaded, missing_value_cutoff, pred_cols, pred_ops, pred_values, random_sample, _pred_children):
-        LOG.info(f"update_summary_table")
+    def update_fields_table(self, df_loaded, missing_value_cutoff, pred_cols, pred_ops, pred_values, random_sample, _pred_children):
+        self.log.info(f"update_fields_table")
         ds = data_store.get()
 
         df = ds.load(data_store.MAIN_DATA)
@@ -44,7 +110,7 @@ def get_layout(app):
 
         description_df = ds.description
         specifiers = ["s", "d", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f"]
-        table_summary_layout = html.Div(
+        fields_table_layout = html.Div(
             dash_table.DataTable(
                 id="table",
                 columns=[
@@ -90,31 +156,24 @@ def get_layout(app):
         predicates = list(zip(pred_cols, pred_ops, pred_values))
         try:
             random_sample_size = int(random_sample)
-            LOG.info("Random sample size: %i", random_sample_size)
+            self.log.info("Random sample size: %i", random_sample_size)
             predicates.append((None, "random", random_sample_size))
         except:
             pass
         ds.predicates = predicates
 
-        return table_summary_layout, True
+        return fields_table_layout, True
 
-    @app.callback(
-        Output("predicate-filter-container", "children"),
-        Input("df-loaded-div", "children"),
-        Input("add-row-predicate-button", "n_clicks"),
-        State("predicate-filter-container", "children"),
-        prevent_initial_call=True,
-    )
-    def add_row_predicate(n_clicks, df_loaded, children): 
+    def add_row_predicate(self, n_clicks, df_loaded, children): 
         which_input = callback_context.triggered[0]['prop_id'].split('.')[0]
         if which_input == "df-loaded-div":
-            LOG.info(f"reset row predicates")
+            self.log.info(f"reset row predicates")
             return []
         else:
-            LOG.info(f"add_row_predicate %s", n_clicks)
+            self.log.info(f"Add row predicate")
             if n_clicks:
                 df = data_store.get().load(data_store.FILTERED)
-                LOG.info(list(df.columns))
+                self.log.info(list(df.columns))
                 col_options = [
                     {'label': c, 'value': c}
                     for c in list(df.columns)
@@ -127,78 +186,23 @@ def get_layout(app):
                     [
                         html.Label("Column: ", style={"display" : "inline-block", "verticalAlign" : "middle"}),
                         dcc.Dropdown(
-                            id={"type" : "predicate-filter-column", "index" : n_clicks},
+                            id={"type" : self.id_prefix+"predicate-filter-column", "index" : n_clicks},
                             options=col_options, value=None,
                             style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"},
                         ),
                         dcc.Dropdown(
-                            id={"type" : "predicate-filter-op", "index" : n_clicks},
+                            id={"type" : self.id_prefix+"predicate-filter-op", "index" : n_clicks},
                             options=op_options, value="=",
                             style={"width" : "200px", "display" : "inline-block", "verticalAlign" : "middle"},
                         ),
                         dcc.Input(
-                            id={"type" : "predicate-filter-value", "index" : n_clicks},
+                            id={"type" : self.id_prefix+"predicate-filter-value", "index" : n_clicks},
                             style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"},
                         ),
                     ],
-                    id="predicate-filter-%i" % n_clicks,
+                    id=self.id_prefix+"predicate-filter-%i" % n_clicks,
                 )
 
                 children.append(new_predicate)
         
             return children
-
-    layout = html.Div(children=[
-        html.H3(children="Column Summary", style=vstack),
-        dcc.Loading(
-            id="loading-table-summary",
-            children=[
-                html.Div(
-                    id="table-summary",
-                    style={
-                        "width": "95%",
-                        "margin-left": "10px",
-                        "margin-right": "10px",
-                    },
-                ),
-            ],
-        ),
-        html.H3(children="Column filter", style=vstack),
-        html.Div(
-            id="missing-values-filter",
-            children=[
-                html.Label("Filter out all columns missing at least X percentage of rows:", style=hstack),
-                dcc.Input(
-                    id="missing-values-input",
-                    type="number",
-                    min=0,
-                    max=100,
-                    debounce=True,
-                    value=None,
-                    style=hstack,
-                ),
-            ],
-        ),        
-        html.H3(children="Row filter", style=vstack),
-        html.Div(
-            id="predicate-filters",
-            children=[           
-                html.Div(id="predicate-filter-container", children=[]),
-                html.Button(
-                    "Add row condition",
-                    id="add-row-predicate-button",
-                    style={
-                        "margin-top": "10px",
-                        "margin-left": standard_margin_left,
-                        "margin-bottom": "40px",
-                    },
-                ),
-                html.Div(id="random-sample", children=[
-                    html.Label("Return random sample of: ", style={"display" : "inline-block", "verticalAlign" : "middle"}),
-                    dcc.Input(id="random-sample-input", style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"}),
-                ]),
-            ],
-        ),
-    ])
-
-    return layout
