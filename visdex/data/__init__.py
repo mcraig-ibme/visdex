@@ -269,8 +269,10 @@ def get_layout(app):
         """
         When using a standard data source, the set of selected data sets have been changed
         """
+        LOG.info("Standard dataset changed")
         # Not sure why this is needed when we have prevent_initial_call=True?
         if data_type == "user":
+            LOG.error('std_dataset_selection_changed fired although we are in user data mode')
             return [], []
 
         try:
@@ -282,6 +284,8 @@ def get_layout(app):
             selected_fields_cur = [field_data[idx]["ElementName"] for idx in selected_field_rows]
             selected_fields_new = [idx for idx, record in enumerate(fields) if record["ElementName"] in selected_fields_cur]
 
+            LOG.debug("Fields found:")
+            LOG.debug(fields)
             return fields, selected_fields_new
         except Exception as e:
             LOG.exception('Error changing std dataset')
@@ -297,6 +301,7 @@ def get_layout(app):
         """
         When using a standard data source, the active (clicked on) selected data set has been changed
         """
+        LOG.info("Standard dataset active changed")
         try:
             return data[active_cell["row"]]["desc"]
         except (TypeError, KeyError, IndexError):
@@ -312,6 +317,7 @@ def get_layout(app):
         """
         When using a standard data source, the active (clicked on) selected field has been changed
         """
+        LOG.info("Standard dataset active field changed")
         try:
             return data[active_cell["row"]]["ElementDescription"]
         except (TypeError, IndexError):
@@ -346,7 +352,9 @@ def get_layout(app):
         """
         When using standard data, the load button is clicked
         """
-        LOG.info(f"Load standard data")
+        LOG.info(f"Load standard data {n_clicks}")
+        LOG.debug(fields)
+        LOG.debug(selected_rows)
         selected_fields = [fields[idx]["ElementName"] for idx in selected_rows]
         try:
             data_store.get().fields = selected_fields
