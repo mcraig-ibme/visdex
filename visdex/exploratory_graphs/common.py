@@ -1,3 +1,6 @@
+"""
+Common code for the exploratory graphs
+"""
 import logging
 from collections import defaultdict
 
@@ -9,14 +12,24 @@ from visdex.data import data_store
 LOG = logging.getLogger(__name__)
 
 def common_define_cbs(app, ctype, make_fig):
+    """
+    Define the callbacks for a graph type
+    
+    :param ctype: Graph type, e.g. violin, histogram
+    :param make_fig: Callable that creates the figure
+    """
     @app.callback(
         [
             Output({"type": f"div-{ctype}-{component['id']}", "index": MATCH}, "children")
             for component in all_components[ctype]
         ],
-        [Input("filtered-loaded-div", "children")],
-        [State({"type": f"div-{ctype}-x", "index": MATCH}, "style")]
-        + [
+        [
+            Input("filtered-loaded-div", "children")
+        ],
+        [
+            State({"type": f"div-{ctype}-{all_components[ctype][0]['id']}", "index": MATCH}, "style")
+        ] +
+        [
             State({"type": f"{ctype}-{component['id']}", "index": MATCH}, prop)
             for component in all_components[ctype]
             for prop in component
