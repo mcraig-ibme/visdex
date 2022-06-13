@@ -108,6 +108,10 @@ class NdaData(DataStore):
 
     def update(self):
         # Build a data frame containing the selected fields from the corresponding datasets
+        if not self._fields:
+            self.log.info("No fields selected")
+            return
+
         main_df = None
         for short_name in self._datasets:
             dict_fname = os.path.join(GLOBAL_DICTDIR, "%s.csv" % short_name)
@@ -124,6 +128,8 @@ class NdaData(DataStore):
  
         if main_df is not None:
             self.store(MAIN_DATA, main_df)
+        else:
+            self.log.error(f"Fields {self._fields} not found in any selected dataset")
 
     def _get_dataset(self, short_name):
         """
