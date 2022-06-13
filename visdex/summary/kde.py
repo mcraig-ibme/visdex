@@ -25,11 +25,16 @@ class SummaryKdes(Component):
         """
         Component.__init__(self, app, id_prefix, children=[
             html.H3(children="Per-variable Histograms and KDEs", style=vstack),
-            dcc.Checklist(
-                id_prefix+"checkbox",
-                options=[{"label": " Run KDE analysis", "value": "kde-active"}],
-                value=[],
-                style=vstack,
+            html.Div(
+                [
+                    "Select (numerical) variables for KDE display",
+                    dcc.Dropdown(
+                        id=id_prefix+"dropdown",
+                        options=([]),
+                        multi=True,
+                        # style={'height': '100px', 'overflowY': 'auto'}
+                    ),
+                ]
             ),
             dcc.Loading(
                 id=id_prefix+"loading",
@@ -37,11 +42,21 @@ class SummaryKdes(Component):
             ),
         ])
 
+        self.register_cb(app, "update_dropdown", 
+            [
+                Output(id_prefix+"dropdown", "options"),
+                Output(id_prefix+"dropdown", "value")
+            ],
+            [
+                Input("filtered-loaded-div", "children")
+            ],
+            prevent_initial_call=True,
+        )
+
         self.register_cb(app, "update_figure",
             Output(id_prefix+"figure", "figure"),
             [
-                Input("heatmap-dropdown", "value"), 
-                Input(id_prefix+"checkbox", "value")
+                Input(id_prefix+"dropdown", "value"),
             ],
             [
                 State("filtered-loaded-div", "children")
@@ -50,11 +65,22 @@ class SummaryKdes(Component):
         )
 
     @timing
-    def update_figure(self, dropdown_values, kde_active, df_loaded):
+    def update_dropdown(self, df_loaded):
+        self.log.info(f"update_dropdown {df_loaded}")
+        ds = data_store.get()
+        dff = ds.load(data_store.FILTERED)
+
+        options = [
+            {"label": col, "value": col}
+            for col in dff.columns
+            if dff[col].dtype in [np.int64, np.float64]
+        ]
+        return options, []
+
+    @timing
+    def update_figure(self, dropdown_values, df_loaded):
         self.log.info(f"update_figure")
         ds = data_store.get()
-        if kde_active != ["kde-active"]:
-            raise PreventUpdate
 
         # Guard against the third argument being an empty list, as happens at first
         # invocation
@@ -62,7 +88,6 @@ class SummaryKdes(Component):
             return go.Figure(go.Scatter())
 
         dff = ds.load(data_store.FILTERED)
-
         n_variables = len(dropdown_values) if dropdown_values is not None else 0
 
         # Return early if no variables are selected
