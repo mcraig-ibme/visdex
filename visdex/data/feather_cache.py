@@ -4,7 +4,6 @@ Storage backend using Feather files in a temporary directory
 import logging
 import os
 import tempfile
-import shutil
 
 import pandas as pd
 

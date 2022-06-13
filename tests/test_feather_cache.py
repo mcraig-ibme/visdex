@@ -1,6 +1,6 @@
 import pandas as pd
 
-from visdex.feather_cache import FeatherCache
+from visdex.data.feather_cache import FeatherCache
 
 COLS = [
     "subjid",

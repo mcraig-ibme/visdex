@@ -3,8 +3,6 @@ import pytest
 from dash.testing.application_runners import import_app
 from selenium.webdriver.common.keys import Keys
 
-from visdex.app import cache
-
 # 2. give each testcase a tcid, and pass the fixture
 # as a function argument, less boilerplate
 @pytest.mark.skip(reason="Old test need to revise")
