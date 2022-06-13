@@ -12,6 +12,7 @@ import scipy.stats as stats
 from sklearn.cluster import AgglomerativeClustering
 
 from dash.dependencies import Input, Output, State
+import dash_bootstrap_components as dbc
 from dash import html, dcc
 import plotly.graph_objects as go
 
@@ -27,9 +28,26 @@ class SummaryHeatmap(Component):
         :param app: Dash application
         """
         Component.__init__(self, app, id_prefix, children=[
-            html.H3(children="Correlation Heatmap (Pearson's)", style=vstack),
-            html.Div(
-                id=id_prefix+"div",
+            html.Div(children=[
+                dbc.Button(
+                    "+",
+                    id=id_prefix+"collapse-button",
+                    style={
+                        "display": "inline-block",
+                        "margin-left": "10px",
+                        "width": "40px",
+                        "vertical-align" : "middle",
+                    },
+                ),
+                html.H3(children="Correlation Heatmap (Pearson's)",
+                    style={
+                        "display": "inline-block",
+                        "vertical-align" : "middle",
+                    }
+                ),
+            ]),
+            dbc.Collapse(
+                id=id_prefix+"collapse",
                 style=vstack,
                 children=[
                     dcc.Input(
@@ -51,14 +69,24 @@ class SummaryHeatmap(Component):
                             ),
                         ]
                     ),
+                    dcc.Loading(
+                        id=id_prefix+"loading",
+                        children=[dcc.Graph(id=id_prefix+"plot", figure=go.Figure())],
+                    ),
                 ],
-            ),
-            dcc.Loading(
-                id=id_prefix+"loading",
-                children=[dcc.Graph(id=id_prefix+"plot", figure=go.Figure())],
             ),
         ])
 
+        self.register_cb(app, "toggle_collapse", 
+            [
+                Output(id_prefix+"collapse", "is_open"),
+                Output(id_prefix+"collapse-button", "children"),
+            ],
+            [Input(id_prefix+"collapse-button", "n_clicks")],
+            [State(id_prefix+"collapse", "is_open")],
+            prevent_initial_call=True,
+        )
+        
         self.register_cb(app, "update_dropdown", 
             [
                 Output(id_prefix+"dropdown", "options"), 
@@ -85,6 +113,15 @@ class SummaryHeatmap(Component):
             ],
             prevent_initial_call=True,
         )
+
+    def toggle_collapse(self, n_clicks, is_open):
+        """
+        Handle click on the expand/collapse button
+        """
+        self.log.info(f"toggle_collapse {n_clicks} {is_open}")
+        if n_clicks:
+            return not is_open, "+" if is_open else "-"
+        return is_open, "-"
 
     @timing
     def update_dropdown(self, df_loaded):
