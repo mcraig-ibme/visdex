@@ -18,20 +18,6 @@ class DataFilter(Collapsible):
         :param app: Dash application
         """
         Collapsible.__init__(self, app, id_prefix, title, children=[
-            html.H3(children="Column Summary", style=vstack),
-            dcc.Loading(
-                id=id_prefix+"loading-fields",
-                children=[
-                    html.Div(
-                        id=id_prefix+"fields",
-                        style={
-                            "width": "95%",
-                            "margin-left": "10px",
-                            "margin-right": "10px",
-                        },
-                    ),
-                ],
-            ),
             html.H3(children="Column filter", style=vstack),
             html.Div(
                 id=id_prefix+"missing-values-filter",
@@ -72,11 +58,8 @@ class DataFilter(Collapsible):
             html.Div(id="filtered-loaded-div", style={"display": "none"}, children=[]),
         ])
 
-        self.register_cb(app, "update_fields_table",
-            [
-                Output(id_prefix+"fields", "children"),
-                Output("filtered-loaded-div", "children"),
-            ],
+        self.register_cb(app, "update_filtered_data",
+            Output("filtered-loaded-div", "children"),
             [
                 Input("df-loaded-div", "children"),
                 Input(id_prefix+"missing-values-input", "value"),
@@ -99,61 +82,14 @@ class DataFilter(Collapsible):
             prevent_initial_call=True,
         )
 
-    def update(self, df_loaded):
-        self.log.info("Update filter wibble")
-
     @timing
-    def update_fields_table(self, df_loaded, missing_value_cutoff, pred_cols, pred_ops, pred_values, random_sample, _pred_children):
-        self.log.info(f"update_fields_table")
+    def update_filtered_data(self, df_loaded, missing_value_cutoff, pred_cols, pred_ops, pred_values, random_sample, _pred_children):
+        self.log.info(f"update_filtered_data")
         ds = data_store.get()
 
         df = ds.load(data_store.MAIN_DATA)
         if df.empty:
-            return [], False
-
-        description_df = ds.description
-        specifiers = ["s", "d", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f"]
-        fields_table_layout = html.Div(
-            dash_table.DataTable(
-                id="table",
-                columns=[
-                    {
-                        "name": description_df.columns[0].upper(),
-                        "id": description_df.columns[0],
-                        "type": "text",
-                        "format": {"specifier": "s"},
-                    }
-                ]
-                + [
-                    {
-                        "name": i.upper(),
-                        "id": i,
-                        "type": "numeric",
-                        "format": {"specifier": j},
-                    }
-                    for i, j in zip(description_df.columns[1:], specifiers[1:])
-                ],
-                data=description_df.to_dict("records"),
-                page_size=20,
-                # Highlight any columns that do not have a complete set of records,
-                # by comparing count against the length of the DF.
-                style_data_conditional=[
-                    {
-                        "if": {
-                            "filter_query": "{{count}} < {}".format(df.shape[0]),
-                            "column_id": "count",
-                        },
-                        "backgroundColor": "FireBrick",
-                        "color": "white",
-                    },
-                    {
-                        "if": {"filter_query": "{{% missing values}} > {}".format(missing_value_cutoff)},
-                        "backgroundColor": "Grey",
-                        "color": "white",
-                    }
-                ],
-            ),
-        )
+            return False
 
         ds.missing_values_threshold = missing_value_cutoff
         predicates = list(zip(pred_cols, pred_ops, pred_values))
@@ -165,9 +101,9 @@ class DataFilter(Collapsible):
             pass
         ds.predicates = predicates
 
-        return fields_table_layout, True
+        return True
 
-    def add_row_predicate(self, n_clicks, df_loaded, children): 
+    def add_row_predicate(self, n_clicks, df_loaded, children):
         which_input = callback_context.triggered[0]['prop_id'].split('.')[0]
         if which_input == "df-loaded-div":
             self.log.info(f"reset row predicates")

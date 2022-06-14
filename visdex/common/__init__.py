@@ -3,7 +3,7 @@ visdex: Common layout definitions
 """
 import logging
 
-from dash import html
+from dash import html, callback_context
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
@@ -80,6 +80,7 @@ class Collapsible(Component):
                 children=kwargs.pop("children", []),
                 is_open=is_open,                
             ),
+            html.Div(id=id_prefix+"force-collapse", style={"display": "none"}, children=[]),
         ]
 
         Component.__init__(self, app, id_prefix, children=children, *args, **kwargs)
@@ -89,16 +90,26 @@ class Collapsible(Component):
                 Output(id_prefix+"collapse", "is_open"),
                 Output(id_prefix+"collapse-button", "children"),
             ],
-            [Input(id_prefix+"collapse-button", "n_clicks")],
+            [
+                Input(id_prefix+"collapse-button", "n_clicks"),
+                Input(id_prefix+"force-collapse", "children")
+            ],
             [State(id_prefix+"collapse", "is_open")],
             prevent_initial_call=True,
         )
 
-    def toggle_collapse(self, n_clicks, is_open):
+    def toggle_collapse(self, n_clicks, force_collapse, is_open):
         """
         Handle click on the expand/collapse button
         """
-        self.log.info(f"toggle_collapse {n_clicks} {is_open}")
-        if n_clicks:
+        self.log.info(f"toggle_collapse {n_clicks} {force_collapse} {is_open}")
+        which_input = callback_context.triggered[0]['prop_id'].split('.')[0]
+        if which_input == self.id_prefix+"force-collapse":
+            if force_collapse:
+                return False, "+"
+            else:
+                return True, "-"
+        elif n_clicks:
             return not is_open, "+" if is_open else "-"
-        return is_open, "-"
+        else:
+            return is_open, "-"
