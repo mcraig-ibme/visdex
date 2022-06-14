@@ -1,7 +1,5 @@
 """
-visdex: Data handling components
-
-These components handle the loading of the main data and filter files
+visdex: Component to allow user to upload a data set
 """
 import base64
 import datetime

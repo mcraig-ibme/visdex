@@ -1,7 +1,5 @@
 """
 visdex: Component to browse standard data
-
-These components handle the loading of the main data and filter files
 """
 from dash import html, dash_table
 from dash.dependencies import Input, Output, State

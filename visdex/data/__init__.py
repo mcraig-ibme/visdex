@@ -1,7 +1,7 @@
 """
-visdex: Data handling components
+visdex: Data selection
 
-These components handle the loading of the main data and filter files
+These components handle the loading of the main data
 """
 from dash import html, dcc
 from dash.dependencies import Input, Output
