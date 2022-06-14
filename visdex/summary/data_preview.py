@@ -6,8 +6,17 @@ Shows a basic summary of the first few rows in the data
 from dash import html, dcc, dash_table
 from dash.dependencies import Input, Output
 
-from visdex.common import Component, vstack
+from visdex.common import Component, Collapsible, vstack
 from visdex.data import data_store
+
+class RawPreview(Collapsible):
+    def __init__(self, app, id_prefix="rawpreview-"):
+        """
+        :param app: Dash application
+        """
+        Collapsible.__init__(self, app, id_prefix, title="Raw data preview", children=[
+            DataPreview(app, "Data preview (unfiltered)"),
+        ], is_open=True)
 
 class DataPreview(Component):
     """
@@ -21,9 +30,10 @@ class DataPreview(Component):
         :param update_div_id: ID of div that signals when to update
         """
         self.data_id = data_id
+        self.title = title
 
         Component.__init__(self, app, id_prefix, children=[
-            html.H3(children=title, style=vstack),
+            html.H3(id=id_prefix+"title", style=vstack),
             dcc.Loading(
                 id=id_prefix + "loading",
                 children=[
@@ -40,8 +50,13 @@ class DataPreview(Component):
         ])
 
         self.register_cb(app, "update",
-            Output(self.id_prefix + "table", "children"),
-            [Input(update_div_id, "children")],
+            [
+                Output(self.id_prefix + "title", "children"),
+                Output(self.id_prefix + "table", "children"),
+            ],
+            [
+                Input(update_div_id, "children")
+            ],
             prevent_initial_call=True,
         )
 
@@ -53,7 +68,7 @@ class DataPreview(Component):
         dff = ds.load(self.data_id, keep_index_cols=True)
 
         if dff.size > 0:
-            return html.Div(children=[
+            return self.title, html.Div(children=[
                 dash_table.DataTable(
                     id=self.id_prefix + "data-table",
                     columns=[{"name": i, "id": i} for i in dff.columns],
@@ -66,4 +81,4 @@ class DataPreview(Component):
                 ])
             ])
         else:
-            return html.Div(dash_table.DataTable(self.id_prefix + "data-table"))
+            return "", html.Div(dash_table.DataTable(self.id_prefix + "data-table"))

@@ -1,22 +1,23 @@
 """
-visdex: Row filtering component
+visdex: Data filtering component
 """
 from dash import html, dcc, dash_table, callback_context
 from dash.dependencies import Input, Output, State, ALL
 
-from visdex.common import vstack, hstack, standard_margin_left, Component
+from visdex.common import vstack, hstack, standard_margin_left, Collapsible
 from visdex.data import data_store
+from visdex.summary import data_preview
 from visdex.common.timing import timing
 
-class RowFilter(Component):
+class DataFilter(Collapsible):
     """
-    Component that filters the rows of the data
+    Component that filters the rows/columns of the data
     """
-    def __init__(self, app, id_prefix="filter-"):
+    def __init__(self, app, id_prefix="filter-", title="Data Filtering"):
         """
         :param app: Dash application
         """
-        Component.__init__(self, app, id_prefix, children=[
+        Collapsible.__init__(self, app, id_prefix, title, children=[
             html.H3(children="Column Summary", style=vstack),
             dcc.Loading(
                 id=id_prefix+"loading-fields",
@@ -67,6 +68,7 @@ class RowFilter(Component):
                     ]),
                 ],
             ),
+            data_preview.DataPreview(app, "Data preview (filtered)", id_prefix="preview-filtered", update_div_id="filtered-loaded-div", data_id=data_store.FILTERED),
         ])
 
         self.register_cb(app, "update_fields_table",

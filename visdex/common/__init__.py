@@ -3,7 +3,9 @@ visdex: Common layout definitions
 """
 import logging
 
-from dash import html, dcc
+from dash import html
+from dash.dependencies import Input, Output, State
+import dash_bootstrap_components as dbc
 
 # Default style constants
 standard_margin_left = "10px"
@@ -45,3 +47,58 @@ class Component(html.Div):
         def _cb(*cb_args, **cb_kwargs):
             return getattr(self, name)(*cb_args, **cb_kwargs)
 
+class Collapsible(Component):
+    """
+    Component which has an expand/collapse button
+    """
+    def __init__(self, app, id_prefix, title, is_open=False, *args, **kwargs):
+        """
+        :param app: Dash application
+        """
+        children=[
+            html.Div(children=[
+                dbc.Button(
+                    "-" if is_open else "+",
+                    id=id_prefix+"collapse-button",
+                    style={
+                        "display": "inline-block",
+                        "margin-left": "10px",
+                        "width": "40px",
+                        "vertical-align" : "middle",
+                    },
+                ),
+                html.H3(children=title,
+                    style={
+                        "display": "inline-block",
+                        "vertical-align" : "middle",
+                    }
+                ),
+            ]),
+            dbc.Collapse(
+                id=id_prefix+"collapse",
+                style=vstack,
+                children=kwargs.pop("children", []),
+                is_open=is_open,                
+            ),
+        ]
+
+        Component.__init__(self, app, id_prefix, children=children, *args, **kwargs)
+
+        self.register_cb(app, "toggle_collapse", 
+            [
+                Output(id_prefix+"collapse", "is_open"),
+                Output(id_prefix+"collapse-button", "children"),
+            ],
+            [Input(id_prefix+"collapse-button", "n_clicks")],
+            [State(id_prefix+"collapse", "is_open")],
+            prevent_initial_call=True,
+        )
+
+    def toggle_collapse(self, n_clicks, is_open):
+        """
+        Handle click on the expand/collapse button
+        """
+        self.log.info(f"toggle_collapse {n_clicks} {is_open}")
+        if n_clicks:
+            return not is_open, "+" if is_open else "-"
+        return is_open, "-"

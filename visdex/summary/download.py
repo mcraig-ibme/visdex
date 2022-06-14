@@ -9,17 +9,16 @@ from dash import html, dcc, callback_context as ctx, dash_table
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
-from visdex.common import Component, vstack, hstack
+from visdex.common import Collapsible, vstack, hstack
 from visdex.data import data_store
 
-class Download(Component):
+class Download(Collapsible):
 
     def __init__(self, app, id_prefix="download-"):
         """
         :param app: Dash application
         """
-        Component.__init__(self, app, id_prefix, children=[
-            html.H3(children="Download data", style=vstack),
+        Collapsible.__init__(self, app, id_prefix, title="Download data", children=[
             html.Button(
                     "Download data",
                     id=id_prefix + "data-button",

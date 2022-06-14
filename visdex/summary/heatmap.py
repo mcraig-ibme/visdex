@@ -17,76 +17,42 @@ from dash import html, dcc
 import plotly.graph_objects as go
 
 from visdex.data import data_store
-from visdex.common import vstack, Component
+from visdex.common import vstack, Collapsible
 from visdex.common.timing import timing, start_timer, log_timing, print_timings
 
-class SummaryHeatmap(Component):
+class SummaryHeatmap(Collapsible):
     """
     """
     def __init__(self, app, id_prefix="heatmap-"):
         """
         :param app: Dash application
         """
-        Component.__init__(self, app, id_prefix, children=[
-            html.Div(children=[
-                dbc.Button(
-                    "+",
-                    id=id_prefix+"collapse-button",
-                    style={
-                        "display": "inline-block",
-                        "margin-left": "10px",
-                        "width": "40px",
-                        "vertical-align" : "middle",
-                    },
-                ),
-                html.H3(children="Correlation Heatmap (Pearson's)",
-                    style={
-                        "display": "inline-block",
-                        "vertical-align" : "middle",
-                    }
-                ),
-            ]),
-            dbc.Collapse(
-                id=id_prefix+"collapse",
-                style=vstack,
-                children=[
-                    dcc.Input(
-                        id=id_prefix+"clustering-input",
-                        type="number",
-                        min=1,
-                        debounce=True,
-                        value=2,
+        Collapsible.__init__(self, app, id_prefix, title="Correlation Heatmap (Pearson's)", children=[
+            dcc.Input(
+                id=id_prefix+"clustering-input",
+                type="number",
+                min=1,
+                debounce=True,
+                value=2,
+            ),
+            # TODO label the cluster input selection
+            html.Div(
+                [
+                    "Select (numerical) variables to display:",
+                    dcc.Dropdown(
+                        id=id_prefix+"dropdown",
+                        options=([]),
+                        multi=True,
+                        # style={'height': '100px', 'overflowY': 'auto'}
                     ),
-                    # TODO label the cluster input selection
-                    html.Div(
-                        [
-                            "Select (numerical) variables to display:",
-                            dcc.Dropdown(
-                                id=id_prefix+"dropdown",
-                                options=([]),
-                                multi=True,
-                                # style={'height': '100px', 'overflowY': 'auto'}
-                            ),
-                        ]
-                    ),
-                    dcc.Loading(
-                        id=id_prefix+"loading",
-                        children=[dcc.Graph(id=id_prefix+"plot", figure=go.Figure())],
-                    ),
-                ],
+                ]
+            ),
+            dcc.Loading(
+                id=id_prefix+"loading",
+                children=[dcc.Graph(id=id_prefix+"plot", figure=go.Figure())],
             ),
         ])
 
-        self.register_cb(app, "toggle_collapse", 
-            [
-                Output(id_prefix+"collapse", "is_open"),
-                Output(id_prefix+"collapse-button", "children"),
-            ],
-            [Input(id_prefix+"collapse-button", "n_clicks")],
-            [State(id_prefix+"collapse", "is_open")],
-            prevent_initial_call=True,
-        )
-        
         self.register_cb(app, "update_dropdown", 
             [
                 Output(id_prefix+"dropdown", "options"), 
@@ -113,15 +79,6 @@ class SummaryHeatmap(Component):
             ],
             prevent_initial_call=True,
         )
-
-    def toggle_collapse(self, n_clicks, is_open):
-        """
-        Handle click on the expand/collapse button
-        """
-        self.log.info(f"toggle_collapse {n_clicks} {is_open}")
-        if n_clicks:
-            return not is_open, "+" if is_open else "-"
-        return is_open, "-"
 
     @timing
     def update_dropdown(self, df_loaded):

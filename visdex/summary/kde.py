@@ -14,58 +14,28 @@ import plotly.graph_objects as go
 
 from visdex.common.timing import timing
 from visdex.data import data_store
-from visdex.common import vstack, Component
+from visdex.common import vstack, Collapsible
 
-class SummaryKdes(Component):
+class SummaryKdes(Collapsible):
     """
     """
     def __init__(self, app, id_prefix="kde-"):
         """
         :param app: Dash application
         """
-        Component.__init__(self, app, id_prefix, children=[
-            html.Div(children=[
-                dbc.Button(
-                    "+",
-                    id=id_prefix+"collapse-button",
-                    style={
-                        "display": "inline-block",
-                        "margin-left": "10px",
-                        "width": "40px",
-                        "vertical-align" : "middle",
-                    },
-                ),
-                html.H3(children="Per-variable Histograms and KDEs",
-                    style={
-                        "display": "inline-block",
-                        "vertical-align" : "middle",
-                    }
-                ),
-            ]),
-            dbc.Collapse(id=id_prefix+"collapse", children=[
-                "Select (numerical) variables for KDE display",
-                dcc.Dropdown(
-                    id=id_prefix+"dropdown",
-                    options=([]),
-                    multi=True,
-                    # style={'height': '100px', 'overflowY': 'auto'}
-                ),
-                dcc.Loading(
-                    id=id_prefix+"loading",
-                    children=[dcc.Graph(id=id_prefix+"figure", figure=go.Figure())],
-                ),
-            ])
+        Collapsible.__init__(self, app, id_prefix, title="Per-variable Histograms and KDEs", children=[
+            "Select (numerical) variables for KDE display",
+            dcc.Dropdown(
+                id=id_prefix+"dropdown",
+                options=([]),
+                multi=True,
+                # style={'height': '100px', 'overflowY': 'auto'}
+            ),
+            dcc.Loading(
+                id=id_prefix+"loading",
+                children=[dcc.Graph(id=id_prefix+"figure", figure=go.Figure())],
+            ),
         ])
-
-        self.register_cb(app, "toggle_collapse", 
-            [
-                Output(id_prefix+"collapse", "is_open"),
-                Output(id_prefix+"collapse-button", "children"),
-            ],
-            [Input(id_prefix+"collapse-button", "n_clicks")],
-            [State(id_prefix+"collapse", "is_open")],
-            prevent_initial_call=True,
-        )
 
         self.register_cb(app, "update_dropdown", 
             [
@@ -88,15 +58,6 @@ class SummaryKdes(Component):
             ],
             prevent_initial_call=True,
         )
-
-    def toggle_collapse(self, n_clicks, is_open):
-        """
-        Handle click on the expand/collapse button
-        """
-        self.log.info(f"toggle_collapse {n_clicks} {is_open}")
-        if n_clicks:
-            return not is_open, "+" if is_open else "-"
-        return is_open, "-"
 
     @timing
     def update_dropdown(self, df_loaded):
