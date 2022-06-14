@@ -27,6 +27,6 @@ def get_layout(app):
             visdex.summary.get_layout(app),
 
             # Exploratory graphs
-            visdex.exploratory_graphs.get_layout(app),
+            visdex.exploratory_graphs.ExploratoryGraphs(app),
         ]
     )
