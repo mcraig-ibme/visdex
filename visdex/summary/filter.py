@@ -176,10 +176,11 @@ class DataFilter(Collapsible):
             self.log.info(f"Add row predicate")
             if n_clicks:
                 df = data_store.get().load(data_store.FILTERED)
-                self.log.info(list(df.columns))
+                cols = list(df.columns) + list(df.index.names)
+                self.log.info(cols, df.index.names)
                 col_options = [
                     {'label': c, 'value': c}
-                    for c in list(df.columns)
+                    for c in cols
                 ]
                 op_options = [
                     {'label': c, 'value': c}

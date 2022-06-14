@@ -122,7 +122,7 @@ class DataStore:
         """
         Do row/column filtering on main data
         """
-        df = self.load(MAIN_DATA)
+        df = self.load(MAIN_DATA, keep_index_cols=True)
         if df.empty:
             self.log.info("No data to filter")
             return
@@ -161,6 +161,8 @@ class DataStore:
             df = df[keep_cols]
 
         self.log.info("Filter: post-filter %s", df.shape)
+
+        df.drop(columns=df.index.names, inplace=True)
         self.store(FILTERED, df)
 
     @property
