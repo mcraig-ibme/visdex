@@ -18,7 +18,7 @@ def get_layout(app):
     return html.Div(
         children=[
             # Data selection
-            visdex.data.get_layout(app),
+            visdex.data.DataSelection(app),
 
             # Export component
             #visdex.export.get_layout(app),
