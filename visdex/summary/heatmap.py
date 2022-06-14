@@ -51,6 +51,8 @@ class SummaryHeatmap(Collapsible):
                 id=id_prefix+"loading",
                 children=[dcc.Graph(id=id_prefix+"plot", figure=go.Figure())],
             ),
+            html.Div(id="corr-loaded-div", style={"display": "none"}, children=[]),
+            html.Div(id="pval-loaded-div", style={"display": "none"}, children=[]),
         ])
 
         self.register_cb(app, "update_dropdown", 

@@ -24,7 +24,7 @@ def get_layout(app):
             #visdex.export.get_layout(app),
 
             # Summary section
-            visdex.summary.get_layout(app),
+            visdex.summary.Summary(app),
 
             # Exploratory graphs
             visdex.exploratory_graphs.ExploratoryGraphs(app),

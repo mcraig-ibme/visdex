@@ -69,6 +69,7 @@ class DataFilter(Collapsible):
                 ],
             ),
             data_preview.DataPreview(app, "Data preview (filtered)", id_prefix="preview-filtered", update_div_id="filtered-loaded-div", data_id=data_store.FILTERED),
+            html.Div(id="filtered-loaded-div", style={"display": "none"}, children=[]),
         ])
 
         self.register_cb(app, "update_fields_table",
