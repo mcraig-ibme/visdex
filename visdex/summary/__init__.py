@@ -16,7 +16,7 @@ from . import (
 
 class Summary(Component):
     def __init__(self, app):
-        Component.__init__(self, id_prefix="summary-", children=[
+        Component.__init__(self, app, id_prefix="summary-", children=[
             data_preview.RawPreview(app),
             filter.DataFilter(app),
             download.Download(app),
