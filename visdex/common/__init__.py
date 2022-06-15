@@ -7,29 +7,6 @@ from dash import html, callback_context
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
-# Default style constants
-standard_margin_left = "10px"
-default_marker_color = "crimson"
-
-# Vertically stacked page elements
-vstack = {
-    "margin-left": standard_margin_left
-}
-
-# Page elements that can stack horizontally
-hstack = {
-    "margin-left": standard_margin_left,
-    "display": "inline-block",
-}
-
-# Style for exploratory graphs
-plot_style = {
-    "width": "13%",
-    "display": "inline-block",
-    "verticalAlign": "middle",
-    "margin-right": "2em",
-}
-
 class Component(html.Div):
     """
     Base class for layout/callback component
@@ -45,6 +22,7 @@ class Component(html.Div):
     def register_cb(self, app, name, *args, **kwargs):
         @app.callback(*args, **kwargs)
         def _cb(*cb_args, **cb_kwargs):
+            self.log.info(name)
             return getattr(self, name)(*cb_args, **cb_kwargs)
 
 class Collapsible(Component):
@@ -59,28 +37,17 @@ class Collapsible(Component):
             html.Div(children=[
                 dbc.Button(
                     "-" if is_open else "+",
+                    style={"width" : "40px"},
                     id=id_prefix+"collapse-button",
-                    style={
-                        "display": "inline-block",
-                        "margin-left": "10px",
-                        "width": "40px",
-                        "vertical-align" : "middle",
-                    },
                 ),
-                html.H3(children=title,
-                    style={
-                        "display": "inline-block",
-                        "vertical-align" : "middle",
-                    }
-                ),
+                html.H3(children=title, className="inline"),
             ]),
             dbc.Collapse(
                 id=id_prefix+"collapse",
-                style=vstack,
                 children=kwargs.pop("children", []),
                 is_open=is_open,                
             ),
-            html.Div(id=id_prefix+"force-collapse", style={"display": "none"}, children=[]),
+            html.Div(id=id_prefix+"force-collapse", className="hidden"),
         ]
 
         Component.__init__(self, app, id_prefix, children=children, *args, **kwargs)

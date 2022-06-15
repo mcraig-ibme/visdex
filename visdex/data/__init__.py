@@ -6,13 +6,13 @@ These components handle the loading of the main data
 from dash import html, dcc
 from dash.dependencies import Input, Output
 
-from visdex.common import vstack, Component
+from visdex.common import Component
 from . import data_store, user_upload, std_data
 
 class DataSelection(Component):
     def __init__(self, app):
         Component.__init__(self, app, id_prefix="data-", children=[
-            html.H2(children="Data selection", style=vstack),
+            html.H2(children="Data selection"),
             html.Div(
                 dcc.Dropdown(
                     id="dataset-selection",
@@ -24,11 +24,11 @@ class DataSelection(Component):
                     ],
                     value='user',
                 ),
-                style={"width": "30%", "margin" : "10px"},
+                style={"width": "30%"},
             ),
             user_upload.UserUpload(app),
             std_data.StdData(app, style={"display" : "none"}),
-            html.Div(id="df-loaded-div", style={"display": "none"}, children=[]),
+            html.Div(id="df-loaded-div", className="hidden"),
         ])
 
         self.register_cb(app, "data_loaded", 

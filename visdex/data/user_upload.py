@@ -7,7 +7,7 @@ import datetime
 from dash import html, dcc
 from dash.dependencies import Input, Output, State
 
-from visdex.common import vstack, hstack, Component
+from visdex.common import Component
 from visdex.data import data_store
 
 class UserUpload(Component):
@@ -16,41 +16,22 @@ class UserUpload(Component):
             dcc.Upload(
                 id="data-file-upload",
                 children=html.Div([html.A(id="data-file", children="Drag and drop or click to select files")]),
-                style={
-                    "height": "60px",
-                    "lineHeight" : "60px",
-                    "borderWidth" : "1px",
-                    "borderStyle" : "dashed",
-                    "borderRadius" : "5px",
-                    "textAlign" : "center",
-                    "margin" : "10px",
-                },
+                className="upload"
             ),
             html.H2(
                 children="Column Filter",
-                style=vstack,
             ),
-            html.Label("Upload an optional file containing columns to select", style=hstack),
-            html.Button("Clear", id="clear-filter-button", style=hstack), 
+            html.Label("Upload an optional file containing columns to select", className="inline"),
+            html.Button("Clear", id="clear-filter-button", className="inline"), 
             dcc.Upload(
                 id="filter-file-upload",
                 children=html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")]),
-                style={
-                    "height": "60px",
-                    "lineHeight": "60px",
-                    "borderWidth": "1px",
-                    "borderStyle": "dashed",
-                    "borderRadius": "5px",
-                    "textAlign": "center",
-                    "margin": "10px",
-                },
+                className="upload"
             ),
-            html.Div(
-                id="data-warning", children=[""], style={"color" : "blue", "display" : "inline-block", "margin-left" : "10px"}
-            ),
+            html.Div(id="data-warning"),
             # Hidden div for holding the booleans identifying whether a DF is loaded
-            html.Div(id="user-df-loaded-div", style={"display": "none"}, children=[]),
-        ], style={"display" : "block"}, id="upload")
+            html.Div(id="user-df-loaded-div", className="hidden"),
+        ], id="upload")
 
         self.register_cb(app, "user_data_file_changed",
             [Output("data-file", "children"), Output("user-df-loaded-div", "children")],

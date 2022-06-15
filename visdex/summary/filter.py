@@ -4,7 +4,7 @@ visdex: Data filtering component
 from dash import html, dcc, dash_table, callback_context
 from dash.dependencies import Input, Output, State, ALL
 
-from visdex.common import vstack, hstack, standard_margin_left, Collapsible
+from visdex.common import Collapsible
 from visdex.data import data_store
 from visdex.summary import data_preview
 from visdex.common.timing import timing
@@ -18,11 +18,11 @@ class DataFilter(Collapsible):
         :param app: Dash application
         """
         Collapsible.__init__(self, app, id_prefix, title, children=[
-            html.H3(children="Column filter", style=vstack),
+            html.H3(children="Column filter"),
             html.Div(
                 id=id_prefix+"missing-values-filter",
                 children=[
-                    html.Label("Filter out all columns missing at least X percentage of rows:", style=hstack),
+                    "Filter out all columns missing at least:",
                     dcc.Input(
                         id=id_prefix+"missing-values-input",
                         type="number",
@@ -30,11 +30,12 @@ class DataFilter(Collapsible):
                         max=100,
                         debounce=True,
                         value=None,
-                        style=hstack,
+                        className="inline",
                     ),
+                    "% of rows",
                 ],
             ),        
-            html.H3(children="Row filter", style=vstack),
+            html.H3(children="Row filter"),
             html.Div(
                 id=id_prefix+"predicate-filters",
                 children=[           
@@ -42,20 +43,19 @@ class DataFilter(Collapsible):
                     html.Button(
                         "Add row condition",
                         id=id_prefix+"add-row-predicate-button",
-                        style={
-                            "margin-top": "10px",
-                            "margin-left": standard_margin_left,
-                            "margin-bottom": "40px",
-                        },
                     ),
-                    html.Div(id=id_prefix+"random-sample", children=[
-                        html.Label("Return random sample of: ", style={"display" : "inline-block", "verticalAlign" : "middle"}),
-                        dcc.Input(id=id_prefix+"random-sample-input", style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"}),
-                    ]),
-                ],
+                ]
+            ),
+            html.H3(children="Random sample"),
+            html.Div(id=id_prefix+"random-sample", 
+                children=[
+                    "Return random sample of: ",
+                    dcc.Input(id=id_prefix+"random-sample-input", className="text-input"),
+                    "subjects",
+                ]
             ),
             data_preview.DataPreview(app, "Data preview (filtered)", id_prefix="preview-filtered", update_div_id="filtered-loaded-div", data_id=data_store.FILTERED),
-            html.Div(id="filtered-loaded-div", style={"display": "none"}, children=[]),
+            html.Div(id="filtered-loaded-div", className="hidden", children=[]),
         ])
 
         self.register_cb(app, "update_filtered_data",
@@ -124,20 +124,18 @@ class DataFilter(Collapsible):
                 ]
                 new_predicate = html.Div(
                     [
-                        html.Label("Column: ", style={"display" : "inline-block", "verticalAlign" : "middle"}),
+                        "Column: ",
                         dcc.Dropdown(
                             id={"type" : self.id_prefix+"predicate-filter-column", "index" : n_clicks},
-                            options=col_options, value=None,
-                            style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"},
+                            options=col_options, value=None, className="text-input"
                         ),
                         dcc.Dropdown(
                             id={"type" : self.id_prefix+"predicate-filter-op", "index" : n_clicks},
-                            options=op_options, value="=",
-                            style={"width" : "200px", "display" : "inline-block", "verticalAlign" : "middle"},
+                            options=op_options, value="=", className="text-input"
                         ),
                         dcc.Input(
-                            id={"type" : self.id_prefix+"predicate-filter-value", "index" : n_clicks},
-                            style={"width" : "300px", "display" : "inline-block", "verticalAlign" : "middle"},
+                            id={"type" : self.id_prefix+"predicate-filter-value", "index" : n_clicks}, 
+                            className="text-input"
                         ),
                     ],
                     id=self.id_prefix+"predicate-filter-%i" % n_clicks,

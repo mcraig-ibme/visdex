@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 
 from visdex.common.timing import timing
 from visdex.data import data_store
-from visdex.common import vstack, Collapsible
+from visdex.common import Collapsible
 
 class SummaryKdes(Collapsible):
     """
@@ -29,7 +29,6 @@ class SummaryKdes(Collapsible):
                 id=id_prefix+"dropdown",
                 options=([]),
                 multi=True,
-                # style={'height': '100px', 'overflowY': 'auto'}
             ),
             dcc.Loading(
                 id=id_prefix+"loading",

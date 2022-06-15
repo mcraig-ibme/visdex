@@ -9,7 +9,7 @@ from dash import html, dcc, callback_context as ctx, dash_table
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
-from visdex.common import Collapsible, vstack, hstack
+from visdex.common import Collapsible
 from visdex.data import data_store
 
 class Download(Collapsible):
@@ -22,17 +22,17 @@ class Download(Collapsible):
             html.Button(
                     "Download data",
                     id=id_prefix + "data-button",
-                    style=hstack,
+                    className="inline"
                 ),
             html.Button(
                     "Download IDs",
                     id=id_prefix + "ids-button",
-                    style=hstack,
+                    className="inline"
                 ),
             html.Button(
                     "Download imaging data links",
                     id=id_prefix + "links-button",
-                    style=hstack,
+                    className="inline"
                 ),
             dbc.Modal(
             [

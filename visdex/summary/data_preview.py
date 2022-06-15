@@ -1,106 +1,13 @@
 """
 visdex: data preview table
 
-Shows a basic summary of the first few rows in the data 
+Shows a basic summary of the first few rows in a data frame
 """
 from dash import html, dcc, dash_table
 from dash.dependencies import Input, Output
 
-from visdex.common import Component, Collapsible, vstack
+from visdex.common import Component
 from visdex.data import data_store
-
-class RawPreview(Collapsible):
-    def __init__(self, app, id_prefix="rawpreview-"):
-        """
-        :param app: Dash application
-        """
-        Collapsible.__init__(self, app, id_prefix, title="Raw data preview", children=[
-            html.H3(children="Column Summary", style=vstack),
-            dcc.Loading(
-                id=id_prefix+"loading-fields",
-                children=[
-                    html.Div(
-                        id=id_prefix+"fields",
-                        style={
-                            "width": "95%",
-                            "margin-left": "10px",
-                            "margin-right": "10px",
-                        },
-                    ),
-                ],
-            ),
-            DataPreview(app, "Data preview (unfiltered)"),
-        ], is_open=False)
-
-        self.register_cb(app, "expand_on_data_load",
-            Output(id_prefix+"force-collapse", "children"),
-            Input("df-loaded-div", "children"),
-            prevent_initial_call=True,
-        )
-
-        self.register_cb(app, "update_field_summary",
-            Output(id_prefix+"fields", "children"),
-            Input("df-loaded-div", "children"),
-            Input("filter-missing-values-input", "value"),
-            prevent_initial_call=True,
-        )
-
-    def expand_on_data_load(self, df_loaded):
-        return not df_loaded
-
-    def update_field_summary(self, df_loaded, missing_value_cutoff):
-        self.log.info(f"update_field_summary")
-        ds = data_store.get()
-
-        df = ds.load(data_store.MAIN_DATA)
-        if df.empty:
-            return [], False
-
-        description_df = ds.description
-        specifiers = ["s", "d", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f"]
-        fields_table_layout = html.Div(
-            dash_table.DataTable(
-                id="table",
-                columns=[
-                    {
-                        "name": description_df.columns[0].upper(),
-                        "id": description_df.columns[0],
-                        "type": "text",
-                        "format": {"specifier": "s"},
-                    }
-                ]
-                + [
-                    {
-                        "name": i.upper(),
-                        "id": i,
-                        "type": "numeric",
-                        "format": {"specifier": j},
-                    }
-                    for i, j in zip(description_df.columns[1:], specifiers[1:])
-                ],
-                data=description_df.to_dict("records"),
-                page_size=20,
-                # Highlight any columns that do not have a complete set of records,
-                # by comparing count against the length of the DF.
-                style_data_conditional=[
-                    {
-                        "if": {
-                            "filter_query": "{{count}} < {}".format(df.shape[0]),
-                            "column_id": "count",
-                        },
-                        "backgroundColor": "FireBrick",
-                        "color": "white",
-                    },
-                    {
-                        "if": {"filter_query": "{{% missing values}} > {}".format(missing_value_cutoff)},
-                        "backgroundColor": "Grey",
-                        "color": "white",
-                    }
-                ],
-            ),
-        )
-
-        return fields_table_layout
 
 class DataPreview(Component):
     """
@@ -117,18 +24,11 @@ class DataPreview(Component):
         self.title = title
 
         Component.__init__(self, app, id_prefix, children=[
-            html.H3(id=id_prefix+"title", style=vstack),
+            html.H3(id=id_prefix+"title"),
             dcc.Loading(
                 id=id_prefix + "loading",
                 children=[
-                    html.Div(
-                        id=id_prefix + "table",
-                        style={
-                            "width": "95%",
-                            "margin-left": "10px",
-                            "margin-right": "10px",
-                        },
-                    )
+                    html.Div(id=id_prefix + "table")
                 ],
             ),
         ])
@@ -157,7 +57,7 @@ class DataPreview(Component):
                     id=self.id_prefix + "data-table",
                     columns=[{"name": i, "id": i} for i in dff.columns],
                     data=dff.head().to_dict("records"),
-                    style_table={"overflowX": "auto"},
+                    className="data-table",
                 ),
                 html.Div([
                     html.Div("Rows: " + str(dff.shape[0])),

@@ -8,7 +8,7 @@ from dash import html, dcc
 from dash.dependencies import Input, Output, State, MATCH
 import plotly.graph_objects as go
 
-from visdex.common import standard_margin_left, vstack, plot_style, Collapsible
+from visdex.common import Collapsible
 
 from .common import all_components
 from . import (
@@ -31,11 +31,6 @@ class ExploratoryGraphs(Collapsible):
             html.Button(
                 "New Graph",
                 id="add-graph-button",
-                style={
-                    "margin-top": "10px",
-                    "margin-left": standard_margin_left,
-                    "margin-bottom": "40px",
-                },
             ),
         ], is_open=True)
 
@@ -77,7 +72,6 @@ class ExploratoryGraphs(Collapsible):
                             for value in all_components.keys()
                         ],
                         value="scatter",
-                        style={"width": "50%"},
                     ),
                     # This is a placeholder for the 'filter-graph-group-scatter' or
                     # 'filter-graph-group-bar' to be placed here.
@@ -89,7 +83,6 @@ class ExploratoryGraphs(Collapsible):
                     html.Div(id={"type": "placeholder", "index": n_clicks}),
                 ],
                 id={"type": "divgraph-type-dd", "index": n_clicks},
-                style=vstack,
             )
 
             children.append(new_graph)
@@ -121,7 +114,7 @@ class ExploratoryGraphs(Collapsible):
                             ),
                         ],
                         id={"type": "div-" + graph_type + "-" + name, "index": graph_idx},
-                        style=plot_style,
+                        className="plot"
                     )
                 )
 

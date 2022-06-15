@@ -17,7 +17,7 @@ from dash import html, dcc
 import plotly.graph_objects as go
 
 from visdex.data import data_store
-from visdex.common import vstack, Collapsible
+from visdex.common import Collapsible
 from visdex.common.timing import timing, start_timer, log_timing, print_timings
 
 class SummaryHeatmap(Collapsible):
@@ -43,7 +43,6 @@ class SummaryHeatmap(Collapsible):
                         id=id_prefix+"dropdown",
                         options=([]),
                         multi=True,
-                        # style={'height': '100px', 'overflowY': 'auto'}
                     ),
                 ]
             ),
@@ -51,8 +50,8 @@ class SummaryHeatmap(Collapsible):
                 id=id_prefix+"loading",
                 children=[dcc.Graph(id=id_prefix+"plot", figure=go.Figure())],
             ),
-            html.Div(id="corr-loaded-div", style={"display": "none"}, children=[]),
-            html.Div(id="pval-loaded-div", style={"display": "none"}, children=[]),
+            html.Div(id="corr-loaded-div", className="hidden"),
+            html.Div(id="pval-loaded-div", className="hidden"),
         ])
 
         self.register_cb(app, "update_dropdown", 

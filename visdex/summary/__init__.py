@@ -1,11 +1,12 @@
 """
 visdex: Summary section
 
-The summary section defines basic data visualisations that are
+The summary section defines basic data tables and visualisations that are
 available by default
 """
 from visdex.common import Component
 from . import (
+    raw_preview,
     data_preview,
     filter,
     download,
@@ -17,7 +18,7 @@ from . import (
 class Summary(Component):
     def __init__(self, app):
         Component.__init__(self, app, id_prefix="summary-", children=[
-            data_preview.RawPreview(app),
+            raw_preview.RawPreview(app),
             filter.DataFilter(app),
             download.Download(app),
             heatmap.SummaryHeatmap(app),

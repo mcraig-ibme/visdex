@@ -10,7 +10,6 @@ from dash import html, dcc
 from dash.dependencies import Input, Output
 
 from visdex._version import __version__
-from . import hstack
 
 LOG = logging.getLogger(__name__)
 HEADER_IMAGE = "UoN_Primary_Logo_RGB.png"
@@ -30,7 +29,7 @@ def get_layout(app):
             user_id = current_user.get_id()
             LOG.info(current_user)
             LOG.info(session)
-            return [html.Label(f"User: {user_id}", style=hstack), html.Label(f"Session:", style=hstack), html.A('logout', href=f'{app.config.get("PREFIX", "/")}logout', style=hstack)], user_id
+            return [f"User: {user_id} ", html.A('logout', href=f'{app.config.get("PREFIX", "/")}logout', className="inline")], user_id
         else:
             return [], ''
 
@@ -47,36 +46,11 @@ def get_layout(app):
             children=[
                 html.A(
                     id="drs-link",
-                    children=[
-                        html.H1("DRS |"),
-                    ],
+                    children=[html.H1("DRS |")],
                     href="https://digitalresearch.nottingham.ac.uk/",
-                    style={
-                        "display": "inline-block",
-                        "margin-left": "10px",
-                        "margin-right": "10px",
-                        "text-decoration": "none",
-                        "align": "center",
-                    },
                 ),
-                html.H2(
-                    "Visual Data Explorer v%s" % __version__,
-                    style={
-                        "display": "inline-block",
-                    },
-                ),
-                html.Div(
-                    id="user-status-label", 
-                    style={
-                         "display": "inline-block",
-                         "position" : "absolute",
-                         "top" : "0",
-                         "right": "0",
-                         "margin-right": "10px",
-                         "color": "#505050",
-                     },
-                )
+                html.H2("Visual Data Explorer v%s" % __version__, className="inline"),
+                html.Div(id="user-status-label")
             ],
-            style={"width": "100%", "display": "inline-block", "color": "white"},
         ),
     ])

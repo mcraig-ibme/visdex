@@ -15,13 +15,13 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
 
-from visdex.common import default_marker_color
 from .common import common_define_cbs
 
 LOG = logging.getLogger(__name__)
 
 MIN_MARKER_SIZE = 2
 MAX_MARKER_SIZE = 10
+DEFAULT_MARKER_COLOR = "crimson"
 
 def define_cbs(app):
     common_define_cbs(app, "scatter", make_scatter_figure)
@@ -74,7 +74,7 @@ def make_scatter_figure(dff, args_dict):
 
     # If color is not provided, then use default
     if args_dict["color"] is None:
-        color_to_use = default_marker_color
+        color_to_use = DEFAULT_MARKER_COLOR
     # Otherwise, if the dtype is categorical, then we need to map - otherwise, leave as it is
     else:
         dff.dropna(inplace=True, subset=[args_dict["color"]])

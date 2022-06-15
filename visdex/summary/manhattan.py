@@ -11,7 +11,6 @@ from dash import html, dcc
 import plotly.graph_objects as go
 
 from visdex.data import data_store
-from visdex.common import vstack
 from visdex.common.timing import timing, start_timer, log_timing, print_timings
 from visdex.exploratory_graphs.manhattan_graph import (
     calculate_transformed_corrected_pval,
@@ -182,7 +181,7 @@ def get_layout(app):
         return fig
 
     return html.Div(children=[
-        html.H3("Manhattan Plot", style=vstack),
+        html.H3("Manhattan Plot"),
         dcc.Loading(
             id="loading-manhattan-figure",
             children=[
@@ -197,7 +196,7 @@ def get_layout(app):
                                 }
                             ],
                             value=[],
-                            style={"display": "inline-block"},
+                            className="inline"
                         ),
                     ]
                 ),
@@ -210,10 +209,9 @@ def get_layout(app):
                             value=0.05,
                             step=0.0001,
                             debounce=True,
-                            style={"display": "inline-block"},
+                            className="inline"
                         ),
                     ],
-                    style=vstack,
                 ),
                 html.Div(
                     [
@@ -223,10 +221,9 @@ def get_layout(app):
                                 {"label": "  logscale y-axis", "value": "LOG"}
                             ],
                             value=[],
-                            style={"display": "inline-block"},
+                            className="inline"
                         ),
                     ],
-                    style=vstack,
                 ),
                 dcc.Graph(id="manhattan-figure", figure=go.Figure()),
             ],
