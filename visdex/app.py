@@ -25,18 +25,24 @@ LOG = logging.getLogger(__name__)
 
 # Create the Flask application
 flask_app = flask.Flask(__name__)
-config_file = os.environ.get("VISDEX_CONFIG", os.path.join(os.environ["HOME"], ".visdex.conf"))
+if "VISDEX_CONFIG" in os.environ:
+    config_file = os.environ["VISDEX_CONFIG"]
+elif "HOME" in os.environ:
+    config_file = os.path.join(os.environ["HOME"], ".visdex.conf")
+else:
+    config_file = "/etc/visdex/visdex.conf"
+
 if os.path.isfile(config_file):
     LOG.info(f"Using config file: {config_file}")
     flask_app.config.from_pyfile(config_file)
 else:
     LOG.info(f"Config file: {config_file} not found")
-LOG.info(f"Visdex configuration: {flask_app.config}")
 
 # It should be possible to handle URL prefixes transparently but
 # have not managed to get this to work yet - so set this to whatever
 # prefix Apache is using
 PREFIX = flask_app.config.get("PREFIX", "/")
+LOG.info(f"Using prefix: {PREFIX}")
 
 login.init_login(flask_app)
 
