@@ -8,13 +8,13 @@ from dash.dependencies import Input, Output
 
 from visdex.common import Collapsible
 import visdex.data.data_store as data_store
-import visdex.summary.data_preview as data_preview
 
 class RawPreview(Collapsible):
     def __init__(self, app, id_prefix="rawpreview-"):
         """
         :param app: Dash application
         """
+        import visdex.summary.data_preview as data_preview
         Collapsible.__init__(self, app, id_prefix, title="Raw data preview", children=[
             html.H3(children="Column Summary"),
             dcc.Loading(
