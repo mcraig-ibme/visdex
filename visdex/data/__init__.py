@@ -18,9 +18,9 @@ class DataSelection(Component):
                     id="dataset-selection",
                     options=[
                         {'label': 'Upload a CSV/TSV data set', 'value': 'user'},
-                        {'label': 'ABCD release 4.0', 'value': 'abcd'},
-                        {'label': 'Early psychosis study', 'value': 'earlypsychosis'},
-                        {'label': 'HCP Ageing', 'value': 'hcpageing'},
+                        {'label': 'ABCD release 4.0', 'value': 'nda.abcd'},
+                        {'label': 'Early psychosis study', 'value': 'nda.earlypsychosis'},
+                        {'label': 'HCP Ageing', 'value': 'nda.hcpageing'},
                     ],
                     value='user',
                 ),
@@ -39,8 +39,13 @@ class DataSelection(Component):
         )
         
         self.register_cb(app, "data_selection_changed", 
-            [Output("upload", "style"), Output("std", "style"), Output("std-dataset-checklist", "data")],
-            [Input("dataset-selection", "value")],
+            [
+                Output("upload", "style"),
+                Output("std", "style"),
+            ],
+            [
+                Input("dataset-selection", "value")
+            ],
             prevent_initial_call=True,
         )
 
@@ -52,10 +57,8 @@ class DataSelection(Component):
         Change to source of data selection, user or standard data
         """
         self.log.info(f"Data selection: {selection}")
+        data_store.set_session_data_store(selection)
         if selection == "user":
-            data_store.init()
-            return {"display" : "block"}, {"display" : "none"}, []
+            return {"display" : "block"}, {"display" : "none"}
         else:
-            data_store.init(selection)
-            dataset_df = data_store.get().get_all_datasets()
-            return {"display" : "none"}, {"display" : "block"}, dataset_df.to_dict('records')
+            return {"display" : "none"}, {"display" : "block"}

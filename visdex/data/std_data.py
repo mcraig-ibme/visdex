@@ -41,6 +41,12 @@ class StdData(Component):
             html.Div(id=id_prefix+"df-loaded-div", className="hidden"),
         ], id="std", *args, **kwargs),
 
+        self.register_cb(app, "std_data_selected", 
+            Output(id_prefix+"dataset-checklist", "data"),
+            Input("std", "style"),
+            prevent_initial_call=True,
+        )
+
         self.register_cb(app, "dataset_selection_changed",
             Output(id_prefix+"field-checklist", "data"),
             Output(id_prefix+"field-checklist", "selected_rows"),
@@ -73,6 +79,16 @@ class StdData(Component):
             State(id_prefix+"field-checklist", "derived_virtual_selected_rows"),
             prevent_initial_call=True,
         )
+
+    def std_data_selected(self, style):
+        """
+        Standard data may have been selected by the user - need to repopulate dataset list
+        """
+        if style["display"] == "block":
+            dataset_df = data_store.get().get_all_datasets()
+            return dataset_df.to_dict('records')
+        else:
+            return []
 
     def dataset_selection_changed(self, data, selected_rows, field_data, selected_field_rows, data_type):
         """

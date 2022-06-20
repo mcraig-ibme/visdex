@@ -3,44 +3,144 @@ Base class for data store with functions for creating and
 retrieving per-session instances
 """
 import logging
+import os
+from datetime import datetime
+import json
 
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_string_dtype
 
-from flask import session
+from flask import current_app, session
 
 LOG = logging.getLogger(__name__)
+DATA_STORE_TIMEOUT_LAG_MINUTES = 5
 
-DATA_STORES = {}
+# Data store implementing classes
+DATA_STORE_CLASSES = {
+    "user" : "UserData"
+}
 
-def init(std_data=None):
+# Data store instances keyed by session UID
+LOG.info("Clearing session stores")
+SESSION_DATA_STORES = {
+}
+
+def load_config(fname):
+    from . import data_stores
+    global DATA_STORE_CLASSES
+    LOG.info(f"start data store configuration: {DATA_STORE_CLASSES}")
+    LOG.info("Load_config: %s", fname)
+    try:
+        if os.path.isfile(fname):
+            with open(fname, "r") as f:
+                config = json.load(f)
+            LOG.info(config)
+            for cat, cat_defn in config.items():
+                LOG.info(cat)
+                LOG.info(cat_defn)
+                mod = getattr(data_stores, cat, None)
+                if mod is None:
+                    LOG.warn("No module for data store category: {cat}")
+                    continue
+
+                class_name = None
+                for k, v in cat_defn.items():
+                    LOG.info("Attr: %s=%s", k, v)
+                    if k == "class_name" :
+                        LOG.info("Found class name: %s" % v)
+                        class_name = v
+                        cls = getattr(mod, v, None)
+                        if cls is None:
+                            LOG.warn("Class not found: {cat}.{class_name}")
+                    else:
+                        LOG.info("Setting attribute: %s=%s", k, v)
+                        setattr(mod, k, v)
+                
+                LOG.info("Adding module")
+                if class_name:
+                    LOG.info("Setting class name: %s" % class_name)
+                    DATA_STORE_CLASSES[cat] = class_name
+                else:
+                    LOG.warn(f"Class name not defined for data store category {cat}")
+            LOG.info(f"Data store configuration: {DATA_STORE_CLASSES}")
+        else:
+            LOG.warn(f"Failed to load data store config from {fname} - no such file")
+    except Exception as exc:
+        LOG.warn(exc)
+
+def prune_sessions():
+    """
+    Flag current session's last used time to now and remove sessions that have timed out
+
+    We need this because although Flask can expire sessions itself, all that means is
+    that the session data is removed, i.e. we will no longer get a session object with
+    the expired uid, and we can't remove the associated data store without that uid.
+
+    We remove data stores 5 minutes after the corresponding session timeout.
+    """
+    current_uid = session["uid"].hex
+    if current_uid in SESSION_DATA_STORES:
+        SESSION_DATA_STORES[uid].last_used = datetime.now()
+
+    timeout_minutes = current_app.config.get("TIMOUT_MINUTES", 1) + DATA_STORE_TIMEOUT_LAG_MINUTES
+    for uid in list(SESSION_DATA_STORES.keys()):
+        ds = SESSION_DATA_STORES[uid]
+        dt = datetime.now() - ds.last_used
+        LOG.info(f"Session data store {uid} last used {dt.minutes} mins ago")
+        if dt.minutes > timeout_minutes:
+            LOG.info(f"Cleaning up expired session data store: {uid}")
+            remove(uid)
+
+def set_session_data_store(name="user"):
+    """
+    Set the data store for the current session
+    
+    :param name: Name of data store in form <category>.<name>
+                 or just <category>
+    """
     uid = session["uid"].hex
-    if uid in DATA_STORES:
-        # Is this useful?
-        DATA_STORES[uid].free()
+    remove(uid)
 
-    if std_data is None:
-        from .user_data import UserData
-        DATA_STORES[uid] = UserData()
-    elif std_data in ("abcd", "earlypsychosis", "hcpageing"):
-        from .nda_data import NdaData
-        DATA_STORES[uid] = NdaData(std_data)
+    from . import data_stores
+    parts = name.split(".", 1)
+    cat = parts[0]
+    class_name = DATA_STORE_CLASSES.get(cat, None)
+    mod = getattr(data_stores, cat, None)
+    if mod is None or class_name is None:
+        raise RuntimeError(f"Unknown data store category: '{cat}'")
+
+    cls = getattr(mod, class_name, None)
+    if cls is not None:
+        name = "" if len(parts) == 1 else parts[1]
+        LOG.info(f"Setting data store for session {uid} to {cls} {class_name}")
+        SESSION_DATA_STORES[uid] = cls(name)
+        LOG.info(SESSION_DATA_STORES)
     else:
-        raise RuntimeError(f"Unknown standard data type: '{std_data}'")
+        raise RuntimeError(f"Unknown data store class: '{cat}' '{class_name}'")
 
 def get():
+    """
+    Get the DataStore for the current session
+    """
+    LOG.info("get")
+    LOG.info(SESSION_DATA_STORES)
     uid = session["uid"].hex
-    if uid not in DATA_STORES:
+    if uid not in SESSION_DATA_STORES:
         LOG.error("No data store for session: %s" % uid)
-        init()
-    return DATA_STORES[uid]
+        set_session_data_store()
+    return SESSION_DATA_STORES[uid]
 
-def remove():
-    uid = session["uid"].hex
-    if uid in DATA_STORES:
+def remove(uid=None):
+    """
+    Remove the DataStore for the current session and free any associated resources
+    """
+    if uid is None:
+        uid = session["uid"].hex
+    if uid in SESSION_DATA_STORES:
         LOG.info("Removing data store for session: %s" % uid)
-        del DATA_STORES[uid]
+        SESSION_DATA_STORES[uid].free()
+        del SESSION_DATA_STORES[uid]
 
 MAIN_DATA = "df"
 FILTERED = "filtered"
@@ -56,6 +156,7 @@ class DataStore:
     def __init__(self, backend):
         self.log = logging.getLogger(__name__)
         self.backend = backend
+        self.last_used = datetime.now()
         self._datasets = []
         self._fields = []
         self._missing_values_threshold = 101

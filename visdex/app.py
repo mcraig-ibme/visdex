@@ -8,6 +8,7 @@ appropriate page in response to requests
 """
 import logging
 import os
+from datetime import timedelta
 
 import flask
 from flask_login import logout_user, current_user
@@ -20,6 +21,7 @@ from dash import html
 import visdex.common.header as header
 import visdex.visdex as visdex
 import visdex.login as login
+import visdex.data.data_store as data_store
 
 LOG = logging.getLogger(__name__)
 
@@ -41,8 +43,22 @@ else:
 # It should be possible to handle URL prefixes transparently but
 # have not managed to get this to work yet - so set this to whatever
 # prefix Apache is using
-PREFIX = flask_app.config.get("PREFIX", "/")
-LOG.info(f"Using prefix: {PREFIX}")
+prefix = flask_app.config.get("PREFIX", "/")
+LOG.info(f"Using prefix: {prefix}")
+
+timeout_minutes = flask_app.config.get("TIMOUT_MINUTES", 1)
+LOG.info(f"Session timeout {timeout_minutes} minutes")
+
+# Load data store configuration
+datastore_config = flask_app.config.get("DATA_STORE_CONFIG", None)
+if datastore_config:
+    LOG.info(f"Loading data store configuration from {datastore_config}")
+    data_store.load_config(datastore_config)
+
+@flask_app.before_request
+def set_session_timeout():
+    flask.session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=5)
 
 login.init_login(flask_app)
 
@@ -50,7 +66,7 @@ login.init_login(flask_app)
 app = dash.Dash(
     __name__,
     server=flask_app,
-    requests_pathname_prefix=PREFIX,
+    requests_pathname_prefix=prefix,
     suppress_callback_exceptions=False,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
@@ -73,24 +89,28 @@ def display_page(pathname):
     """
     Display the appropriate page based on URL requested and login status
     """
+    data_store.prune_sessions()
     view = None
     url = dash.no_update
-    LOG.info("Choosing page for path %s", pathname)
-    if pathname == f'{PREFIX}login':
+    LOG.info(f"Request: {pathname}")
+    if pathname == f'{prefix}login':
         view = login_layout
-    elif pathname == f'{PREFIX}logout':
+    elif pathname == f'{prefix}logout':
+        if "uid" in flask.session:
+            data_store.remove()
         if current_user.is_authenticated:
             logout_user()
-        url = f'{PREFIX}login'
-    elif pathname == f'{PREFIX}app':
+        url = f'{prefix}login'
+    elif pathname == f'{prefix}app':
         if current_user.is_authenticated and "uid" in flask.session:
             view = visdex_layout
         else:
             # Not authenticated - redirect to login page
-            url = f'{PREFIX}login'
+            url = f'{prefix}login'
     else:
         # Redirect any other page to the main app
-        url = f'{PREFIX}app'
+        url = f'{prefix}app'
 
-    LOG.info("Redirecting to %s", url)
+    if url != dash.no_update:
+        LOG.info(f"Redirect: {url}")
     return view, url

@@ -7,8 +7,8 @@ import io
 
 import pandas as pd
 
-from .data_store import DataStore
-from .feather_cache import FeatherCache
+from visdex.data.data_store import DataStore, MAIN_DATA
+from visdex.data.feather_cache import FeatherCache
 
 # Possible sets of index columns. 
 # This is very data specific so we just try them in order and use the first set
@@ -19,7 +19,7 @@ KNOWN_INDICES = [
 
 class UserData(DataStore):
 
-    def __init__(self):
+    def __init__(self, _name=None):
         DataStore.__init__(self, FeatherCache())
 
     def update(self):

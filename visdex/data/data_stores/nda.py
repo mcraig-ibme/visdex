@@ -5,11 +5,12 @@ import os
 
 import pandas as pd
 
-from .data_store import DataStore, MAIN_DATA
-from .feather_cache import FeatherCache
+from visdex.data.data_store import DataStore, MAIN_DATA
+from visdex.data.feather_cache import FeatherCache
  
-GLOBAL_DATADIR = "/home/martin/nda/"
-GLOBAL_DICTDIR = os.path.join(GLOBAL_DATADIR, "dictionary")
+datadir = "/home/bbzmsc/nda/"
+dictdir = os.path.join(datadir, "dictionary")
+
 STD_FIELDS = ["subjectkey", "src_subject_id", "visit", "interview_date", "interview_age", "sex", "eventname"]
 IMG_FIELDS = [
     "image_description", "scan_type", 
@@ -30,9 +31,9 @@ class NdaData(DataStore):
     def __init__(self, study_name):
         DataStore.__init__(self, FeatherCache())
         self._study_name = study_name
-        self._datadir = os.path.join(GLOBAL_DATADIR, study_name)
+        self._datadir = os.path.join(datadir, study_name)
         self._dataset_names = [fname.split(".")[0] for fname in os.listdir(self._datadir) if fname.endswith(".txt")]
-        df = pd.read_csv(os.path.join(GLOBAL_DATADIR, "datasets.tsv"), sep="\t", quotechar='"')
+        df = pd.read_csv(os.path.join(datadir, "datasets.tsv"), sep="\t", quotechar='"')
         self._all_datasets = df[df['shortname'].isin(self._dataset_names)]
         self._fields = {}
         self._datasets = []
@@ -53,7 +54,7 @@ class NdaData(DataStore):
         """
         dfs = []
         for short_name in self._datasets:
-            dict_fname = os.path.join(GLOBAL_DICTDIR, "%s.csv" % short_name)
+            dict_fname = os.path.join(dictdir, "%s.csv" % short_name)
             df = pd.read_csv(dict_fname, sep=",", quotechar='"')
             df.drop(df[df.ElementName.isin(STD_FIELDS)].index, inplace=True)
             dfs.append(df)
@@ -114,7 +115,7 @@ class NdaData(DataStore):
 
         main_df = None
         for short_name in self._datasets:
-            dict_fname = os.path.join(GLOBAL_DICTDIR, "%s.csv" % short_name)
+            dict_fname = os.path.join(dictdir, "%s.csv" % short_name)
             dict_df = pd.read_csv(dict_fname, sep=",", quotechar='"')
             df_fields = dict_df["ElementName"]
             self.log.info(f"Dataset {short_name} has fields:")

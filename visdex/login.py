@@ -97,7 +97,7 @@ def get_layout(app):
         if user:
             login_user(user)
             session['uid'] = uuid.uuid4()
-            print(session)
+            LOG.info(f"Created session with UID {session['uid'].hex}")
             return f'{app.server.config.get("PREFIX", "/")}app'
 
     @app.callback(
