@@ -49,11 +49,7 @@ LOG.info(f"Using prefix: {prefix}")
 timeout_minutes = flask_app.config.get("TIMOUT_MINUTES", 1)
 LOG.info(f"Session timeout {timeout_minutes} minutes")
 
-# Load data store configuration
-datastore_config = flask_app.config.get("DATA_STORE_CONFIG", None)
-if datastore_config:
-    LOG.info(f"Loading data store configuration from {datastore_config}")
-    data_stores.load_config(datastore_config)
+data_stores.load_config(flask_app.config.get("DATA_STORE_CONFIG", None))
 
 @flask_app.before_request
 def set_session_timeout():
