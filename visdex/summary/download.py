@@ -10,7 +10,8 @@ from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
 from visdex.common import Collapsible
-from visdex.data import data_store
+import visdex.session
+from visdex.data_stores import DATA_STORES
 
 class Download(Collapsible):
 
@@ -92,34 +93,33 @@ class Download(Collapsible):
 
     def download_data(self, n_clicks):
         self.log.debug("Download data")
-        df = data_store.get().load(data_store.FILTERED)
+        df = visdex.session.get().load(visdex.session.FILTERED)
         return dcc.send_data_frame(df.to_csv, "visdex_data.csv")
 
     def download_ids(self, n_clicks):
         self.log.debug("Download IDs")
-        df = pd.DataFrame(index=data_store.get().load(data_store.FILTERED).index)
+        df = pd.DataFrame(index=visdex.session.get().load(visdex.session.FILTERED).index)
         return dcc.send_data_frame(df.to_csv, "visdex_ids.csv")
 
     def show_links_modal(self, show_n_clicks, ok_n_clicks, cancel_n_clicks, is_open, imaging_types, selected_rows):
         """
         Show modal for downloading imaging data links
         """
+        sess = visdex.session.get()
+        datastore = DATA_STORES[sess.get_prop("ds")]["impl"]
+        imaging_types = datastore.imaging_types
         triggered_ids = [c["prop_id"] for c in ctx.triggered]
+
         if triggered_ids[0] == self.id_prefix + "links-button.n_clicks":
             # Initial show of modal dialog
-            ds = data_store.get()
-            imaging_types = ds.imaging_types.to_dict('records')
-            return True, imaging_types, None
+            return True, imaging_types.to_dict('records'), None
         elif triggered_ids[0] == self.id_prefix + "links-modal-ok.n_clicks":
             # Ok clicked
-            return False, [], self.download_links(data_store.get().imaging_types, selected_rows)
+            self.log.debug("Download imaging links")
+            imaging_types = imaging_types.iloc[selected_rows]
+            ids = pd.DataFrame(index=visdex.session.get().load(visdex.session.FILTERED).index)
+            df = datastore.imaging_links(ids, imaging_types)
+            return False, [], dcc.send_data_frame(df.to_csv, "visdex_imaging_links.csv")
         else:
             # Cancel clicked
             return False, [], None
-
-    def download_links(self, imaging_types, selected_rows):
-        self.log.debug("Download imaging links")
-        imaging_types = imaging_types.iloc[selected_rows]
-        ids = pd.DataFrame(index=data_store.get().load(data_store.FILTERED).index)
-        df = data_store.get().imaging_links(ids, imaging_types)
-        return dcc.send_data_frame(df.to_csv, "visdex_imaging_links.csv")

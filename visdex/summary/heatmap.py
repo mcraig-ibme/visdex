@@ -16,7 +16,7 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc
 import plotly.graph_objects as go
 
-from visdex.data import data_store
+import visdex.session
 from visdex.common import Collapsible
 from visdex.common.timing import timing, start_timer, log_timing, print_timings
 
@@ -84,8 +84,8 @@ class SummaryHeatmap(Collapsible):
     @timing
     def update_dropdown(self, df_loaded):
         self.log.info(f"update_dropdown {df_loaded}")
-        ds = data_store.get()
-        dff = ds.load(data_store.FILTERED)
+        ds = visdex.session.get()
+        dff = ds.load(visdex.session.FILTERED)
 
         options = [
             {"label": col, "value": col}
@@ -99,7 +99,7 @@ class SummaryHeatmap(Collapsible):
     @timing
     def update_figure(self, dropdown_values, clusters, df_loaded):
         self.log.info(f"update_figure {dropdown_values} {clusters}")
-        ds = data_store.get()
+        ds = visdex.session.get()
         # Guard against the first argument being an empty list, as happens at first
         # invocation, or df_loaded being False
         if df_loaded is False or len(dropdown_values) <= 1:
@@ -107,7 +107,7 @@ class SummaryHeatmap(Collapsible):
             return fig, False, False
 
         # Load main dataframe
-        dff = ds.load(data_store.FILTERED)
+        dff = ds.load(visdex.session.FILTERED)
 
         # Guard against the dataframe being empty
         if dff.size == 0:

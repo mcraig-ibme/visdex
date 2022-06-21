@@ -1,17 +1,18 @@
 """
 visdex: Component to allow user to upload a data set
 """
-import base64
 import datetime
 
 from dash import html, dcc
 from dash.dependencies import Input, Output, State
 
 from visdex.common import Component
-from visdex.data import data_store
+from visdex.data_stores import DATA_STORES
+import visdex.session
 
 class UserUpload(Component):
     def __init__(self, app):
+        self.ds = DATA_STORES["user"]["impl"]
         Component.__init__(self, app, id_prefix="user-", children=[
             dcc.Upload(
                 id="data-file-upload",
@@ -21,82 +22,104 @@ class UserUpload(Component):
             html.H2(
                 children="Column Filter",
             ),
-            html.Label("Upload an optional file containing columns to select", className="inline"),
-            html.Button("Clear", id="clear-filter-button", className="inline"), 
+            "Upload an optional file containing columns to select",
             dcc.Upload(
                 id="filter-file-upload",
                 children=html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")]),
                 className="upload"
             ),
+            html.Button("Clear column filter", id="clear-filter-button", className="inline"), 
             html.Div(id="data-warning"),
             # Hidden div for holding the booleans identifying whether a DF is loaded
             html.Div(id="user-df-loaded-div", className="hidden"),
         ], id="upload")
 
-        self.register_cb(app, "user_data_file_changed",
-            [Output("data-file", "children"), Output("user-df-loaded-div", "children")],
-            [Input("data-file-upload", "contents")],
-            [State("data-file-upload", "filename"), State("data-file-upload", "last_modified")],
+        self.register_cb(app, "datastore_selection_changed", 
+            Output("upload", "style"),
+            Input("dataset-selection", "value"),
             prevent_initial_call=True,
         )
 
-        self.register_cb(app, "user_filter_file_changed",
+        self.register_cb(app, "data_file_changed",
+            [Output("data-file", "children"), Output("user-df-loaded-div", "children")],
+            [Input("data-file-upload", "contents")],
+            [
+                State("data-file-upload", "filename"), 
+                State("data-file-upload", "last_modified"),
+                State("filter-file-upload", "contents"),
+            ],
+            prevent_initial_call=True,
+        )
+
+        self.register_cb(app, "filter_file_changed",
             [Output("filter-file", "children"), Output("data-warning", "children")],
             [Input("filter-file-upload", "contents")],
             [
                 State("filter-file-upload", "filename"),
                 State("filter-file-upload", "last_modified"),
+                State("data-file-upload", "contents"),
+                State("data-file-upload", "filename"),
             ],
             prevent_initial_call=True,
         )
 
-        self.register_cb(app, "user_filter_clear_button_clicked",
-            [Output("filter-file-upload", "children")],
-            [Input("clear-filter-button", "n_clicks")],
+        self.register_cb(app, "filter_clear_button_clicked",
+            Output("filter-file-upload", "children"),
+            Input("clear-filter-button", "n_clicks"),
+            [
+                State("data-file-upload", "contents"),
+                State("data-file-upload", "filename"),
+            ],
             prevent_initial_call=True,
         )
 
-    def user_data_file_changed(self, contents, filename, date):
+    def datastore_selection_changed(self, selection):
+        """
+        If standard data has been selected show the data set / field lists and repopulate them
+        """
+        if selection == "user":
+            return {"display" : "block"}
+        else:
+            return {"display" : "none"}
+
+    def data_file_changed(self, data_contents, data_filename, data_date, filter_contents):
         """
         When using a user data source, the upload file has been changed
         """
-        self.log.info(f"data_file_changed")
-        ds = data_store.get()
+        sess = visdex.session.get()
         try:
-            ds.datasets = [(contents, filename, date)]
+            df = self.ds.load_file(self, data_contents, data_filename, filter_contents)
+            sess.store(visdex.session.MAIN_DATA, df)
             # FIXME loaded with warning
-            return f"{filename} loaded, last modified {datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}"
+            return f"{data_filename} loaded, last modified {datetime.datetime.fromtimestamp(data_date).strftime('%Y-%m-%d %H:%M:%S')}", True
         except Exception as e:
             self.log.error(f"{e}")
+            sess.store(visdex.session.MAIN_DATA, None)
             return "File not loaded: " + str(e), False
 
-    def user_filter_file_changed(self, contents, filename, date):
+    def filter_file_changed(self, filter_contents, filter_filename, filter_date, data_contents, data_filename):
         """
         When using user data source, the column filter file has changed
         """
-        self.log.info(f"filter_file_changed")
-        ds = data_store.get()
-
-        if contents is None:
+        if filter_contents is None:
             return "File not loaded", ""
-        
+        sess = visdex.session.get()
         try:
-            _content_type, content_string = contents.split(",")
-            decoded = base64.b64decode(content_string).decode()
-            variables_of_interest = [str(item) for item in decoded.splitlines()]
-            ds.fields = variables_of_interest
-            return (
-                f"{filename} loaded, last modified {datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S')}",
-                ""
-            )
+            df = self.ds.load_file(self, data_contents, data_filename, filter_contents)
+            sess.store(visdex.session.MAIN_DATA, df)
+            return f"{filter_filename} loaded, last modified {datetime.datetime.fromtimestamp(filter_date).strftime('%Y-%m-%d %H:%M:%S')}", ""
         except Exception as e:
             self.log.error(f"{e}")
             return "File not loaded: " + str(e), ""
 
-    def user_filter_clear_button_clicked(self, n_clicks):
+    def filter_clear_button_clicked(self, n_clicks, data_contents, data_filename):
         """
         When using user data source, the column filter file has been cleared
         """
-        self.log.info(f"clear filter")
-        data_store.get().fields = []
-        return html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")])
+        sess = visdex.session.get()
+        try:
+            df = self.ds.load_file(self, data_contents, data_filename, None)
+            sess.store(visdex.session.MAIN_DATA, df)
+            return html.Div([html.A(id="filter-file", children="Drag and drop or click to select files")])
+        except Exception as e:
+            self.log.error(f"{e}")

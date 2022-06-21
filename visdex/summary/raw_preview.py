@@ -7,7 +7,7 @@ from dash import html, dcc, dash_table
 from dash.dependencies import Input, Output
 
 from visdex.common import Collapsible
-import visdex.data.data_store as data_store
+import visdex.session
 
 class RawPreview(Collapsible):
     def __init__(self, app, id_prefix="rawpreview-"):
@@ -47,13 +47,13 @@ class RawPreview(Collapsible):
 
     def update_field_summary(self, df_loaded, missing_value_cutoff):
         self.log.info(f"update_field_summary")
-        ds = data_store.get()
+        ds = visdex.session.get()
 
-        df = ds.load(data_store.MAIN_DATA)
+        df = ds.load(visdex.session.MAIN_DATA)
         if df.empty:
             return [], False
 
-        description_df = ds.description
+        description_df = ds.description(df)
         specifiers = ["s", "d", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f", ".2f"]
         fields_table_layout = html.Div(
             dash_table.DataTable(

@@ -7,7 +7,7 @@ from collections import defaultdict
 from dash.dependencies import Input, Output, State, MATCH
 from dash import dcc
 
-from visdex.data import data_store
+import visdex.session
 
 LOG = logging.getLogger(__name__)
 
@@ -37,8 +37,8 @@ def common_define_cbs(app, ctype, make_fig):
     )
     def update_components(df_loaded, style_dict, *args):
         LOG.info(f"update_{ctype}_components")
-        ds = data_store.get()
-        dff = ds.load(data_store.FILTERED)
+        ds = visdex.session.get()
+        dff = ds.load(visdex.session.FILTERED)
         dd_options = [{"label": col, "value": col} for col in dff.columns]
         return update_graph_components(ctype, all_components[ctype], dd_options, args)
 
@@ -53,11 +53,11 @@ def common_define_cbs(app, ctype, make_fig):
     )
     def make_figure(*args):
         LOG.info(f"make_{ctype}_figure")
-        ds = data_store.get()
+        ds = visdex.session.get()
         keys = [component["id"] for component in all_components[ctype]]
 
         args_dict = dict(zip(keys, args))
-        dff = ds.load(data_store.FILTERED)
+        dff = ds.load(visdex.session.FILTERED)
         return make_fig(dff, args_dict)
 
 # Definitions of supported plot types

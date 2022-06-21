@@ -7,14 +7,14 @@ from dash import html, dcc, dash_table
 from dash.dependencies import Input, Output
 
 from visdex.common import Component
-from visdex.data import data_store
+import visdex.session
 
 class DataPreview(Component):
     """
     Component that displays the first few lines of a data frame
     """
 
-    def __init__(self, app, title, id_prefix="preview-", update_div_id="df-loaded-div", data_id=data_store.MAIN_DATA):
+    def __init__(self, app, title, id_prefix="preview-", update_div_id="df-loaded-div", data_id=visdex.session.MAIN_DATA):
         """
         :param app: Dash application
         :param id_prefix: Prefix string for HTML component identifiers
@@ -46,7 +46,7 @@ class DataPreview(Component):
 
     def update(self, df_loaded):
         self.log.info("Update preview table")
-        ds = data_store.get()
+        ds = visdex.session.get()
 
         # We want to be able to see the index columns in the preview table
         dff = ds.load(self.data_id, keep_index_cols=True)
@@ -57,7 +57,7 @@ class DataPreview(Component):
                     id=self.id_prefix + "data-table",
                     columns=[{"name": i, "id": i} for i in dff.columns],
                     data=dff.head().to_dict("records"),
-                    className="data-table",
+                    #className="data-table",
                 ),
                 html.Div([
                     html.Div("Rows: " + str(dff.shape[0])),

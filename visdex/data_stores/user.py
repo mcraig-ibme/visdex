@@ -1,5 +1,5 @@
 """
-Manages access to user-uploaded data sets
+visdex: Manages access to user-uploaded data sets
 """
 import base64
 import csv
@@ -7,8 +7,7 @@ import io
 
 import pandas as pd
 
-from visdex.data.data_store import DataStore, MAIN_DATA
-from visdex.data.feather_cache import FeatherCache
+from .data_store import DataStore
 
 # Possible sets of index columns. 
 # This is very data specific so we just try them in order and use the first set
@@ -19,16 +18,10 @@ KNOWN_INDICES = [
 
 class UserData(DataStore):
 
-    def __init__(self, _name=None):
-        DataStore.__init__(self, FeatherCache())
+    def __init__(self, **kwargs):
+        DataStore.__init__(self)
 
-    def update(self):
-        if len(self._datasets) == 0:
-            return
-        elif len(self._datasets) > 1:
-            raise ValueError("User data can only have a single source data set")
-
-        contents, filename, date = self._datasets[0]
+    def load_file(self, contents, filename, fields_contents):
         if contents is None:
             return
 
@@ -50,24 +43,24 @@ class UserData(DataStore):
             raise ValueError(f"Error loading {filename}: {e}")
             
         # Filter the columns
-        if self._fields:
+        if fields_contents:
+            _content_type, content_string = fields_contents.split(",")
+            decoded = base64.b64decode(content_string).decode()
+            fields = [str(item).strip() for item in decoded.splitlines()]
+
             # Remove fields that don't exist in the source data
-            missing_vars = [var for var in self._fields if var not in df.columns]
-            present_vars = [var for var in self._fields if var in df.columns]
+            missing_vars = [var for var in fields if var not in df.columns]
+            present_vars = [var for var in fields if var in df.columns]
 
             if missing_vars and not present_vars:
                 self.log.warn("No columns found in filter file are present in main data - filter file ignored")
-                self._fields = []
+                fields = []
             elif missing_vars:
                 self.log.warn("Some columns found in filter file not present in main data - these columns ignored")
-                self._fields = present_vars
+                fields = present_vars
 
         if self._fields:
-            df = df[self._fields]
-
-        # Filter the rows
-        if self._predicates:
-            pass
+            df = df[fields]
 
         self.log.info("df\n: %s" % str(df))
 
@@ -90,6 +83,5 @@ class UserData(DataStore):
             if all([col in df for col in index]):
                 df.set_index(index, inplace=True, verify_integrity=True, drop=True)
                 break
-
-        # Store the combined DF, and set df-loaded-div to [True]
-        self.store(MAIN_DATA, df)
+        
+        return df

@@ -6,7 +6,7 @@ import numpy as np
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 
-from visdex.data import data_store
+import visdex.session
 from .common import common_define_cbs
 
 LOG = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ def make_manhattan_figure(dff, args_dict):
         raise PreventUpdate
 
     # Load logs of all p-values
-    logs = data_store.get().load("logs")
+    logs = visdex.session.get().load("logs")
 
     # Select the column and row associated to this variable, and combine the two. Half of the values will be nans,
     # so we keep all the non-nans.

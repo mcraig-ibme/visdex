@@ -21,7 +21,7 @@ from dash import html
 import visdex.common.header as header
 import visdex.visdex as visdex
 import visdex.login as login
-import visdex.data.data_store as data_store
+import visdex.data_stores as data_stores
 
 LOG = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ LOG.info(f"Session timeout {timeout_minutes} minutes")
 datastore_config = flask_app.config.get("DATA_STORE_CONFIG", None)
 if datastore_config:
     LOG.info(f"Loading data store configuration from {datastore_config}")
-    data_store.load_config(datastore_config)
+    data_stores.load_config(datastore_config)
 
 @flask_app.before_request
 def set_session_timeout():
@@ -89,7 +89,6 @@ def display_page(pathname):
     """
     Display the appropriate page based on URL requested and login status
     """
-    data_store.prune_sessions()
     view = None
     url = dash.no_update
     LOG.info(f"Request: {pathname}")
@@ -97,7 +96,8 @@ def display_page(pathname):
         view = login_layout
     elif pathname == f'{prefix}logout':
         if "uid" in flask.session:
-            data_store.remove()
+            #data_store.remove() FIXME free server side session
+            pass
         if current_user.is_authenticated:
             logout_user()
         url = f'{prefix}login'

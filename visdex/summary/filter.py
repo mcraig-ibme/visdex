@@ -5,7 +5,7 @@ from dash import html, dcc, dash_table, callback_context
 from dash.dependencies import Input, Output, State, ALL
 
 from visdex.common import Collapsible
-from visdex.data import data_store
+import visdex.session
 from visdex.summary import data_preview
 from visdex.common.timing import timing
 
@@ -54,7 +54,7 @@ class DataFilter(Collapsible):
                     "subjects",
                 ]
             ),
-            data_preview.DataPreview(app, "Data preview (filtered)", id_prefix="preview-filtered", update_div_id="filtered-loaded-div", data_id=data_store.FILTERED),
+            data_preview.DataPreview(app, "Data preview (filtered)", id_prefix="preview-filtered", update_div_id="filtered-loaded-div", data_id=visdex.session.FILTERED),
             html.Div(id="filtered-loaded-div", className="hidden", children=[]),
         ])
 
@@ -85,13 +85,12 @@ class DataFilter(Collapsible):
     @timing
     def update_filtered_data(self, df_loaded, missing_value_cutoff, pred_cols, pred_ops, pred_values, random_sample, _pred_children):
         self.log.info(f"update_filtered_data")
-        ds = data_store.get()
+        ds = visdex.session.get()
 
-        df = ds.load(data_store.MAIN_DATA)
+        df = ds.load(visdex.session.MAIN_DATA, keep_index_cols=True)
         if df.empty:
             return False
 
-        ds.missing_values_threshold = missing_value_cutoff
         predicates = list(zip(pred_cols, pred_ops, pred_values))
         try:
             random_sample_size = int(random_sample)
@@ -99,8 +98,9 @@ class DataFilter(Collapsible):
             predicates.append((None, "random", random_sample_size))
         except:
             pass
-        ds.predicates = predicates
 
+        dff = ds.filter(df, missing_value_cutoff, predicates)
+        ds.store(visdex.session.FILTERED, dff)
         return True
 
     def add_row_predicate(self, n_clicks, df_loaded, children):
@@ -111,7 +111,7 @@ class DataFilter(Collapsible):
         else:
             self.log.info(f"Add row predicate")
             if n_clicks:
-                df = data_store.get().load(data_store.FILTERED)
+                df = visdex.session.get().load(visdex.session.FILTERED)
                 cols = list(df.columns) + list(df.index.names)
                 self.log.info(cols, df.index.names)
                 col_options = [

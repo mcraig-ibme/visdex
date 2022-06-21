@@ -13,7 +13,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
 from visdex.common.timing import timing
-from visdex.data import data_store
+import visdex.session
 from visdex.common import Collapsible
 
 class SummaryKdes(Collapsible):
@@ -61,8 +61,8 @@ class SummaryKdes(Collapsible):
     @timing
     def update_dropdown(self, df_loaded):
         self.log.info(f"update_dropdown {df_loaded}")
-        ds = data_store.get()
-        dff = ds.load(data_store.FILTERED)
+        ds = visdex.session.get()
+        dff = ds.load(visdex.session.FILTERED)
 
         options = [
             {"label": col, "value": col}
@@ -74,14 +74,14 @@ class SummaryKdes(Collapsible):
     @timing
     def update_figure(self, dropdown_values, df_loaded):
         self.log.info(f"update_figure")
-        ds = data_store.get()
+        ds = visdex.session.get()
 
         # Guard against the third argument being an empty list, as happens at first
         # invocation
         if df_loaded is False:
             return go.Figure(go.Scatter())
 
-        dff = ds.load(data_store.FILTERED)
+        dff = ds.load(visdex.session.FILTERED)
         n_variables = len(dropdown_values) if dropdown_values is not None else 0
 
         # Return early if no variables are selected

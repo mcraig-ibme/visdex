@@ -10,7 +10,7 @@ from dash.dependencies import Input, Output
 from dash import html, dcc
 import plotly.graph_objects as go
 
-from visdex.data import data_store
+import visdex.session
 from visdex.common.timing import timing, start_timer, log_timing, print_timings
 from visdex.exploratory_graphs.manhattan_graph import (
     calculate_transformed_corrected_pval,
@@ -36,7 +36,7 @@ def get_layout(app):
     @timing
     def plot_manhattan(pvalue, logscale, df_loaded, pval_loaded, manhattan_active):
         LOG.info(f"plot_manhattan")
-        ds = data_store.get()
+        ds = visdex.session.get()
 
         start_timer("plot_manhattan")
         if manhattan_active != ["manhattan-active"]:

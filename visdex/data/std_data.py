@@ -4,12 +4,15 @@ visdex: Component to browse standard data
 from dash import html, dash_table
 from dash.dependencies import Input, Output, State
 
-from visdex.common import Component
-from . import data_store
+import visdex.session
+import visdex.common
+from visdex.data_stores import DATA_STORES
 
-class StdData(Component):
+class StdData(visdex.common.Component):
     def __init__(self, app, id_prefix="std-", *args, **kwargs):
-        Component.__init__(self, app, id_prefix, children=[
+        self.ds = None
+
+        visdex.common.Component.__init__(self, app, id_prefix, children=[
             html.Div(
                 id=id_prefix+"dataset-select",
                 children=[
@@ -41,9 +44,10 @@ class StdData(Component):
             html.Div(id=id_prefix+"df-loaded-div", className="hidden"),
         ], id="std", *args, **kwargs),
 
-        self.register_cb(app, "std_data_selected", 
+        self.register_cb(app, "datastore_selection_changed", 
+            Output("std", "style"),
             Output(id_prefix+"dataset-checklist", "data"),
-            Input("std", "style"),
+            Input("dataset-selection", "value"),
             prevent_initial_call=True,
         )
 
@@ -75,20 +79,26 @@ class StdData(Component):
         self.register_cb(app, "load_button_clicked",
             Output(id_prefix+"df-loaded-div", "children"),
             Input(id_prefix+"load-button", "n_clicks"),
+            Input(id_prefix+"dataset-checklist", "derived_virtual_data"),
+            Input(id_prefix+"dataset-checklist", "derived_virtual_selected_rows"),
             State(id_prefix+"field-checklist", "derived_virtual_data"),
             State(id_prefix+"field-checklist", "derived_virtual_selected_rows"),
             prevent_initial_call=True,
         )
 
-    def std_data_selected(self, style):
+    def datastore_selection_changed(self, selection):
         """
-        Standard data may have been selected by the user - need to repopulate dataset list
+        If standard data has been selected show the data set / field lists and repopulate them
         """
-        if style["display"] == "block":
-            dataset_df = data_store.get().get_all_datasets()
-            return dataset_df.to_dict('records')
+        if selection != "user":
+            sess = visdex.session.get()
+            self.ds = DATA_STORES[selection]["impl"]
+            sess.set_prop("ds", selection)
+            dataset_df = self.ds.datasets
+            return {"display" : "block"}, dataset_df.to_dict('records')
         else:
-            return []
+            self.ds = None
+            return {"display" : "none"}, []
 
     def dataset_selection_changed(self, data, selected_rows, field_data, selected_field_rows, data_type):
         """
@@ -98,11 +108,13 @@ class StdData(Component):
         if data_type == "user":
             self.log.error('dataset_selection_changed fired although we are in user data mode')
             return [], []
+        elif self.ds is None:
+            self.log.error('dataset_selection_changed fired although ds is still None')
+            return [], []
 
         try:
             selected_datasets = [data[idx]["shortname"] for idx in selected_rows]
-            data_store.get().datasets = selected_datasets
-            fields = data_store.get().get_all_fields().to_dict('records')
+            fields = self.ds.get_fields(*selected_datasets).to_dict('records')
 
             # Change the set of selected field rows so they match the same fields before the change
             selected_fields_cur = [field_data[idx]["ElementName"] for idx in selected_field_rows]
@@ -133,16 +145,24 @@ class StdData(Component):
         except (TypeError, IndexError):
             return ""
 
-    def load_button_clicked(self, n_clicks, fields, selected_rows):
+    def load_button_clicked(self, n_clicks, dataset_info, dataset_selected_rows, field_info, field_selected_rows):
         """
         When using standard data, the load button is clicked
         """
-        self.log.debug(fields)
-        self.log.debug(selected_rows)
-        selected_fields = [fields[idx]["ElementName"] for idx in selected_rows]
+        if self.ds is None:
+            return False
+
+        self.log.debug(field_info)
+        self.log.debug(field_selected_rows)
+        selected_fields = [field_info[idx]["ElementName"] for idx in field_selected_rows]
         try:
-            data_store.get().fields = selected_fields
-            return True
+            sess = visdex.session.get()
+            # FIXME more than one selected data set
+            datasets = [dataset_info[idx]["shortname"] for idx in dataset_selected_rows]
+            if datasets:
+                sess.store(visdex.session.MAIN_DATA, self.ds.get_data(datasets[0], selected_fields))
+                return True
+            return False
         except Exception as e:
             self.log.exception('Error loading dataset')
             return False
