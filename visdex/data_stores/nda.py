@@ -31,12 +31,17 @@ class NdaData(DataStore):
         self._dictdir = os.path.join(global_datadir, "dictionary")
         self._datadir = os.path.join(global_datadir, study_name)
 
-        self.datasets = self._get_known_datasets()
-        self.imaging_types = self._get_known_imaging_types()
-
         self.log.info("NDA data source for study %s", self._study_name)
         self.log.info("Found %i data sets", len(self.datasets))
         self.log.info(self.datasets)
+
+    @property
+    def datasets(self):
+        return self._get_known_datasets()
+    
+    @property
+    def imaging_types(self):
+        self.imaging_types = self._get_known_imaging_types()
 
     def get_fields(self, *dataset_short_names):
         """
