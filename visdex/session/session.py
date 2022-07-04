@@ -34,8 +34,11 @@ class Session:
         """
         Get a string property
         """
-        with open(os.path.join(self._sessdir, prop + ".prop"), "r") as f:
-            return f.read()
+        try:
+            with open(os.path.join(self._sessdir, prop + ".prop"), "r") as f:
+                return f.read()
+        except FileNotFoundError:
+            return None
 
     def set_prop(self, prop, value):
         """
