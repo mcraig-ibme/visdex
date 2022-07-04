@@ -10,8 +10,6 @@ from visdex.data_stores import DATA_STORES
 
 class StdData(visdex.common.Component):
     def __init__(self, app, id_prefix="std-", *args, **kwargs):
-        self.ds = None
-
         visdex.common.Component.__init__(self, app, id_prefix, children=[
             html.Div(
                 id=id_prefix+"dataset-select",
@@ -92,12 +90,11 @@ class StdData(visdex.common.Component):
         """
         if selection != "user":
             sess = visdex.session.get()
-            self.ds = DATA_STORES[selection]["impl"]
+            ds = DATA_STORES[selection]["impl"]
             sess.set_prop("ds", selection)
-            dataset_df = self.ds.datasets
+            dataset_df = ds.datasets
             return {"display" : "block"}, dataset_df.to_dict('records')
         else:
-            self.ds = None
             return {"display" : "none"}, []
 
     def dataset_selection_changed(self, data, selected_rows, field_data, selected_field_rows, data_type):
@@ -105,16 +102,19 @@ class StdData(visdex.common.Component):
         When using a standard data source, the set of selected data sets have been changed
         """
         # Not sure why this is needed when we have prevent_initial_call=True?
+        sess = visdex.session.get()
+        ds_name = sess.get_prop("ds")
         if data_type == "user":
             self.log.error('dataset_selection_changed fired although we are in user data mode')
             return [], []
-        elif self.ds is None:
+        elif ds_name is None:
             self.log.error('dataset_selection_changed fired although ds is still None')
             return [], []
 
         try:
             selected_datasets = [data[idx]["shortname"] for idx in selected_rows]
-            fields = self.ds.get_fields(*selected_datasets).to_dict('records')
+            ds = DATA_STORES[ds_name]["impl"]
+            fields = ds.get_fields(*selected_datasets).to_dict('records')
 
             # Change the set of selected field rows so they match the same fields before the change
             selected_fields_cur = [field_data[idx]["ElementName"] for idx in selected_field_rows]
@@ -149,8 +149,9 @@ class StdData(visdex.common.Component):
         """
         When using standard data, the load button is clicked
         """
-        if self.ds is None:
-            return False
+        sess = visdex.session.get()
+        ds_name = sess.get_prop("ds")
+        ds = DATA_STORES[ds_name]["impl"]
 
         self.log.debug(field_info)
         self.log.debug(field_selected_rows)
@@ -160,7 +161,7 @@ class StdData(visdex.common.Component):
             # FIXME more than one selected data set
             datasets = [dataset_info[idx]["shortname"] for idx in dataset_selected_rows]
             if datasets:
-                sess.store(visdex.session.MAIN_DATA, self.ds.get_data(datasets[0], selected_fields))
+                sess.store(visdex.session.MAIN_DATA, ds.get_data(datasets[0], selected_fields))
                 return True
             return False
         except Exception as e:

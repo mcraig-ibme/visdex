@@ -5,7 +5,9 @@ import flask
 
 from .session import Session
 
-SESSION_TIMEOUT_LAG_MINUTES = 5
+TIMEOUT_LAG_MINUTES = 5
+TIMEOUT_MINUTES = 5
+CACHE_DIR = None
 
 MAIN_DATA = "df"
 FILTERED = "filtered"
@@ -13,33 +15,36 @@ FILTERED = "filtered"
 LOG = logging.getLogger(__name__)
 
 def init(flask_app):
-    timeout_minutes = flask_app.config.get("TIMEOUT_MINUTES", 5)
-    LOG.info(f"Session timeout {timeout_minutes} minutes")
+    global TIMEOUT_MINUTES, CACHE_DIR
+    TIMEOUT_MINUTES = flask_app.config.get("TIMEOUT_MINUTES", 5)
+    LOG.info(f"Session timeout {TIMEOUT_MINUTES} minutes")
+
+    CACHE_DIR = flask_app.config.get("DATA_CACHE_DIR", None)
+    if not CACHE_DIR:
+        raise RuntimeError("No session cache dir defined")
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+    elif not os.path.isdir(CACHE_DIR):
+        raise RuntimeError("Session cache dir already exists and is not a directory")
+    LOG.info(f"Session cache dir: {CACHE_DIR}")
 
     @flask_app.before_request
     def set_session_timeout():
         flask.session.permanent = True
-        flask_app.permanent_session_lifetime = datetime.timedelta(minutes=timeout_minutes)
+        flask_app.permanent_session_lifetime = datetime.timedelta(minutes=TIMEOUT_MINUTES)
 
 def get():
     """
     Get the current session
     """
-    session_dir = flask.current_app.config.get("DATA_CACHE_DIR", None)
-    if not session_dir:
-        raise RuntimeError("No session cache dir defined")
-    if not os.path.exists(session_dir):
-        os.makedirs(session_dir)
-    elif not os.path.isdir(session_dir):
-        raise RuntimeError("Session cache dir already exists and is not a directory")
-
+    global CACHE_DIR
     uid = flask.session["uid"].hex
-    sess = Session(session_dir, uid)
+    sess = Session(CACHE_DIR, uid)
     sess.touch()
-    expire_old_sessions(session_dir)
+    expire_old_sessions()
     return sess
 
-def expire_old_sessions(session_dir):
+def expire_old_sessions():
     """
     Flag current session's last used time to now and remove sessions that have timed out
 
@@ -49,10 +54,11 @@ def expire_old_sessions(session_dir):
 
     We remove data stores 5 minutes after the corresponding session timeout.
     """
-    timeout_minutes = flask.current_app.config.get("TIMOUT_MINUTES", 1) + SESSION_TIMEOUT_LAG_MINUTES
+    global TIMEOUT_MINUTES, TIMEOUT_LAG_MINUTES, CACHE_DIR
+    timeout_minutes = TIMEOUT_MINUTES + TIMEOUT_LAG_MINUTES
     now = datetime.datetime.now()
-    for uid in os.listdir(session_dir):
-        sess = Session(session_dir, uid)
+    for uid in os.listdir(CACHE_DIR):
+        sess = Session(CACHE_DIR, uid)
         dt = (now - sess.last_used()).seconds//60
         LOG.info(f"Session data store {uid} last used {dt} mins ago")
         if dt > timeout_minutes:
