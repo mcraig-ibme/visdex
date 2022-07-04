@@ -21,7 +21,7 @@ DATA_STORES = {
     }
 }
 
-def load_config(fname):
+def init(flask_app):
     """
     Load data store configuration from a .json file
     
@@ -34,28 +34,28 @@ def load_config(fname):
     """
     global DATA_STORES
     LOG.info(f"Loading data store configuration")
+    fname = flask_app.config.get("DATA_STORE_CONFIG", None)
     try:
         if os.path.isfile(fname):
             LOG.info(f"Config file: {fname}")
             with open(fname, "r") as f:
                 config = json.load(f)
-            LOG.info(config)
+            LOG.debug(config)
             DATA_STORES.update(config)
         elif fname is not None:
             LOG.warn(f"Failed to load data store config from {fname} - no such file")
         for id in list(DATA_STORES.keys()):
             DATA_STORES[id]["impl"] = _get_impl(id)
+            LOG.info("Created data store: %s: %s" % (id, DATA_STORES[id]))
 
     except Exception as exc:
         LOG.warn(exc)
-    LOG.info(f"Data store configuration: {DATA_STORES}")
 
 def _get_impl(id):
     """
     Get the implementation of a data store by ID
     """
     global DATA_STORES
-    LOG.info(f"data store configuration: {DATA_STORES}")
     ds_conf = DATA_STORES.get(id, None)
     if ds_conf is None:
         raise RuntimeError(f"No such data store '{id}'")

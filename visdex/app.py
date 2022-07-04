@@ -7,8 +7,6 @@ This module defines the basic Dash application that serves the
 appropriate page in response to requests
 """
 import logging
-import os
-from datetime import timedelta
 
 import flask
 from flask_login import logout_user, current_user
@@ -21,24 +19,18 @@ from dash import html
 import visdex.common.header as header
 import visdex.visdex as visdex
 import visdex.login as login
+import visdex.config as config
+import visdex.session as session
 import visdex.data_stores as data_stores
 
 LOG = logging.getLogger(__name__)
 
 # Create the Flask application
 flask_app = flask.Flask(__name__)
-if "VISDEX_CONFIG" in os.environ:
-    config_file = os.environ["VISDEX_CONFIG"]
-elif "HOME" in os.environ:
-    config_file = os.path.join(os.environ["HOME"], ".visdex.conf")
-else:
-    config_file = "/etc/visdex/visdex.conf"
-
-if os.path.isfile(config_file):
-    LOG.info(f"Using config file: {config_file}")
-    flask_app.config.from_pyfile(config_file)
-else:
-    LOG.info(f"Config file: {config_file} not found")
+config.init(flask_app)
+login.init(flask_app)
+session.init(flask_app)
+data_stores.init(flask_app)
 
 # It should be possible to handle URL prefixes transparently but
 # have not managed to get this to work yet - so set this to whatever
@@ -46,20 +38,8 @@ else:
 prefix = flask_app.config.get("PREFIX", "/")
 LOG.info(f"Using prefix: {prefix}")
 
-timeout_minutes = flask_app.config.get("TIMOUT_MINUTES", 1)
-LOG.info(f"Session timeout {timeout_minutes} minutes")
-
-data_stores.load_config(flask_app.config.get("DATA_STORE_CONFIG", None))
-
-@flask_app.before_request
-def set_session_timeout():
-    flask.session.permanent = True
-    app.permanent_session_lifetime = timedelta(minutes=5)
-
-login.init_login(flask_app)
-
 # Create the Dash application
-app = dash.Dash(
+dash_app = dash.Dash(
     __name__,
     server=flask_app,
     requests_pathname_prefix=prefix,
@@ -68,15 +48,15 @@ app = dash.Dash(
 )
 
 # Main layout - all pages have header
-app.layout = html.Div([
-    header.get_layout(app),
+dash_app.layout = html.Div([
+    header.get_layout(dash_app),
     html.Div(id='page-content'),
 ])
 
-visdex_layout = visdex.get_layout(app)
-login_layout =  login.get_layout(app),
+visdex_layout = visdex.get_layout(dash_app)
+login_layout =  login.get_layout(dash_app),
 
-@app.callback(
+@dash_app.callback(
     Output('page-content', 'children'), 
     Output('redirect', 'pathname'),
     [Input('url', 'pathname')]

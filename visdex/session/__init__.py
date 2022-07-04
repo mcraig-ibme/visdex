@@ -1,7 +1,7 @@
 import datetime
 import logging
 import os
-from flask import current_app, session as flask_session
+import flask
 
 from .session import Session
 
@@ -12,11 +12,20 @@ FILTERED = "filtered"
 
 LOG = logging.getLogger(__name__)
 
+def init(flask_app):
+    timeout_minutes = flask_app.config.get("TIMEOUT_MINUTES", 5)
+    LOG.info(f"Session timeout {timeout_minutes} minutes")
+
+    @flask_app.before_request
+    def set_session_timeout():
+        flask.session.permanent = True
+        flask_app.permanent_session_lifetime = datetime.timedelta(minutes=timeout_minutes)
+
 def get():
     """
     Get the current session
     """
-    session_dir = current_app.config.get("DATA_CACHE_DIR", None)
+    session_dir = flask.current_app.config.get("DATA_CACHE_DIR", None)
     if not session_dir:
         raise RuntimeError("No session cache dir defined")
     if not os.path.exists(session_dir):
@@ -24,7 +33,7 @@ def get():
     elif not os.path.isdir(session_dir):
         raise RuntimeError("Session cache dir already exists and is not a directory")
 
-    uid = flask_session["uid"].hex
+    uid = flask.session["uid"].hex
     sess = Session(session_dir, uid)
     sess.touch()
     expire_old_sessions(session_dir)
@@ -40,7 +49,7 @@ def expire_old_sessions(session_dir):
 
     We remove data stores 5 minutes after the corresponding session timeout.
     """
-    timeout_minutes = current_app.config.get("TIMOUT_MINUTES", 1) + SESSION_TIMEOUT_LAG_MINUTES
+    timeout_minutes = flask.current_app.config.get("TIMOUT_MINUTES", 1) + SESSION_TIMEOUT_LAG_MINUTES
     now = datetime.datetime.now()
     for uid in os.listdir(session_dir):
         sess = Session(session_dir, uid)

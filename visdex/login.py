@@ -17,12 +17,12 @@ LDAP_SERVER="ldaps://uonauth.nottingham.ac.uk/"
 class User(UserMixin):
     pass
 
-USERS = {'bbzmsc': {}}
+KNOWN_USERS = []
 
 LOG = logging.getLogger(__name__)
 
 def get_user(userid):
-    if userid in USERS:
+    if userid in KNOWN_USERS:
         user = User()
         user.id = userid
         return user
@@ -31,8 +31,8 @@ def check_password(userid, password):
     user = get_user(userid)    
     if user:
         try:
+            # Perform a synchronous bind to get Distinguished Name (DN)
             ldap_client = ldap.initialize(LDAP_SERVER)
-            # perform a synchronous bind
             ldap_client.set_option(ldap.OPT_REFERRALS, 0)
             
             dns = ldap_client.search_st("ou=accounts,o=university", ldap.SCOPE_SUBTREE, filterstr='(uid=%s)' % userid, timeout=-1)
@@ -47,6 +47,8 @@ def check_password(userid, password):
                     LOG.warn(" - %s" % dn)
             else:
                 LOG.info("%s->%s" % (userid, dn))
+
+            # Now use DN to check credentials
             ldap_client.simple_bind_s(dn, password)
             print("Authentication successful")
             return user
@@ -57,28 +59,11 @@ def check_password(userid, password):
         finally:
             ldap_client.unbind()
 
-        # server = Server(LDAP_SERVER, use_ssl=True, get_info=ALL)
-        # LOG.info("Server " + str(server))
-        # ldap_username = 'cn=%s,ou=Staff,ou=Active,ou=Accounts,o=University' % userid
-        # conn = Connection(server, ldap_username, password, auto_bind=False, raise_exceptions=False)
-        # LOG.info("Conn" + str(conn))
-        # try:
-        #     LOG.info("Binding")
-        #     conn.bind()
-        #     LOG.info("Bound: %s" % conn.result)
-        #     if conn.result['result'] == 0:  # Successful
-        #         return user
-        # except Exception as e:
-        #     LOG.info("Exc ")
-        #     LOG.warn(str(e))
-        # except:
-        #     LOG.info("???")
-        # finally:
-        #     LOG.info("Unbinding")
-        #     if conn.bound:
-        #         conn.unbind()
-
-def init_login(flask_app):
+def init(flask_app):
+    global KNOWN_USERS
+    KNOWN_USERS = flask_app.config.get("KNOWN_USERS", [])
+    LOG.info(f"Found %i known users", len(KNOWN_USERS))
+    
     login_manager = LoginManager()
     login_manager.init_app(flask_app)
 
