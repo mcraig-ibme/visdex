@@ -19,7 +19,7 @@ KNOWN_INDICES = [
 class UserData(DataStore):
 
     def __init__(self, **kwargs):
-        DataStore.__init__(self)
+        DataStore.__init__(self, **kwargs)
 
     def load_file(self, contents, filename, fields_contents):
         if contents is None:
