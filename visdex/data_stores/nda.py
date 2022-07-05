@@ -4,6 +4,7 @@ visdex: Manages access to NDA data sets
 import os
 
 import pandas as pd
+from flask_login import current_user
 
 from .data_store import DataStore
 
@@ -25,7 +26,7 @@ IMG_ROUND_DPS = [
 
 class NdaData(DataStore):
     def __init__(self, global_datadir, study_name, **kwargs):
-        DataStore.__init__(self)
+        DataStore.__init__(self, **kwargs)
         self._global_datadir = global_datadir
         self._study_name = study_name
         self._dictdir = os.path.join(global_datadir, "dictionary")
@@ -119,15 +120,18 @@ class NdaData(DataStore):
             return "%s (%s)" % (r.scan_type, r.image_description)
             #return "%s (%s) %.1f %.1f %.1f %.1fmm" % (r.scan_type, r.image_description, r.image_resolution1, r.image_resolution2, r.image_resolution3, r.image_resolution4)
 
-        df = self._load_dataset("image03")
-        df.reset_index(drop=True, inplace=True)
-        df = df[IMG_FIELDS]
-        df.fillna(0, inplace=True)
-        for f, dps in zip(IMG_ROUND_FIELDS, IMG_ROUND_DPS):
-            df[f] = df[f].round(dps)
-        df.drop_duplicates(inplace=True)
-        df['text'] = df.apply(format, axis=1)
-        return df[['image_description', 'text']]
+        try:
+            df = self._load_dataset("image03")
+            df.reset_index(drop=True, inplace=True)
+            df = df[IMG_FIELDS]
+            df.fillna(0, inplace=True)
+            for f, dps in zip(IMG_ROUND_FIELDS, IMG_ROUND_DPS):
+                df[f] = df[f].round(dps)
+            df.drop_duplicates(inplace=True)
+            df['text'] = df.apply(format, axis=1)
+            return df[['image_description', 'text']]
+        except:
+            return pd.DataFrame(columns=['image_description', 'text'])
 
     def _load_dataset(self, short_name):
         """
