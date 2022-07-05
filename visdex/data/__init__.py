@@ -12,16 +12,12 @@ from . import user_upload, std_data
 
 class DataSelection(Component):
     def __init__(self, app):
-        data_store_selections = []
-        for id, ds_conf in DATA_STORES.items():
-            data_store_selections.append({"label" : ds_conf["label"], "value" : id})
-
         Component.__init__(self, app, id_prefix="data-", children=[
             html.H2(children="Data selection"),
             html.Div(
                 dcc.Dropdown(
                     id="dataset-selection",
-                    options=data_store_selections,
+                    options=[],
                     value='user',
                 ),
                 style={"width": "30%"},
@@ -38,5 +34,19 @@ class DataSelection(Component):
             prevent_initial_call=True,
         )
 
+        self.register_cb(app, "update_stores", 
+            Output("dataset-selection", "options"),
+            Input('url', 'pathname'),
+            prevent_initial_call=False,
+        )
+
     def data_loaded(self, std_loaded, user_loaded):
         return std_loaded or user_loaded
+
+    def update_stores(self, url_login):
+        data_store_selections = []
+        for id, ds_conf in DATA_STORES.items():
+            self.log.info("%s: %s", id, ds_conf)
+            if ds_conf["impl"].check_user():
+                data_store_selections.append({"label" : ds_conf["label"], "value" : id})
+        return data_store_selections
