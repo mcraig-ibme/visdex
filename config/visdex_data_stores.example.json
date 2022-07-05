@@ -3,24 +3,28 @@
         "label" : "ABCD 4.0",
         "class" : "NdaData",
         "global_datadir" : "/home/visdex/nda",
-        "study_name" : "abcd"
+        "study_name" : "abcd",
+        "users" : ["bbzmsc"]
     },
     "nda.hcpd" : {
         "label" : "HCP Development",
         "class" : "NdaData",
         "global_datadir" : "/home/visdex/nda",
-        "study_name" : "hcpd"
+        "study_name" : "hcpd",
+        "users" : ["bbzmsc"]
     },
     "nda.hcpageing" : {
         "label" : "HCP Ageing",
         "class" : "NdaData",
         "global_datadir" : "/home/visdex/nda",
-        "study_name" : "hcpageing"
+        "study_name" : "hcpageing",
+        "users" : ["bbzmsc"]
     },
     "nda.hcpep" : {
         "label" : "HCP Early Psychosis",
         "class" : "NdaData",
         "global_datadir" : "/home/visdex/nda",
-        "study_name" : "earlypsychosis"
+        "study_name" : "earlypsychosis",
+        "users" : ["bbzmsc"]
     }
 }
