@@ -8,6 +8,7 @@ of each, this is pretty harmless.
 import json
 import logging
 import os
+import traceback
 
 from .nda import NdaData
 from .user import UserData
@@ -45,9 +46,13 @@ def init(flask_app):
         elif fname is not None:
             LOG.warn(f"Failed to load data store config from {fname} - no such file")
         for id in list(DATA_STORES.keys()):
-            DATA_STORES[id]["impl"] = _get_impl(id)
-            LOG.info("Created data store: %s: %s" % (id, DATA_STORES[id]))
-
+            impl = _get_impl(id)
+            if impl is not None:
+                DATA_STORES[id]["impl"] = impl
+                LOG.info("Created data store: %s: %s" % (id, DATA_STORES[id]))
+            else:
+                LOG.warn("Failed to create data store: %s: %s" % (id, DATA_STORES[id]))
+                del DATA_STORES[id]
     except Exception as exc:
         LOG.warn(exc)
 
@@ -65,6 +70,10 @@ def _get_impl(id):
     cls = globals().get(class_name, None)
     if cls is None:
         raise RuntimeError(f"Can't find class {class_name} for data store '{id}'")
-    return cls(**ds_conf)
+    try:
+        return cls(**ds_conf)
+    except:
+        traceback.print_exc()
+        return None
 
 __all__= ["DATA_STORES", "load_config"]
