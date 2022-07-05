@@ -130,5 +130,5 @@ class SummaryKdes(Collapsible):
                         i + 1,
                         j + 1,
                     )
-        fig.update_layout(height=200 * n_rows, showlegend=False)
+        fig.update_layout(height=100 + 200 * n_rows, showlegend=False)
         return fig
