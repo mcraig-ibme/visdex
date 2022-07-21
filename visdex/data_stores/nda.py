@@ -102,7 +102,25 @@ class NdaData(DataStore):
         image_ids = images.set_index('subjectkey').index
         images = images[image_ids.isin(ids)]
 
-        return images[["subjectkey", "visit", "image_file"]]
+        if self._study_name == "abcd":
+            return images[["subjectkey", "visit", "image_file"]]
+        else:
+            # Different for HCP! We get S3 links from the datastructure_manifest
+            # table. Also we have images in fmriresults01 for processed data
+            manifests = images["manifest"]
+
+            preproc = self._load_dataset("fmriresults01")
+            preproc.reset_index(drop=False, inplace=True)
+            image_types = preproc.set_index('job_name').index
+            preproc_images = preproc[image_types.isin(selected_types)]
+            preproc_ids = preproc_images.set_index('subjectkey').index
+            preproc_images = preproc_images[preproc_ids.isin(ids)]
+            preproc_manifests = preproc_images["manifest"]
+
+            manifest_data = self._load_dataset("datastructure_manifest")
+            manifest_names = manifest_data.set_index('manifest_name').index
+            manifest_data = manifest_data[manifest_names.isin(manifests) | manifest_names.isin(preproc_manifests)]
+            return manifest_data["associated_file"]
 
     def _get_known_datasets(self):
         """
@@ -129,9 +147,27 @@ class NdaData(DataStore):
                 df[f] = df[f].round(dps)
             df.drop_duplicates(inplace=True)
             df['text'] = df.apply(format, axis=1)
-            return df[['image_description', 'text']]
-        except:
-            return pd.DataFrame(columns=['image_description', 'text'])
+            imgs = df[['image_description', 'text']]
+        except Exception as exc:
+            self.log.warn(f"Error getting raw imaging types: {exc}")
+            imgs = pd.DataFrame(columns=['image_description', 'text'])
+
+        try:
+            df = self._load_dataset("fmriresults01")
+            df.reset_index(drop=True, inplace=True)
+            print(df.columns)
+            df = df[['job_name']]
+            print(df)
+            df.drop_duplicates(inplace=True)
+            print(df)
+            df['image_description'] = df['job_name']
+            df['text'] = df['job_name']
+            proc_imgs = df[['image_description', 'text']]
+        except Exception as exc:
+            self.log.warn(f"Error getting processed imaging types: {exc}")
+            proc_imgs = pd.DataFrame(columns=['image_description', 'text'])
+
+        return pd.concat([imgs, proc_imgs])
 
     def _load_dataset(self, short_name):
         """
@@ -140,19 +176,22 @@ class NdaData(DataStore):
         self.log.info(f"_get_dataset {short_name}")
         data_fname = os.path.join(self._datadir, "%s.txt" % short_name)
         df = pd.read_csv(data_fname, sep="\t", quotechar='"', skiprows=[1], low_memory=False)
-        df.set_index('subjectkey', inplace=True)
-        if not df.index.is_unique:
-            self.log.info(f"Dataset {short_name} is not subjectkey only")
-            df.reset_index(inplace=True)
-            if 'eventname' in df.columns:
-                df.set_index(['subjectkey', 'eventname'], inplace=True)
-            elif 'visit' in df.columns:
-                df.set_index(['subjectkey', 'visit'], inplace=True)
-            else:
-                df.set_index('subjectkey', inplace=True)
-
+        if 'subjectkey' in df.columns:
+            df.set_index('subjectkey', inplace=True)
             if not df.index.is_unique:
-                self.log.warn(f"Dataset {short_name} still doesn't have a unique index")
+                self.log.info(f"Dataset {short_name} is not subjectkey only")
+                df.reset_index(inplace=True)
+                if 'eventname' in df.columns:
+                    df.set_index(['subjectkey', 'eventname'], inplace=True)
+                elif 'visit' in df.columns:
+                    df.set_index(['subjectkey', 'visit'], inplace=True)
+                else:
+                    df.set_index('subjectkey', inplace=True)
+
+                if not df.index.is_unique:
+                    self.log.warn(f"Dataset {short_name} still doesn't have a unique index")
+            else:
+                self.log.info(f"Dataset {short_name} is indexed by subjectkey")
         else:
-            self.log.info(f"Dataset {short_name} is indexed by subjectkey")
+            self.log.warn(f"Dataset {short_name} does not contain 'subjectkey'")
         return df
