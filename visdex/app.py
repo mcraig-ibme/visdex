@@ -71,9 +71,6 @@ def display_page(pathname):
     if pathname == f'{prefix}login':
         view = login_layout
     elif pathname == f'{prefix}logout':
-        if "uid" in flask.session:
-            #data_store.remove() FIXME free server side session
-            pass
         if current_user.is_authenticated:
             logout_user()
         url = f'{prefix}login'
