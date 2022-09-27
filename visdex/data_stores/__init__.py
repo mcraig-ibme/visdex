@@ -46,10 +46,10 @@ def init(flask_app):
         elif fname is not None:
             LOG.warn(f"Failed to load data store config from {fname} - no such file")
         for id in list(DATA_STORES.keys()):
+            LOG.info("Creating data store: %s: %s" % (id, DATA_STORES[id]))
             impl = _get_impl(id)
             if impl is not None:
                 DATA_STORES[id]["impl"] = impl
-                LOG.info("Created data store: %s: %s" % (id, DATA_STORES[id]))
             else:
                 LOG.warn("Failed to create data store: %s: %s" % (id, DATA_STORES[id]))
                 del DATA_STORES[id]

@@ -3,9 +3,6 @@ visdex: Configuration handling
 """
 import logging
 import os
-from datetime import timedelta
-
-import visdex.data_stores as data_stores
 
 LOG = logging.getLogger(__name__)
 

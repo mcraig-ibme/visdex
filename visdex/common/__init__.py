@@ -17,6 +17,7 @@ class Component(html.Div):
         self.app = app
         self.id_prefix = id_prefix
         self.log = logging.getLogger(type(self).__name__)
+        self.config = app.server.config
         html.Div.__init__(self, *args, **kwargs)
 
     def register_cb(self, app, name, *args, **kwargs):

@@ -25,10 +25,9 @@ import visdex.data_stores as data_stores
 
 LOG = logging.getLogger(__name__)
 
-# Create the Flask application
+# Create the Flask application and load configuration file
 flask_app = flask.Flask(__name__)
 config.init(flask_app)
-login.init(flask_app)
 session.init(flask_app)
 data_stores.init(flask_app)
 
@@ -49,12 +48,12 @@ dash_app = dash.Dash(
 
 # Main layout - all pages have header
 dash_app.layout = html.Div([
-    header.get_layout(dash_app),
+    header.Header(dash_app),
     html.Div(id='page-content'),
 ])
 
-visdex_layout = visdex.get_layout(dash_app)
-login_layout =  login.get_layout(dash_app),
+visdex_page = visdex.VisdexPage(dash_app)
+login_page =  login.LoginPage(dash_app),
 
 @dash_app.callback(
     Output('page-content', 'children'), 
@@ -69,14 +68,14 @@ def display_page(pathname):
     url = dash.no_update
     LOG.info(f"Request: {pathname}")
     if pathname == f'{prefix}login':
-        view = login_layout
+        view = login_page
     elif pathname == f'{prefix}logout':
         if current_user.is_authenticated:
             logout_user()
         url = f'{prefix}login'
     elif pathname == f'{prefix}app':
         if current_user.is_authenticated and "uid" in flask.session:
-            view = visdex_layout
+            view = visdex_page
         else:
             # Not authenticated - redirect to login page
             url = f'{prefix}login'
