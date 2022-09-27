@@ -10,14 +10,8 @@ import plotly.graph_objects as go
 
 from visdex.common import Collapsible
 
-from .common import all_components
-from . import (
-    bar_graph,
-    histogram_graph,
-    manhattan_graph,
-    scatter_graph,
-    violin_graph,
-)
+from .common import all_components, add_graph_type
+from . import bar, histogram, manhattan, scatter, violin
 
 class ExploratoryGraphs(Collapsible):
     def __init__(self, app, id_prefix="exp-"):
@@ -50,11 +44,11 @@ class ExploratoryGraphs(Collapsible):
             ],
         )
             
-        bar_graph.define_cbs(app)
-        histogram_graph.define_cbs(app)
-        manhattan_graph.define_cbs(app)
-        scatter_graph.define_cbs(app)
-        violin_graph.define_cbs(app)
+        add_graph_type(app, "bar", bar.make_figure)
+        add_graph_type(app, "histogram", histogram.make_figure)
+        add_graph_type(app, "manhattan", manhattan.make_figure)
+        add_graph_type(app, "scatter", scatter.make_figure)
+        add_graph_type(app, "violin", violin.make_figure)
         
     def add_graph(self, n_clicks, children):
         # Add a new graph group each time the button is clicked. The if None guard stops
