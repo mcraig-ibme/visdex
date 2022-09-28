@@ -11,7 +11,7 @@ import dash_bootstrap_components as dbc
 
 from visdex.common import Collapsible
 import visdex.session
-from visdex.data_stores import DATA_STORES
+import visdex.data_stores
 
 class Download(Collapsible):
 
@@ -106,7 +106,7 @@ class Download(Collapsible):
         Show modal for downloading imaging data links
         """
         sess = visdex.session.get()
-        datastore = DATA_STORES[sess.get_prop("ds")]["impl"]
+        datastore = visdex.data_stores.DATA_STORES[sess.get_prop("ds")]["impl"]
         imaging_types = datastore.imaging_types
         triggered_ids = [c["prop_id"] for c in ctx.triggered]
 

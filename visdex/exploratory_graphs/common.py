@@ -54,7 +54,7 @@ def add_graph_type(app, name, make_fig):
     def make_figure(*args):
         LOG.info(f"make_{name}_figure")
         ds = visdex.session.get()
-        keys = [component["id"] for component in all_components[name]]
+        keys = [component["id"] for component in all_components[ctype]]
 
         args_dict = dict(zip(keys, args))
         dff = ds.load(visdex.session.FILTERED)

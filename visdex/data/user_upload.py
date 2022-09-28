@@ -11,8 +11,8 @@ from visdex.data_stores import DATA_STORES
 import visdex.session
 
 class UserUpload(Component):
-    def __init__(self, app):
-        self.ds = DATA_STORES["user"]["impl"]
+    def __init__(self, app, *args, **kwargs):
+        self.ds = None
         Component.__init__(self, app, id_prefix="user-", children=[
             dcc.Upload(
                 id="data-file-upload",
@@ -32,7 +32,7 @@ class UserUpload(Component):
             html.Div(id="data-warning"),
             # Hidden div for holding the booleans identifying whether a DF is loaded
             html.Div(id="user-df-loaded-div", className="hidden"),
-        ], id="upload")
+        ], id="upload", *args, **kwargs)
 
         self.register_cb(app, "datastore_selection_changed", 
             Output("upload", "style"),
@@ -78,6 +78,8 @@ class UserUpload(Component):
         If standard data has been selected show the data set / field lists and repopulate them
         """
         if selection == "user":
+            if self.ds is None:
+                self.ds = visdex.data_stores.DATA_STORES["user"]["impl"]
             return {"display" : "block"}
         else:
             return {"display" : "none"}

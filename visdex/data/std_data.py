@@ -6,7 +6,7 @@ from dash.dependencies import Input, Output, State
 
 import visdex.session
 import visdex.common
-from visdex.data_stores import DATA_STORES
+import visdex.data_stores
 
 class StdData(visdex.common.Component):
     def __init__(self, app, id_prefix="std-", *args, **kwargs):
@@ -90,7 +90,7 @@ class StdData(visdex.common.Component):
         """
         if selection != "user":
             sess = visdex.session.get()
-            ds = DATA_STORES[selection]["impl"]
+            ds = visdex.data_stores.DATA_STORES[selection]["impl"]
             sess.set_prop("ds", selection)
             dataset_df = ds.datasets
             return {"display" : "block"}, dataset_df.to_dict('records')
@@ -113,7 +113,7 @@ class StdData(visdex.common.Component):
 
         try:
             selected_datasets = [data[idx]["shortname"] for idx in selected_rows]
-            ds = DATA_STORES[ds_name]["impl"]
+            ds = visdex.data_stores.DATA_STORES[ds_name]["impl"]
             fields = ds.get_fields(*selected_datasets).to_dict('records')
 
             # Change the set of selected field rows so they match the same fields before the change
@@ -151,7 +151,7 @@ class StdData(visdex.common.Component):
         """
         sess = visdex.session.get()
         ds_name = sess.get_prop("ds")
-        ds = DATA_STORES[ds_name]["impl"]
+        ds = visdex.data_stores.DATA_STORES[ds_name]["impl"]
 
         self.log.debug(field_info)
         self.log.debug(field_selected_rows)

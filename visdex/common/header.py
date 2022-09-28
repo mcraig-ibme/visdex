@@ -53,6 +53,6 @@ class Header(Component):
             user_id = current_user.get_id()
             LOG.info(current_user)
             LOG.info(session)
-            return [f"User: {user_id} ", html.A('logout', href=f'{app.server.config.get("PREFIX", "/")}logout', className="inline")], user_id
+            return [f"User: {user_id} ", html.A('logout', href=f'{self.config.get("PREFIX", "/")}logout', className="inline")], user_id
         else:
             return [], ''
