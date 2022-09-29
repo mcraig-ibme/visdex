@@ -30,7 +30,7 @@ class Header(Component):
                 children=[
                     html.A(
                         id="drs-link",
-                        children=[html.H1("DRS |")],
+                        children=[html.H2("DRS | ", className="inline")],
                         href="https://digitalresearch.nottingham.ac.uk/",
                     ),
                     html.H2("Visual Data Explorer v%s" % __version__, className="inline"),
