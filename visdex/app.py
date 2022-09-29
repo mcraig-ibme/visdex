@@ -42,7 +42,7 @@ dash_app = dash.Dash(
     __name__,
     server=flask_app,
     requests_pathname_prefix=prefix,
-    suppress_callback_exceptions=False,
+    suppress_callback_exceptions=True,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
 
@@ -53,7 +53,12 @@ dash_app.layout = html.Div([
 ])
 
 visdex_page = visdex.VisdexPage(dash_app)
-login_page =  login.LoginPage(dash_app),
+flask_app.config["USING_AUTH"] = flask_app.config.get("AUTH", {}).get("type", "none") != "none"
+if not flask_app.config["USING_AUTH"]:
+    LOG.warn(f"Not using authorization - any user can access")
+    login_page = None
+else:
+    login_page =  login.LoginPage(dash_app)
 
 @dash_app.callback(
     Output('page-content', 'children'), 
@@ -66,22 +71,32 @@ def display_page(pathname):
     """
     view = None
     url = dash.no_update
-    LOG.info(f"Request: {pathname}")
-    if pathname == f'{prefix}login':
-        view = login_page
-    elif pathname == f'{prefix}logout':
-        if current_user.is_authenticated:
-            logout_user()
-        url = f'{prefix}login'
-    elif pathname == f'{prefix}app':
-        if current_user.is_authenticated and "uid" in flask.session:
-            view = visdex_page
-        else:
-            # Not authenticated - redirect to login page
+    using_auth = flask_app.config["USING_AUTH"]
+    LOG.info(f"Request: {pathname} {flask.session}")
+    if using_auth:
+        if pathname == f'{prefix}login':
+            view = login_page
+        elif pathname == f'{prefix}logout':
+            if current_user.is_authenticated:
+                logout_user()
             url = f'{prefix}login'
+        elif pathname == f'{prefix}app':
+            if current_user.is_authenticated and "uid" in flask.session:
+                view = visdex_page
+            else:
+                # Not authenticated - redirect to login page
+                url = f'{prefix}login'
+        else:
+            url = f'{prefix}app'
     else:
-        # Redirect any other page to the main app
-        url = f'{prefix}app'
+        if pathname != f'{prefix}app':
+            url = f'{prefix}app'
+        else:
+            view = visdex_page
+            if "uid" not in flask.session:
+                session.create()
+                LOG.info(f"Session: {flask.session['uid'].hex}")
+                url = f'{prefix}app'
 
     if url != dash.no_update:
         LOG.info(f"Redirect: {url}")

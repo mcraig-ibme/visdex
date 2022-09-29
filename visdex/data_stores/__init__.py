@@ -9,6 +9,7 @@ import logging
 
 from .nda import NdaData
 from .user import UserData
+from .generic_csv import GenericCsv
 
 LOG = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ def init(flask_app):
 
     for id in list(DATA_STORES.keys()):
         LOG.info("Creating data store: %s: %s" % (id, DATA_STORES[id]))
-        impl = _get_impl(id)
+        impl = _get_impl(flask_app, id)
         if impl is not None:
             DATA_STORES[id]["impl"] = impl
         else:
@@ -43,7 +44,7 @@ def init(flask_app):
 
     LOG.info(f"Configured data stores: {list(DATA_STORES.keys())}")
 
-def _get_impl(id):
+def _get_impl(flask_app, id):
     """
     Get the implementation of a data store by ID
     """
@@ -61,7 +62,7 @@ def _get_impl(id):
         raise RuntimeError(f"Can't find class {class_name} for data store '{id}'")
 
     try:
-        return cls(**ds_conf)
+        return cls(flask_app, **ds_conf)
     except Exception as exc:
         LOG.warn(f"Error creating data store: {id}: {ds_conf}")
         LOG.warn(exc)

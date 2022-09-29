@@ -1,6 +1,8 @@
 import datetime
 import logging
 import os
+import uuid
+
 import flask
 
 from .session import Session
@@ -32,6 +34,14 @@ def init(flask_app):
     def set_session_timeout():
         flask.session.permanent = True
         flask_app.permanent_session_lifetime = datetime.timedelta(minutes=TIMEOUT_MINUTES)
+
+def create():
+    """
+    Create a new session
+    """
+    session_id = uuid.uuid4()
+    flask.session['uid'] = session_id
+    LOG.info(f"Created session with UID {session_id.hex} {flask.session['uid']}.hex")
 
 def get():
     """

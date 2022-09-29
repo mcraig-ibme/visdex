@@ -25,8 +25,8 @@ IMG_ROUND_DPS = [
 ]
 
 class NdaData(DataStore):
-    def __init__(self, global_datadir, study_name, **kwargs):
-        DataStore.__init__(self, **kwargs)
+    def __init__(self, flask_app, global_datadir, study_name, **kwargs):
+        DataStore.__init__(self, flask_app, **kwargs)
         self._global_datadir = global_datadir
         self._study_name = study_name
         self._dictdir = os.path.join(global_datadir, "dictionary")

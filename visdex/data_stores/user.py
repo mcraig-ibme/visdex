@@ -18,8 +18,8 @@ KNOWN_INDICES = [
 
 class UserData(DataStore):
 
-    def __init__(self, **kwargs):
-        DataStore.__init__(self, **kwargs)
+    def __init__(self, flask_app, **kwargs):
+        DataStore.__init__(self, flask_app, **kwargs)
 
     def load_file(self, contents, filename, fields_contents):
         if contents is None:

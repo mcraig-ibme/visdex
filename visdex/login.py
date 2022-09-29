@@ -1,9 +1,6 @@
 """
 visdex: Login functionality
 """
-import uuid
-
-from flask import session
 from flask_login import LoginManager, UserMixin, login_user
 
 from dash import html, dcc
@@ -12,6 +9,7 @@ from dash.dependencies import Input, Output, State
 import ldap
 
 from visdex.common import Component
+import visdex.session
 
 LDAP_SERVER="ldaps://uonauth.nottingham.ac.uk/"
 
@@ -48,6 +46,9 @@ class LoginPage(Component):
             [State('uname-box', 'value'), State('pwd-box', 'value')]
         )
 
+        self.auth_config = self.config.get("AUTH", {})
+        self.auth_type = self.auth_config.get("type", None)
+
         self.known_users = app.server.config.get("KNOWN_USERS", [])
         self.log.info(f"Found %i known users", len(self.known_users))
         
@@ -62,8 +63,7 @@ class LoginPage(Component):
         user = self._check_password(userid, password)
         if user:
             login_user(user)
-            session['uid'] = uuid.uuid4()
-            self.log.info(f"Created session with UID {session['uid'].hex}")
+            visdex.session.create()
             return f'{self.config.get("PREFIX", "/")}app'
 
     def login_outcome(self, n_clicks, userid, password):
@@ -82,33 +82,47 @@ class LoginPage(Component):
             return user
     
     def _check_password(self, userid, password):
-        user = self._get_user(userid)    
-        if user:
-            try:
-                # Perform a synchronous bind to get Distinguished Name (DN)
-                ldap_client = ldap.initialize(LDAP_SERVER)
-                ldap_client.set_option(ldap.OPT_REFERRALS, 0)
-                
-                dns = ldap_client.search_st("ou=accounts,o=university", ldap.SCOPE_SUBTREE, filterstr='(uid=%s)' % userid, timeout=-1)
-                if not dns:
-                    self.log.warn("No matching user found: %s" % userid)
-                    return
+        user = self._get_user(userid)
+        if not user:
+            # unknown user
+            return None
 
-                dn = dns[0][0]
-                if len(dns) > 1:
-                    self.log.warn("Multiple matching DNs for user ID")
-                    for dn, _attrs in dns:
-                        self.log.warn(" - %s" % dn)
-                else:
-                    self.log.info("%s->%s" % (userid, dn))
+        if self.auth_type == "ldap":
+            authorized = self._check_password_ldap(userid, password)
+        elif self.auth_type is None:
+            authorized = True
+        else:
+            raise ValueError(f"Unknown authorization type: {self.auth_type}")
 
-                # Now use DN to check credentials
-                ldap_client.simple_bind_s(dn, password)
-                print("Authentication successful")
-                return user
-            except ldap.INVALID_CREDENTIALS:
-                print('Authentication failed')
-            except ldap.SERVER_DOWN:
-                print('AD server not available')
-            finally:
-                ldap_client.unbind()
+        if authorized:
+            return user
+
+    def _check_password_ldap(self, userid, password):
+        try:
+            # Perform a synchronous bind to get Distinguished Name (DN)
+            ldap_client = ldap.initialize(self.auth_config.get("server", None))
+            ldap_client.set_option(ldap.OPT_REFERRALS, 0)
+            
+            dns = ldap_client.search_st(self.auth_config.get("user_search_str", ""), ldap.SCOPE_SUBTREE, filterstr='(uid=%s)' % userid, timeout=-1)
+            if not dns:
+                self.log.warn("No matching user found: %s" % userid)
+                return
+
+            dn = dns[0][0]
+            if len(dns) > 1:
+                self.log.warn("Multiple matching DNs for user ID")
+                for dn, _attrs in dns:
+                    self.log.warn(" - %s" % dn)
+            else:
+                self.log.info("%s->%s" % (userid, dn))
+
+            # Now use DN to check credentials
+            ldap_client.simple_bind_s(dn, password)
+            print("Authentication successful")
+            return user
+        except ldap.INVALID_CREDENTIALS:
+            print('Authentication failed')
+        except ldap.SERVER_DOWN:
+            print('AD server not available')
+        finally:
+            ldap_client.unbind()
