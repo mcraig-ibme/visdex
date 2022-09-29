@@ -7,7 +7,7 @@ from dash import html, dcc
 from dash.dependencies import Input, Output, State
 
 from visdex.common import Component
-from visdex.data_stores import DATA_STORES
+import visdex.data_stores
 import visdex.session
 
 class UserUpload(Component):
@@ -36,7 +36,7 @@ class UserUpload(Component):
 
         self.register_cb(app, "datastore_selection_changed", 
             Output("upload", "style"),
-            Input("dataset-selection", "value"),
+            Input("datastore-selection", "value"),
             prevent_initial_call=True,
         )
 

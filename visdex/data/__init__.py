@@ -16,7 +16,7 @@ class DataSelection(Component):
             html.H2(children="Data selection"),
             html.Div(
                 dcc.Dropdown(
-                    id="dataset-selection",
+                    id="datastore-selection",
                     options=[],
                 ),
                 style={"width": "30%"},
@@ -34,8 +34,8 @@ class DataSelection(Component):
         )
 
         self.register_cb(app, "update_stores", 
-            Output("dataset-selection", "options"),
-            Input('url', 'pathname'),
+            Output("datastore-selection", "options"),
+            [Input('url', 'pathname')],
             prevent_initial_call=False,
         )
 
@@ -49,4 +49,5 @@ class DataSelection(Component):
             self.log.debug("%s: %s", id, ds_conf)
             if ds_conf["impl"].check_user():
                 data_store_selections.append({"label" : ds_conf["label"], "value" : id})
+        self.log.debug(data_store_selections)
         return data_store_selections

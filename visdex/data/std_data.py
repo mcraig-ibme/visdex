@@ -45,7 +45,7 @@ class StdData(visdex.common.Component):
         self.register_cb(app, "datastore_selection_changed", 
             Output("std", "style"),
             Output(id_prefix+"dataset-checklist", "data"),
-            Input("dataset-selection", "value"),
+            Input("datastore-selection", "value"),
             prevent_initial_call=True,
         )
 
@@ -56,7 +56,7 @@ class StdData(visdex.common.Component):
             Input(id_prefix+"dataset-checklist", "derived_virtual_selected_rows"),
             State(id_prefix+"field-checklist", "derived_virtual_data"),
             State(id_prefix+"field-checklist", "derived_virtual_selected_rows"),
-            State("dataset-selection", "value"),
+            State("datastore-selection", "value"),
             prevent_initial_call=True,
         )
         
