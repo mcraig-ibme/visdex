@@ -53,9 +53,9 @@ class ExploratoryGraphs(Collapsible):
     def add_graph(self, n_clicks, children):
         # Add a new graph group each time the button is clicked. The if None guard stops
         # there being an initial graph.
-        self.log.info(f"add_graph")
         if n_clicks is not None:
             # This dropdown controls what type of graph-group to display next to it.
+            self.log.debug(f"Creating graph {n_clicks}")
             new_graph = html.Div(
                 [
                     "Graph type:",
@@ -124,4 +124,4 @@ class ExploratoryGraphs(Collapsible):
                 children=graph_children,
             )
 
-            return children
+        return children
