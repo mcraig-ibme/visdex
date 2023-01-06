@@ -24,7 +24,7 @@ DATA_STORES = {
 
 def init(flask_app):
     """
-    Load data store configuration from a .json file
+    Load data store configuration from the configured .json file
     
     Format is:
     
@@ -73,7 +73,7 @@ def _get_impl(id):
     try:
         return cls(**ds_conf)
     except:
-        traceback.print_exc()
+        LOG.exception("Exception in constructor for data store")
         return None
 
 __all__= ["DATA_STORES", "load_config"]

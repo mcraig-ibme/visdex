@@ -36,9 +36,9 @@ class NdaData(DataStore):
 
         self.log.info("NDA data source for study %s", self._study_name)
         self.log.info("Found %i data sets", len(self.datasets))
-        self.log.info(self.datasets)
+        #self.log.info(",".join(self.datasets['name'])
         self.log.info("Found %i imaging data types", len(self.imaging_types))
-        self.log.info(self.imaging_types)
+        #self.log.info(self.imaging_types)
 
     def get_fields(self, *dataset_short_names):
         """
@@ -121,16 +121,24 @@ class NdaData(DataStore):
             #return "%s (%s) %.1f %.1f %.1f %.1fmm" % (r.scan_type, r.image_description, r.image_resolution1, r.image_resolution2, r.image_resolution3, r.image_resolution4)
 
         try:
-            df = self._load_dataset("image03")
-            df.reset_index(drop=True, inplace=True)
-            df = df[IMG_FIELDS]
-            df.fillna(0, inplace=True)
-            for f, dps in zip(IMG_ROUND_FIELDS, IMG_ROUND_DPS):
-                df[f] = df[f].round(dps)
-            df.drop_duplicates(inplace=True)
-            df['text'] = df.apply(format, axis=1)
-            return df[['image_description', 'text']]
+            try:
+                cache_file = os.path.join(self._datadir, "_visdex_imaging_types.csv")
+                return pd.read_csv(cache_file)
+            except IOError:
+                self.log.info("Imaging types cache file not found - recreating")
+                df = self._load_dataset("image03")
+                df.reset_index(drop=True, inplace=True)
+                df = df[IMG_FIELDS]
+                df.fillna(0, inplace=True)
+                for f, dps in zip(IMG_ROUND_FIELDS, IMG_ROUND_DPS):
+                    df[f] = df[f].round(dps)
+                df.drop_duplicates(inplace=True)
+                df['text'] = df.apply(format, axis=1)
+                imaging_types = df[['image_description', 'text']]
+                imaging_types.to_csv(cache_file)
+                return imaging_types
         except:
+            self.log.exception("Failed to retrieve imaging types")
             return pd.DataFrame(columns=['image_description', 'text'])
 
     def _load_dataset(self, short_name):
