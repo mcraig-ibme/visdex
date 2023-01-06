@@ -20,6 +20,7 @@ import visdex.common.header as header
 import visdex.visdex as visdex
 import visdex.login as login
 import visdex.config as config
+import visdex.log as log
 import visdex.session as session
 import visdex.data_stores as data_stores
 
@@ -28,6 +29,7 @@ LOG = logging.getLogger(__name__)
 # Create the Flask application
 flask_app = flask.Flask(__name__)
 config.init(flask_app)
+log.init(flask_app)
 login.init(flask_app)
 session.init(flask_app)
 data_stores.init(flask_app)
