@@ -50,12 +50,12 @@ def check_password(userid, password):
 
             # Now use DN to check credentials
             ldap_client.simple_bind_s(dn, password)
-            print("Authentication successful")
+            LOG.info("Authentication successful")
             return user
         except ldap.INVALID_CREDENTIALS:
-            print('Authentication failed')
+            LOG.warn('Authentication failed')
         except ldap.SERVER_DOWN:
-            print('AD server not available')
+            LOG.warn('AD server not available')
         finally:
             ldap_client.unbind()
 
@@ -78,8 +78,12 @@ def get_layout(app):
         [State('uname-box', 'value'), State('pwd-box', 'value')]
     )
     def _try_login(n_clicks, userid, password):
+        if not n_clicks:
+            return
+        LOG.info(f"Attempting login for user %s", userid)
         user = check_password(userid, password)
         if user:
+            LOG.info(f"Authentication successful - logging in")
             login_user(user)
             session['uid'] = uuid.uuid4()
             LOG.info(f"Created session with UID {session['uid'].hex}")
