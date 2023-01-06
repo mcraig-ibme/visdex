@@ -127,18 +127,18 @@ class DataFilter(Collapsible):
                         "Column: ",
                         dcc.Dropdown(
                             id={"type" : self.id_prefix+"predicate-filter-column", "index" : n_clicks},
-                            options=col_options, value=None, className="text-input"
+                            options=col_options, value=None, className="numeric-input"
                         ),
                         dcc.Dropdown(
                             id={"type" : self.id_prefix+"predicate-filter-op", "index" : n_clicks},
-                            options=op_options, value="=", className="text-input"
+                            options=op_options, value="=", className="numeric-input"
                         ),
                         dcc.Input(
                             id={"type" : self.id_prefix+"predicate-filter-value", "index" : n_clicks}, 
-                            className="text-input"
+                            className="numeric-input"
                         ),
                     ],
-                    id=self.id_prefix+"predicate-filter-%i" % n_clicks,
+                    id=self.id_prefix+"predicate-filter-%i" % n_clicks, style=dict(display="flex")
                 )
 
                 children.append(new_predicate)

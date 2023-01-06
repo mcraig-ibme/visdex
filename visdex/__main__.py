@@ -1,3 +1,6 @@
+"""
+visdex: Entry point for test server
+"""
 def main():
     # Default logging to stdout
     import logging

@@ -25,8 +25,8 @@ IMG_ROUND_DPS = [
 ]
 
 class NdaData(DataStore):
-    def __init__(self, global_datadir, study_name, **kwargs):
-        DataStore.__init__(self, **kwargs)
+    def __init__(self, flask_app, global_datadir, study_name, **kwargs):
+        DataStore.__init__(self, flask_app, **kwargs)
         self._global_datadir = global_datadir
         self._study_name = study_name
         self._dictdir = os.path.join(global_datadir, "dictionary")
@@ -102,7 +102,25 @@ class NdaData(DataStore):
         image_ids = images.set_index('subjectkey').index
         images = images[image_ids.isin(ids)]
 
-        return images[["subjectkey", "visit", "image_file"]]
+        if self._study_name == "abcd":
+            return images[["subjectkey", "visit", "image_file"]]
+        else:
+            # Different for HCP! We get S3 links from the datastructure_manifest
+            # table. Also we have images in fmriresults01 for processed data
+            manifests = images["manifest"]
+
+            preproc = self._load_dataset("fmriresults01")
+            preproc.reset_index(drop=False, inplace=True)
+            image_types = preproc.set_index('job_name').index
+            preproc_images = preproc[image_types.isin(selected_types)]
+            preproc_ids = preproc_images.set_index('subjectkey').index
+            preproc_images = preproc_images[preproc_ids.isin(ids)]
+            preproc_manifests = preproc_images["manifest"]
+
+            manifest_data = self._load_dataset("datastructure_manifest")
+            manifest_names = manifest_data.set_index('manifest_name').index
+            manifest_data = manifest_data[manifest_names.isin(manifests) | manifest_names.isin(preproc_manifests)]
+            return manifest_data["associated_file"]
 
     def _get_known_datasets(self):
         """
@@ -121,11 +139,11 @@ class NdaData(DataStore):
             #return "%s (%s) %.1f %.1f %.1f %.1fmm" % (r.scan_type, r.image_description, r.image_resolution1, r.image_resolution2, r.image_resolution3, r.image_resolution4)
 
         try:
+            cache_file = os.path.join(self._datadir, "_visdex_imaging_types.csv")
+            return pd.read_csv(cache_file)
+        except IOError:
+            self.log.info("Imaging types cache file not found - recreating")
             try:
-                cache_file = os.path.join(self._datadir, "_visdex_imaging_types.csv")
-                return pd.read_csv(cache_file)
-            except IOError:
-                self.log.info("Imaging types cache file not found - recreating")
                 df = self._load_dataset("image03")
                 df.reset_index(drop=True, inplace=True)
                 df = df[IMG_FIELDS]
@@ -134,12 +152,31 @@ class NdaData(DataStore):
                     df[f] = df[f].round(dps)
                 df.drop_duplicates(inplace=True)
                 df['text'] = df.apply(format, axis=1)
-                imaging_types = df[['image_description', 'text']]
-                imaging_types.to_csv(cache_file)
-                return imaging_types
+                raw_imaging_types = df[['image_description', 'text']]
+            except:
+                self.log.exception(f"Error getting raw imaging types")
+                raw_imaging_types = pd.DataFrame(columns=['image_description', 'text'])
+
+            try:
+                df = self._load_dataset("fmriresults01")
+                df.reset_index(drop=True, inplace=True)
+                print(df.columns)
+                df = df[['job_name']]
+                print(df)
+                df.drop_duplicates(inplace=True)
+                print(df)
+                df['image_description'] = df['job_name']
+                df['text'] = df['job_name']
+                proc_imaging_types = df[['image_description', 'text']]
+            except:
+                self.log.exception(f"Error getting processed imaging types")
+                proc_imaging_types = pd.DataFrame(columns=['image_description', 'text'])
+
+            imaging_types = pd.concat([raw_imaging_types, proc_imaging_types])
+            imaging_types.to_csv(cache_file)
+            return imaging_types
         except:
-            self.log.exception("Failed to retrieve imaging types")
-            return pd.DataFrame(columns=['image_description', 'text'])
+            self.log.exception(f"Error getting imaging types")
 
     def _load_dataset(self, short_name):
         """
@@ -148,19 +185,22 @@ class NdaData(DataStore):
         self.log.info(f"_get_dataset {short_name}")
         data_fname = os.path.join(self._datadir, "%s.txt" % short_name)
         df = pd.read_csv(data_fname, sep="\t", quotechar='"', skiprows=[1], low_memory=False)
-        df.set_index('subjectkey', inplace=True)
-        if not df.index.is_unique:
-            self.log.info(f"Dataset {short_name} is not subjectkey only")
-            df.reset_index(inplace=True)
-            if 'eventname' in df.columns:
-                df.set_index(['subjectkey', 'eventname'], inplace=True)
-            elif 'visit' in df.columns:
-                df.set_index(['subjectkey', 'visit'], inplace=True)
-            else:
-                df.set_index('subjectkey', inplace=True)
-
+        if 'subjectkey' in df.columns:
+            df.set_index('subjectkey', inplace=True)
             if not df.index.is_unique:
-                self.log.warn(f"Dataset {short_name} still doesn't have a unique index")
+                self.log.info(f"Dataset {short_name} is not subjectkey only")
+                df.reset_index(inplace=True)
+                if 'eventname' in df.columns:
+                    df.set_index(['subjectkey', 'eventname'], inplace=True)
+                elif 'visit' in df.columns:
+                    df.set_index(['subjectkey', 'visit'], inplace=True)
+                else:
+                    df.set_index('subjectkey', inplace=True)
+
+                if not df.index.is_unique:
+                    self.log.warn(f"Dataset {short_name} still doesn't have a unique index")
+            else:
+                self.log.info(f"Dataset {short_name} is indexed by subjectkey")
         else:
-            self.log.info(f"Dataset {short_name} is indexed by subjectkey")
+            self.log.warn(f"Dataset {short_name} does not contain 'subjectkey'")
         return df

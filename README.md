@@ -1,69 +1,123 @@
-This is a Dash dashboard to explore data in a user-friendly manner.
+# Visdex - Visual Data Explorer
 
-# Installation
+This is a Dash dashboard to explore tabluar data in a user-friendly manner.
 
-It is recommended to use Python 3.7 or higher.
+## Installation
 
-Clone the repository to `$DASHBOARD_HOME`. 
-It is _strongly recommended_ to use a virtual environment before installing.
-```
-python3 -m venv venv
-source venv/bin/activate
-pip install -e $DASHBOARD_HOME
-```
-On Windows: First make sure python 3 is installed and in your path
-```
-python -m venv venv
-venv\Scripts\activate.bat
-pip install -e $DASHBOARD_HOME
-```
-Run with
-```
-run-dashboard
-```
-This will begin a new app. In a browser, go to http://127.0.0.1:8050/ 
-to view the app.
+It is recommended to install the application in a virtual environment, for
+example using Conda.
 
-By default, the dashboard uses Feather format for data caching. If you
-want to use Redis instead, you will need to set up a Redis server on port
-6379, and set `use_redis = True` in `app.py`.
+Visdex is a Dash application and can be run standalone for testing or with 
+a WSGI compliant web application server. To run a standalone server the command
+line application ```run-visdex``` is provided. However you should not use this
+for externally accessible production use.
 
-TODO: add redis install documentation?
+## Configuration
 
-# Documentation of functionality
-The dashboard is split into 3 sections:
-1. File selection
-2. Summary tables and graphs
-3. Exploratory graphs
+The main configuration file is located from the first of the following that
+exists:
 
-## Data input
-Upload Box1 should be used to select the main data file. This can be in a variety of 
-formats (TODO add format specs).
+ - The VISDEX_CONFIG environment variable
+ - $HOME/.visdex.conf
+ - /etc/visdex/visdex.conf
 
-Upload Box 2 can be used to select a (optional) filter file, which lists the columns to 
-be used - TODO.
+The configuration file is a Python file and can use normal Python syntax for
+dictionaries, lists, comments, etc.
 
-Selecting a file in either Upload Box will immediately parse the data in that file.
+### Configuration options
 
-Click "Analyse" to run the analysis on the data.
+**SECRET_KEY**
+
+This should be set to some unique string to enable the server to persist
+sessions on restart
+
+**DATA_CACHE_DIR**
+
+This is the path to a directory where cached data files are stored. A directory
+will be created here for each activate session. Data files in the session
+cache directory will include filtered copies of the subset of data the user
+is working on and possibly intermediate results of calculations for visualisation
+plots.
+
+**TIMEOUT_MINUTES**
+
+Sessions will time out after being inactive for this period
+
+**AUTH**
+
+Dictionary describing the authentication/authorization system
+in use. See ``config/visdex.example.conf`` for an example using
+LDAP authentication. If not given, there will be no user access control.
+
+**KNOWN_USERS**
+
+List of usernames allowed to log in once authenticated. If not specified, no
+control over who may log in. Note that data sources also can have their
+own lists of users permitted to access each data source
+
+**DATA_STORES**
+
+Dictionary describing sources the data that may be visualised. 
+Each key must be unique and map to a dictionary describing the data source.
+As a minimum this should include a human-readable ``label``, and an
+implementing ``class``. See ``config/visdex.example.conf`` for examples.
+
+## Using the application
+
+### Data selection
+
+The top level dropdown menu gives a choice of data sources based on the list 
+given in the configuration file (possibly restricted dependent on user ID).
+
+Data sources may be of two broad types - server-side data which can be 
+explored and queried by the user and user-supplied data which must be uploaded
+to the server. 
+
+#### Server-side data
+
+Server side data is set up and configured as described in the 'Configuration'
+section. Generally it will consist of one or more 'data sets' (tables) each
+of which contains multiple fields/columns that the user may select for 
+exploration.
+
+Currently it is not possible to select fields from different tables, but this
+is to be added soon.
+
+#### User-supplied data
+
+If user-supplied data is an option, the data should be in CSV
+or TSV format - note that uploading of user data may or may not be enabled in
+the configuration. If the application is available without authorization then
+you may prefer not to allow users to upload their own data for security and
+to avoid using too much server-side resources
+
+A separate CSV/TSV file may also be uploaded containing a list of column names
+to filter from the original data
 
 ## Summary tables and graphs
-Select the `-` button to collapse the summary section.
 
-### Table Preview
+The summary section can be expanded and collapsed, and contains the following information
+
+### Table Summary and Preview
+
+The table summary shows a list of columns in the data with basic summary statistics
+for each, including missing values.
+
 Shows the first 5 rows of the data file (only the columns selected in the filter file
 are shown) for information and to easily flag up some data read and formatting issues.
 
-### Table summary and filter
-(?rename filter) Displays a summary of each 
-column (min. max, quartiles, standard deviation etc), and uses colours to
-highlight certain properties (TODO: expand that, document the colours in
-the dashboard, and document them here). The filter box allows the user
-to input the maximum percentage of rows in a column that are allowed to 
-be missing (?or NA) before the column is removed from all the later 
-analysis.
+### Row/Column filter
+
+The filtering section allows removal of columns based on proportion of missing values. 
+
+It is also possible to filter rows on the value of the data the contain, for example
+selecting only rows where a column has a value greater than some threshold.
+
+Finally it is possible to generate a random sample of rows - useful for obtaining
+a small data set for initial testing.
 
 ### Correlation heatmap
+
 Displays the correlation matrix between all columns as a heatmap. Hover over 
 items to view the Pearson correlation coefficient and p-value for that pair.
 Use the dropdown to select/deselect columns to display, and use the
@@ -72,6 +126,7 @@ into. The clustering method used is Agglomerative Hierarchical Clustering:
 https://scikit-learn.org/stable/modules/clustering.html#hierarchical-clustering.
  
 ### Manhattan Plot
+
 Displays a Manhattan plot of all variables.
 
 Use the `pvalue` input to select the appropriate p-value threshold. The black 
@@ -85,6 +140,7 @@ A more customisable Manhattan plot against a single variable is available
 within the exploratory graphs. 
 
 ### Per-variable Histograms and KDEs
+
 Show a histogram per variable. Overlaid onto each is a Gaussian Kernel 
 Density Estimate of the variable. This only runs and updates when the 
 'Run KDE analysis' checkbox is ticked - otherwise changes to the rest 
@@ -92,6 +148,7 @@ of the app make no change to the KDEs display.
 (https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html).
 
 ## Exploratory graphs
+
 "Exploratory graphs" is an area in which new, user-defined graphs can be 
 created. Select "New Graph" to create a new graph. A Scatter ?area (TODO name?)
 will be created, with a number of input controls and a blank graph area.
@@ -137,14 +194,15 @@ Plot a Histogram for a single variable.
 - `n bins`: select the number of bins. Selecting `1` uses the default Plotly 
 algorithm to determine the optimum number of bins.
 
-
-
 ### Adding/modifying exploratory graph types
+
 Graph types can be modified by adding/removing/modifying input controls,
 or by modifying the calculations performed in response.
 
 New graph types can be also be added. This section discusses the code modifications 
-required to do so.
+required to do so. 
+
+**NOTE THIS SECTION IS NOW OUT OF DATE AND NEEDS REVISING**
 
 To add a new type of exploratory graphs (in this example, we add the imaginary graph 
 type "Bubble"):
@@ -165,8 +223,3 @@ each component whenever one is edited, most of which is handled by
 `update_graph_components()` in `exploratory_graph_groups.py`.
 
 3. Import `bubble_graph` to `index.py`
-
-
-# TODO:
-- Where to put data
-- Summary vs exploratory apps

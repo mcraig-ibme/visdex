@@ -3,23 +3,17 @@ visdex: Data stores
 
 A data store is a source of data and is stateless so there is only one class per server instance.
 Note that in multiprocess servers (e.g. apache with mod_wsgi) there may be multiple instances
-of each, this is pretty harmless.
+of each, this is pretty harmless so long as data stores are not computationally expensive to create.
 """
-import json
 import logging
-import os
-import traceback
 
 from .nda import NdaData
 from .user import UserData
+from .generic_csv import GenericCsv
 
 LOG = logging.getLogger(__name__)
 
 DATA_STORES = {
-    "user" : {
-        "label" : "Upload a CSV/TSV data set",
-        "class" : "UserData",
-    }
 }
 
 def init(flask_app):
@@ -35,28 +29,22 @@ def init(flask_app):
     """
     global DATA_STORES
     LOG.info(f"Loading data store configuration")
-    fname = flask_app.config.get("DATA_STORE_CONFIG", None)
-    try:
-        if os.path.isfile(fname):
-            LOG.info(f"Config file: {fname}")
-            with open(fname, "r") as f:
-                config = json.load(f)
-            LOG.debug(config)
-            DATA_STORES.update(config)
-        elif fname is not None:
-            LOG.warn(f"Failed to load data store config from {fname} - no such file")
-        for id in list(DATA_STORES.keys()):
-            impl = _get_impl(id)
-            if impl is not None:
-                DATA_STORES[id]["impl"] = impl
-                LOG.info("Created data store: %s: %s" % (id, DATA_STORES[id]))
-            else:
-                LOG.warn("Failed to create data store: %s: %s" % (id, DATA_STORES[id]))
-                del DATA_STORES[id]
-    except Exception as exc:
-        LOG.warn(exc)
+    DATA_STORES = flask_app.config.get("DATA_STORES", {})
+    if not isinstance(DATA_STORES, dict):
+        raise ValueError("Invalid data store configuration - DATA_STORES must be a dictionary")
 
-def _get_impl(id):
+    for id in list(DATA_STORES.keys()):
+        LOG.info("Creating data store: %s: %s" % (id, DATA_STORES[id]))
+        impl = _get_impl(flask_app, id)
+        if impl is not None:
+            DATA_STORES[id]["impl"] = impl
+        else:
+            LOG.warn("Failed to create data store: %s: %s" % (id, DATA_STORES[id]))
+            del DATA_STORES[id]
+
+    LOG.info(f"Configured data stores: {list(DATA_STORES.keys())}")
+
+def _get_impl(flask_app, id):
     """
     Get the implementation of a data store by ID
     """
@@ -65,15 +53,16 @@ def _get_impl(id):
     if ds_conf is None:
         raise RuntimeError(f"No such data store '{id}'")
     class_name = ds_conf.get("class", None)
+
     if class_name is None:
         raise RuntimeError(f"No class name for data store '{id}'")
     cls = globals().get(class_name, None)
+
     if cls is None:
         raise RuntimeError(f"Can't find class {class_name} for data store '{id}'")
+
     try:
         return cls(**ds_conf)
     except:
         LOG.exception("Exception in constructor for data store")
         return None
-
-__all__= ["DATA_STORES", "load_config"]

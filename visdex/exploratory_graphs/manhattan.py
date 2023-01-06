@@ -7,17 +7,13 @@ from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 
 import visdex.session
-from .common import common_define_cbs
 
 LOG = logging.getLogger(__name__)
 
 # TODO: currently only allows int64 and float64
 valid_manhattan_dtypes = [np.int64, np.float64]
 
-def define_cbs(app):
-    common_define_cbs(app, "manhattan", make_manhattan_figure)
-
-def make_manhattan_figure(dff, args_dict):
+def make_figure(dff, args_dict):
     if args_dict["base_variable"] is None or args_dict["base_variable"] == []:
         LOG.debug(f"return go.Figure()")
         raise PreventUpdate

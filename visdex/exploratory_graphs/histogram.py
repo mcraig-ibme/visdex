@@ -5,14 +5,9 @@ import logging
 
 import plotly.graph_objects as go
 
-from .common import common_define_cbs
-
 LOG = logging.getLogger(__name__)
 
-def define_cbs(app):
-    common_define_cbs(app, "histogram", make_histogram_figure)
-    
-def make_histogram_figure(dff, args_dict):
+def make_figure(dff, args_dict):
     # Return empty plot if not enough options are selected, or the data is empty.
     if dff.columns.size == 0 or args_dict["base_variable"] is None:
         return go.Figure(go.Histogram())

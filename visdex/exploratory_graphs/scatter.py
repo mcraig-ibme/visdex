@@ -15,18 +15,13 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
 
-from .common import common_define_cbs
-
 LOG = logging.getLogger(__name__)
 
 MIN_MARKER_SIZE = 2
 MAX_MARKER_SIZE = 10
 DEFAULT_MARKER_COLOR = "crimson"
 
-def define_cbs(app):
-    common_define_cbs(app, "scatter", make_scatter_figure)
-
-def make_scatter_figure(dff, args_dict):
+def make_figure(dff, args_dict):
     facet_row_cats = (
         list(dff[args_dict["facet_row"]].unique())
         if args_dict["facet_row"] is not None

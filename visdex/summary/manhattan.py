@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 
 import visdex.session
 from visdex.common.timing import timing, start_timer, log_timing, print_timings
-from visdex.exploratory_graphs.manhattan_graph import (
+from visdex.exploratory_graphs.manhattan import (
     calculate_transformed_corrected_pval,
 )
 

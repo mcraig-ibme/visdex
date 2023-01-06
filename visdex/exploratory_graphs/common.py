@@ -11,50 +11,50 @@ import visdex.session
 
 LOG = logging.getLogger(__name__)
 
-def common_define_cbs(app, ctype, make_fig):
+def add_graph_type(app, name, make_fig):
     """
     Define the callbacks for a graph type
     
-    :param ctype: Graph type, e.g. violin, histogram
+    :param name: Graph type, e.g. violin, histogram
     :param make_fig: Callable that creates the figure
     """
     @app.callback(
         [
-            Output({"type": f"div-{ctype}-{component['id']}", "index": MATCH}, "children")
-            for component in all_components[ctype]
+            Output({"type": f"div-{name}-{component['id']}", "index": MATCH}, "children")
+            for component in all_components[name]
         ],
         [
             Input("filtered-loaded-div", "children")
         ],
         [
-            State({"type": f"div-{ctype}-{all_components[ctype][0]['id']}", "index": MATCH}, "style")
+            State({"type": f"div-{name}-{all_components[name][0]['id']}", "index": MATCH}, "style")
         ] +
         [
-            State({"type": f"{ctype}-{component['id']}", "index": MATCH}, prop)
-            for component in all_components[ctype]
+            State({"type": f"{name}-{component['id']}", "index": MATCH}, prop)
+            for component in all_components[name]
             for prop in component
         ],
     )
     def update_components(df_loaded, style_dict, *args):
-        LOG.info(f"update_{ctype}_components")
+        LOG.info(f"update_{name}_components")
         ds = visdex.session.get()
         dff = ds.load(visdex.session.FILTERED)
         dd_options = [{"label": col, "value": col} for col in dff.columns]
-        return update_graph_components(ctype, all_components[ctype], dd_options, args)
+        return update_graph_components(name, all_components[name], dd_options, args)
 
     @app.callback(
-        Output({"type": f"gen-{ctype}-graph", "index": MATCH}, "figure"),
+        Output({"type": f"gen-{name}-graph", "index": MATCH}, "figure"),
         [
             *(
-                Input({"type": f"{ctype}-{component['id']}", "index": MATCH}, "value")
-                for component in all_components[ctype]
+                Input({"type": f"{name}-{component['id']}", "index": MATCH}, "value")
+                for component in all_components[name]
             )
         ],
     )
     def make_figure(*args):
-        LOG.info(f"make_{ctype}_figure")
+        LOG.info(f"make_{name}_figure")
         ds = visdex.session.get()
-        keys = [component["id"] for component in all_components[ctype]]
+        keys = [component["id"] for component in all_components[name]]
 
         args_dict = dict(zip(keys, args))
         dff = ds.load(visdex.session.FILTERED)
