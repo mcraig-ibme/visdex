@@ -16,17 +16,17 @@ import numpy as np
 
 class Session:
     """
-    Session is instantiated on each request and provides access to
+    A Session object is instantiated on *each request* and provides access to
     cached server-side data and properties
     """
 
-    def __init__(self, session_dir, uid):
+    def __init__(self, global_session_dir, uid):
         """
-        :param session: Global session data dir
+        :param global_session_dir: Global session cache directory
         :param uid: Session unique ID
         """
         self.log = logging.getLogger(__name__)
-        self._sessdir = os.path.join(session_dir, uid)
+        self._sessdir = os.path.join(global_session_dir, uid)
         if not os.path.exists(self._sessdir):
             os.makedirs(self._sessdir)
 

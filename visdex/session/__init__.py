@@ -15,6 +15,11 @@ FILTERED = "filtered"
 LOG = logging.getLogger(__name__)
 
 def init(flask_app):
+    """
+    Set session configuration - timeout, cache dir etc
+
+    Called once on server initialization
+    """
     global TIMEOUT_MINUTES, CACHE_DIR
     TIMEOUT_MINUTES = flask_app.config.get("TIMEOUT_MINUTES", 5)
     LOG.info(f"Session timeout {TIMEOUT_MINUTES} minutes")
