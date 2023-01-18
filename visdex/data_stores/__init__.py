@@ -62,7 +62,7 @@ def _get_impl(flask_app, id):
         raise RuntimeError(f"Can't find class {class_name} for data store '{id}'")
 
     try:
-        return cls(**ds_conf)
+        return cls(flask_app, **ds_conf)
     except:
         LOG.exception("Exception in constructor for data store")
         return None
