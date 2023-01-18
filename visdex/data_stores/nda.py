@@ -158,13 +158,13 @@ class NdaData(DataStore):
                 raw_imaging_types = pd.DataFrame(columns=['image_description', 'text'])
 
             try:
+                self.log.info("Loading imaging results from fmriresults01")
                 df = self._load_dataset("fmriresults01")
                 df.reset_index(drop=True, inplace=True)
-                print(df.columns)
+                self.log.info(df.columns)
                 df = df[['job_name']]
-                print(df)
                 df.drop_duplicates(inplace=True)
-                print(df)
+                self.log.info(df)
                 df['image_description'] = df['job_name']
                 df['text'] = df['job_name']
                 proc_imaging_types = df[['image_description', 'text']]
@@ -182,8 +182,8 @@ class NdaData(DataStore):
         """
         Retrieve a dataset as a data frame
         """
-        self.log.info(f"_get_dataset {short_name}")
         data_fname = os.path.join(self._datadir, "%s.txt" % short_name)
+        self.log.info(f"_get_dataset {short_name} {data_fname}")
         df = pd.read_csv(data_fname, sep="\t", quotechar='"', skiprows=[1], low_memory=False)
         if 'subjectkey' in df.columns:
             df.set_index('subjectkey', inplace=True)
