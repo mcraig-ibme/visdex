@@ -30,7 +30,6 @@ LOG = logging.getLogger(__name__)
 flask_app = flask.Flask(__name__)
 config.init(flask_app)
 log.init(flask_app)
-login.init(flask_app)
 session.init(flask_app)
 data_stores.init(flask_app)
 
