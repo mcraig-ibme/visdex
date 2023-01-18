@@ -51,8 +51,13 @@ def create():
 def get():
     """
     Get the current session
+
+    FIXME we expect the uid will always be there but it isn't - why?
     """
     global CACHE_DIR
+    if "uid" not in flask.session:
+        LOG.warn(f"Session UID not found")
+        create()
     uid = flask.session["uid"].hex
     sess = Session(CACHE_DIR, uid)
     sess.touch()
