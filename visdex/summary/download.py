@@ -116,6 +116,8 @@ class Download(Collapsible):
         elif triggered_ids[0] == self.id_prefix + "links-modal-ok.n_clicks":
             # Ok clicked
             self.log.debug("Download imaging links")
+            self.log.debug(selected_rows)
+            self.log.debug(imaging_types)
             imaging_types = imaging_types.iloc[selected_rows]
             ids = pd.DataFrame(index=visdex.session.get().load(visdex.session.FILTERED).index)
             df = datastore.imaging_links(ids, imaging_types)
