@@ -107,20 +107,27 @@ class NdaData(DataStore):
         else:
             # Different for HCP! We get S3 links from the datastructure_manifest
             # table. Also we have images in fmriresults01 for processed data
-            manifests = images["manifest"]
+            image_manifests = images[["subjectkey", "manifest"]]
+            image_manifests.set_index("manifest")
 
             preproc = self._load_dataset("fmriresults01")
             preproc.reset_index(drop=False, inplace=True)
+
             image_types = preproc.set_index('job_name').index
             preproc_images = preproc[image_types.isin(selected_types)]
             preproc_ids = preproc_images.set_index('subjectkey').index
             preproc_images = preproc_images[preproc_ids.isin(ids)]
-            preproc_manifests = preproc_images["manifest"]
+            preproc_manifests = preproc_images[["subjectkey", "manifest"]]
+            preproc_manifests.set_index("manifest")
 
-            manifest_data = self._load_dataset("datastructure_manifest")
-            manifest_names = manifest_data.set_index('manifest_name').index
-            manifest_data = manifest_data[manifest_names.isin(manifests) | manifest_names.isin(preproc_manifests)]
-            return manifest_data["associated_file"]
+            manifest_data = self._load_dataset("datastructure_manifest")[["manifest_name", "associated_file"]]
+            manifest_data.rename(columns={"manifest_name" : "manifest"}, inplace=True)
+            manifest_data.set_index('manifest')
+
+            manifests = pd.concat([image_manifests, preproc_manifests])
+            manifest_data = manifest_data.merge(manifests, on="manifest", how="inner")
+
+            return manifest_data[["subjectkey", "associated_file"]]
 
     def _get_known_datasets(self):
         """
