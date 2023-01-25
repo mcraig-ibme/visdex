@@ -171,7 +171,8 @@ class Session:
 
         self.log.info("Filter: post-filter %s", df.shape)
 
-        df.drop(columns=df.index.names, inplace=True)
+        to_drop = [c for c in df.index.names if c in df]
+        df.drop(columns=to_drop, inplace=True)
         return df
 
     def description(self, df):
