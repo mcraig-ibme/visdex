@@ -107,26 +107,36 @@ class NdaData(DataStore):
         else:
             # Different for HCP! We get S3 links from the datastructure_manifest
             # table. Also we have images in fmriresults01 for processed data
+            # and maybe imagingcollection01
+            manifest_dfs = []
+
             image_manifests = images[["subjectkey", "manifest"]]
             image_manifests.set_index("manifest")
+            manifest_dfs.append(image_manifests)
 
-            preproc = self._load_dataset("fmriresults01")
-            preproc.reset_index(drop=False, inplace=True)
-
-            image_types = preproc.set_index('job_name').index
-            preproc_images = preproc[image_types.isin(selected_types)]
-            preproc_ids = preproc_images.set_index('subjectkey').index
-            preproc_images = preproc_images[preproc_ids.isin(ids)]
-            preproc_manifests = preproc_images[["subjectkey", "manifest"]]
-            preproc_manifests.set_index("manifest")
-
+            for table, img_types_col, manifest_col in [
+                ("fmriresults01", "job_name", "manifest"),
+                ("imagingcollection01", "image_collection_name", "image_manifest"),
+            ]:
+                try:
+                    df = self._load_dataset(table)
+                    df.reset_index(drop=False, inplace=True)
+                    image_types = df.set_index(img_types_col).index
+                    df_images = df[image_types.isin(selected_types)]
+                    df_ids = df_images.set_index('subjectkey').index
+                    df_images = df_images[df_ids.isin(ids)]
+                    df_manifests = df_images[["subjectkey", manifest_col]]
+                    df_manifests.rename(columns={manifest_col : "manifest"}, inplace=True)
+                    df_manifests.set_index("manifest")
+                    manifest_dfs.append(df_manifests)
+                except:
+                    self.log.exception(f"Failed to get manifests from {table}")
+            
+            manifests = pd.concat(manifest_dfs)
             manifest_data = self._load_dataset("datastructure_manifest")[["manifest_name", "associated_file"]]
             manifest_data.rename(columns={"manifest_name" : "manifest"}, inplace=True)
             manifest_data.set_index('manifest')
-
-            manifests = pd.concat([image_manifests, preproc_manifests])
             manifest_data = manifest_data.merge(manifests, on="manifest", how="inner")
-
             return manifest_data[["subjectkey", "associated_file"]]
 
     def _get_known_datasets(self):
@@ -150,6 +160,7 @@ class NdaData(DataStore):
             return pd.read_csv(cache_file)
         except IOError:
             self.log.info("Imaging types cache file not found - recreating")
+            imaging_types = []
             try:
                 df = self._load_dataset("image03")
                 df.reset_index(drop=True, inplace=True)
@@ -159,27 +170,27 @@ class NdaData(DataStore):
                     df[f] = df[f].round(dps)
                 df.drop_duplicates(inplace=True)
                 df['text'] = df.apply(format, axis=1)
-                raw_imaging_types = df[['image_description', 'text']]
+                imaging_types.append(df[['image_description', 'text']])
             except:
-                self.log.exception(f"Error getting raw imaging types")
-                raw_imaging_types = pd.DataFrame(columns=['image_description', 'text'])
+                self.log.exception(f"Error getting imaging types from image03")
 
-            try:
-                self.log.info("Loading imaging results from fmriresults01")
-                df = self._load_dataset("fmriresults01")
-                df.reset_index(drop=True, inplace=True)
-                self.log.info(df.columns)
-                df = df[['job_name']]
-                df.drop_duplicates(inplace=True)
-                self.log.info(df)
-                df['image_description'] = df['job_name']
-                df['text'] = df['job_name']
-                proc_imaging_types = df[['image_description', 'text']]
-            except:
-                self.log.exception(f"Error getting processed imaging types")
-                proc_imaging_types = pd.DataFrame(columns=['image_description', 'text'])
+            for table, img_types_col, manifest_col in [
+                ("fmriresults01", "job_name", "manifest"),
+                ("imagingcollection01", "image_collection_name", "manifest_name"),
+            ]:
+                try:
+                    self.log.info(f"Loading imaging results from {table}")
+                    df = self._load_dataset(table)
+                    df.reset_index(drop=True, inplace=True)
+                    df = df[[img_types_col]]
+                    df.drop_duplicates(inplace=True)
+                    df['image_description'] = df[img_types_col]
+                    df['text'] = df[img_types_col]
+                    imaging_types.append(df[['image_description', 'text']])
+                except:
+                    self.log.exception(f"Error getting imaging types from {table}")
 
-            imaging_types = pd.concat([raw_imaging_types, proc_imaging_types])
+            imaging_types = pd.concat(imaging_types)
             imaging_types.to_csv(cache_file)
             return imaging_types
         except:
