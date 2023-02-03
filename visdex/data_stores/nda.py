@@ -25,12 +25,14 @@ IMG_ROUND_DPS = [
 ]
 
 class NdaData(DataStore):
-    def __init__(self, flask_app, global_datadir, study_name, **kwargs):
+    def __init__(self, flask_app, global_datadir, study_name, subject_table="ndar_subject01", subject_field="subjectkey", **kwargs):
         DataStore.__init__(self, flask_app, **kwargs)
         self._global_datadir = global_datadir
         self._study_name = study_name
         self._dictdir = os.path.join(global_datadir, "dictionary")
         self._datadir = os.path.join(global_datadir, study_name)
+        self._subject_table = subject_table
+        self._subject_field = subject_field
         self.datasets = self._get_known_datasets()
         self.imaging_types = self._get_known_imaging_types()
 
@@ -50,7 +52,7 @@ class NdaData(DataStore):
             df = pd.read_csv(dict_fname, sep=",", quotechar='"')
             df.drop(df[df.ElementName.isin(STD_FIELDS)].index, inplace=True)
             dfs.append(df)
-        
+
         if not dfs:
             return pd.DataFrame()
         else:
@@ -60,6 +62,10 @@ class NdaData(DataStore):
         """
         Build a data frame containing the selected fields from the corresponding datasets
         """
+        if not dataset:
+            dataset = self._subject_table
+            fields = [self._subject_field]
+
         if not fields:
             self.log.info("No fields selected")
             return
@@ -75,8 +81,11 @@ class NdaData(DataStore):
             if fields_in_dataset:
                 self.log.info(f"Found fields {fields_in_dataset} in {short_name}")
                 main_df = self._load_dataset(short_name)
-                fields_of_interest = fields_in_dataset
-                main_df = main_df[fields_of_interest]
+                if fields_in_dataset == [self._subject_field]:
+                    main_df.reset_index(drop=False, inplace=True)
+                main_df = main_df[fields_in_dataset]
+                if fields_in_dataset == [self._subject_field]:
+                    main_df.set_index(fields_in_dataset, inplace=True)
  
         if main_df is not None:
             return main_df
@@ -98,19 +107,19 @@ class NdaData(DataStore):
         images = images[image_types.isin(selected_types)]
 
         # FIXME ids may include visit
-        ids = ids.set_index('subjectkey').index
-        image_ids = images.set_index('subjectkey').index
+        ids = ids.set_index(self._subject_field).index
+        image_ids = images.set_index(self._subject_field).index
         images = images[image_ids.isin(ids)]
 
         if self._study_name == "abcd":
-            return images[["subjectkey", "visit", "image_file"]]
+            return images[[self._subject_field, "visit", "image_file"]]
         else:
             # Different for HCP! We get S3 links from the datastructure_manifest
             # table. Also we have images in fmriresults01 for processed data
             # and maybe imagingcollection01
             manifest_dfs = []
 
-            image_manifests = images[["subjectkey", "manifest"]]
+            image_manifests = images[[self._subject_field, "manifest"]]
             image_manifests.set_index("manifest")
             manifest_dfs.append(image_manifests)
 
@@ -123,9 +132,9 @@ class NdaData(DataStore):
                     df.reset_index(drop=False, inplace=True)
                     image_types = df.set_index(img_types_col).index
                     df_images = df[image_types.isin(selected_types)]
-                    df_ids = df_images.set_index('subjectkey').index
+                    df_ids = df_images.set_index(self._subject_field).index
                     df_images = df_images[df_ids.isin(ids)]
-                    df_manifests = df_images[["subjectkey", manifest_col]]
+                    df_manifests = df_images[[self._subject_field, manifest_col]]
                     df_manifests.rename(columns={manifest_col : "manifest"}, inplace=True)
                     df_manifests.set_index("manifest")
                     manifest_dfs.append(df_manifests)
@@ -137,7 +146,7 @@ class NdaData(DataStore):
             manifest_data.rename(columns={"manifest_name" : "manifest"}, inplace=True)
             manifest_data.set_index('manifest')
             manifest_data = manifest_data.merge(manifests, on="manifest", how="inner")
-            return manifest_data[["subjectkey", "associated_file"]]
+            return manifest_data[[self._subject_field, "associated_file"]]
 
     def _get_known_datasets(self):
         """
@@ -203,22 +212,22 @@ class NdaData(DataStore):
         data_fname = os.path.join(self._datadir, "%s.txt" % short_name)
         self.log.info(f"_get_dataset {short_name} {data_fname}")
         df = pd.read_csv(data_fname, sep="\t", quotechar='"', skiprows=[1], low_memory=False)
-        if 'subjectkey' in df.columns:
-            df.set_index('subjectkey', inplace=True)
+        if self._subject_field in df.columns:
+            df.set_index(self._subject_field, inplace=True)
             if not df.index.is_unique:
-                self.log.info(f"Dataset {short_name} is not subjectkey only")
+                self.log.info(f"Dataset {short_name} is not {self._subject_field} only")
                 df.reset_index(inplace=True)
                 if 'eventname' in df.columns:
-                    df.set_index(['subjectkey', 'eventname'], inplace=True)
+                    df.set_index([self._subject_field, 'eventname'], inplace=True)
                 elif 'visit' in df.columns:
-                    df.set_index(['subjectkey', 'visit'], inplace=True)
+                    df.set_index([self._subject_field, 'visit'], inplace=True)
                 else:
-                    df.set_index('subjectkey', inplace=True)
+                    df.set_index(self._subject_field, inplace=True)
 
                 if not df.index.is_unique:
                     self.log.warn(f"Dataset {short_name} still doesn't have a unique index")
             else:
-                self.log.info(f"Dataset {short_name} is indexed by subjectkey")
+                self.log.info(f"Dataset {short_name} is indexed by {self._subject_field}")
         else:
-            self.log.warn(f"Dataset {short_name} does not contain 'subjectkey'")
+            self.log.warn(f"Dataset {short_name} does not contain '{self._subject_field}'")
         return df

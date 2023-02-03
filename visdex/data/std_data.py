@@ -112,6 +112,8 @@ class StdData(visdex.common.Component):
             return [], []
 
         try:
+            self.log.info(data)
+            self.log.info(selected_rows)
             selected_datasets = [data[idx]["shortname"] for idx in selected_rows]
             ds = visdex.data_stores.DATA_STORES[ds_name]["impl"]
             fields = ds.get_fields(*selected_datasets).to_dict('records')
@@ -160,10 +162,14 @@ class StdData(visdex.common.Component):
             sess = visdex.session.get()
             # FIXME more than one selected data set
             datasets = [dataset_info[idx]["shortname"] for idx in dataset_selected_rows]
-            if datasets:
-                sess.store(visdex.session.MAIN_DATA, ds.get_data(datasets[0], selected_fields))
-                return True
-            return False
+            if not datasets:
+                dataset = ""
+                selected_fields = []
+            else:
+                dataset = datasets[0]
+
+            sess.store(visdex.session.MAIN_DATA, ds.get_data(dataset, selected_fields))
+            return True
         except Exception as e:
             self.log.exception('Error loading dataset')
             return False
